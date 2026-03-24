@@ -11,10 +11,10 @@
 @endphp
 
 <div class="stack-lg" id="guided-quiz-setup" data-multi-mode-initial="{{ $isMultiMode ? '1' : '0' }}">
-    <section class="page-hero">
-        <h2 class="h1">Subjects → Topics → Settings</h2>
-        <p class="mb-0" style="opacity:.92">Choose what you want to practice, then start your quiz.</p>
-        <div class="row-wrap" style="margin-top:.65rem;">
+    <section class="card section-card">
+        <h2 class="h1">Build your quiz</h2>
+        <p class="muted mb-0">Select subjects, optionally filter topics, then choose your quiz settings.</p>
+        <div class="row-wrap">
             @foreach($levels as $level)
                 @if(in_array((string) $level['value'], $selectedLevelValues, true))
                     <span class="pill">{{ $level['label'] }}</span>
@@ -42,7 +42,7 @@
                 <div class="row-between">
                     <div>
                         <h3 class="h2">1) Select subject(s)</h3>
-                        <p class="muted text-sm mb-0">Choose one subject, or enable multi-subject mode to combine them.</p>
+                        <p class="muted text-sm mb-0">Choose one subject or enable multi-subject mode.</p>
                     </div>
                     <label class="toggle-row" style="gap:.55rem">
                         <span class="text-sm text-strong">Multi-subject mode</span>
@@ -87,7 +87,11 @@
 
             <section class="stack-sm section-block">
                 <h3 class="h2">2) Select topics <span class="muted text-sm">(Optional)</span></h3>
-                <p class="muted text-sm mb-0">Topics are grouped by subject with quick search.</p>
+                <p class="muted text-sm mb-0">Topics are grouped by selected subject.</p>
+                <label class="field">
+                    <span>Search topics across selected subjects</span>
+                    <input type="search" class="field-control" id="shared-topic-search" placeholder="Search topics..." autocomplete="off">
+                </label>
 
                 <div class="stack-md" id="topic-groups">
                     @foreach($subjects as $subject)
@@ -100,10 +104,6 @@
                             @if($subject->topics->isEmpty())
                                 <p class="muted text-sm mb-0">No active topics yet for this subject.</p>
                             @else
-                                <label class="field mb-0">
-                                    <span>Search topics</span>
-                                    <input type="search" class="topic-search-input" placeholder="Type to filter topics..." data-topic-search>
-                                </label>
                                 <div class="topic-chip-grid topic-scroll-list" data-topic-list>
                                     @foreach($subject->topics as $topic)
                                         @php $checked = in_array((string) $topic->id, $selectedTopicIds, true); @endphp
@@ -172,6 +172,7 @@
     const multiModeInput = root.querySelector('#multi-subject-mode');
     const subjectCards = Array.from(root.querySelectorAll('.subject-option'));
     const topicGroups = Array.from(root.querySelectorAll('.topic-group'));
+    const sharedTopicSearch = root.querySelector('#shared-topic-search');
 
     const isMulti = () => !!multiModeInput?.checked;
 
@@ -205,6 +206,27 @@
         });
     };
 
+    const applySharedTopicSearch = () => {
+        const query = (sharedTopicSearch?.value || '').trim().toLowerCase();
+
+        topicGroups.forEach((group) => {
+            if (group.style.display === 'none') return;
+
+            const chips = Array.from(group.querySelectorAll('.topic-chip'));
+            const emptyMessage = group.querySelector('[data-topic-empty-message]');
+
+            let visibleCount = 0;
+            chips.forEach((chip) => {
+                const name = chip.dataset.topicName || '';
+                const match = query === '' || name.includes(query);
+                chip.style.display = match ? 'inline-flex' : 'none';
+                if (match) visibleCount += 1;
+            });
+
+            if (emptyMessage) emptyMessage.style.display = visibleCount === 0 ? 'block' : 'none';
+        });
+    };
+
     const syncTopicGroups = () => {
         const selectedIds = selectedSubjectIds();
 
@@ -218,8 +240,12 @@
                     input.checked = false;
                     input.closest('.topic-chip')?.classList.remove('active');
                 });
+                const emptyMessage = group.querySelector('[data-topic-empty-message]');
+                if (emptyMessage) emptyMessage.style.display = 'none';
             }
         });
+
+        applySharedTopicSearch();
     };
 
     const refreshSubjects = () => {
@@ -267,26 +293,7 @@
         });
     });
 
-    root.querySelectorAll('[data-topic-search]').forEach((searchInput) => {
-        searchInput.addEventListener('input', () => {
-            const group = searchInput.closest('.topic-group');
-            if (!group) return;
-
-            const query = searchInput.value.trim().toLowerCase();
-            const chips = Array.from(group.querySelectorAll('.topic-chip'));
-            const emptyMessage = group.querySelector('[data-topic-empty-message]');
-
-            let visibleCount = 0;
-            chips.forEach((chip) => {
-                const name = chip.dataset.topicName || '';
-                const match = query === '' || name.includes(query);
-                chip.style.display = match ? 'inline-flex' : 'none';
-                if (match) visibleCount += 1;
-            });
-
-            if (emptyMessage) emptyMessage.style.display = visibleCount === 0 ? 'block' : 'none';
-        });
-    });
+    sharedTopicSearch?.addEventListener('input', applySharedTopicSearch);
 
     refreshSubjects();
 })();
