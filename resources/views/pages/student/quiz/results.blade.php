@@ -89,6 +89,18 @@
                         @else
                             <p class="muted js-answer-ai-meta" style="margin:0;display:none"></p>
                         @endif
+
+                        @if($status === \App\Models\StudentAnswer::STATUS_MANUAL_REVIEW)
+                            <p class="alert alert-error js-answer-manual-review" style="margin:0;">
+                                This answer requires manual review before grading is final.
+                            </p>
+                        @elseif(!empty(data_get($answer?->ai_result_json, 'error')))
+                            <p class="alert alert-error js-answer-manual-review" style="margin:0;">
+                                Automatic grading failed and your answer has been sent for admin review.
+                            </p>
+                        @else
+                            <p class="js-answer-manual-review" style="display:none;margin:0;"></p>
+                        @endif
                     @endif
                 @endif
 
@@ -167,6 +179,7 @@
                 const feedbackRow = card.querySelector('.js-answer-feedback');
                 const feedbackText = feedbackRow?.querySelector('span');
                 const aiMetaRow = card.querySelector('.js-answer-ai-meta');
+                const manualReviewRow = card.querySelector('.js-answer-manual-review');
                 const scoreRow = card.querySelector('.js-answer-score span');
 
                 if (statusPill) {
@@ -201,6 +214,16 @@
 
                 if (scoreRow) {
                     scoreRow.textContent = formatScore(answer.score);
+                }
+
+                if (manualReviewRow) {
+                    if (answer.grading_status === 'manual_review') {
+                        manualReviewRow.style.display = 'block';
+                        manualReviewRow.textContent = 'This answer requires manual review before grading is final.';
+                    } else {
+                        manualReviewRow.style.display = 'none';
+                        manualReviewRow.textContent = '';
+                    }
                 }
             };
 

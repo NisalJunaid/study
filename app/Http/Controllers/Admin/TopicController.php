@@ -88,6 +88,8 @@ class TopicController extends Controller
 
     public function update(UpdateTopicRequest $request, Topic $topic): RedirectResponse
     {
+        $this->authorize('update', $topic);
+
         $topic->update($request->validated());
 
         return redirect()

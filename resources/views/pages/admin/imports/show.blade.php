@@ -41,6 +41,12 @@
             @if($import->error_summary)
                 <div class="alert alert-error" style="margin-top:.5rem;">{{ $import->error_summary }}</div>
             @endif
+
+            @if(in_array($import->status, [\App\Models\Import::STATUS_FAILED, \App\Models\Import::STATUS_PARTIALLY_COMPLETED], true))
+                <div class="alert alert-error" style="margin-top:.5rem;">
+                    Import finished with failures. Check row-level errors below before retrying.
+                </div>
+            @endif
         </div>
     </div>
 

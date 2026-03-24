@@ -25,6 +25,17 @@ class BuildQuizAction
         };
     }
 
+    public function availableQuestionCountsByMode(Subject $subject, array $topicIds = [], ?string $difficulty = null): array
+    {
+        $countByType = $this->countByType($subject, $topicIds, $difficulty);
+
+        return [
+            Quiz::MODE_MCQ => $countByType[Question::TYPE_MCQ],
+            Quiz::MODE_THEORY => $countByType[Question::TYPE_THEORY],
+            Quiz::MODE_MIXED => $countByType[Question::TYPE_MCQ] + $countByType[Question::TYPE_THEORY],
+        ];
+    }
+
     public function execute(User $student, array $payload): Quiz
     {
         $subject = Subject::query()->active()->findOrFail($payload['subject_id']);
@@ -152,7 +163,19 @@ class BuildQuizAction
 
     private function countByType(Subject $subject, array $topicIds, ?string $difficulty): array
     {
-        $rows = $this->baseQuestionQuery($subject, $topicIds, $difficulty)
+        $query = Question::query()
+            ->availableForStudents()
+            ->where('subject_id', $subject->id);
+
+        if ($topicIds !== []) {
+            $query->whereIn('topic_id', $topicIds);
+        }
+
+        if ($difficulty !== null && $difficulty !== '') {
+            $query->where('difficulty', $difficulty);
+        }
+
+        $rows = $query
             ->select('type', DB::raw('count(*) as aggregate'))
             ->groupBy('type')
             ->pluck('aggregate', 'type');

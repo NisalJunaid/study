@@ -84,7 +84,9 @@ class ImportController extends Controller
         ])->save();
         ImportProgressUpdated::dispatch($import->id);
 
-        ProcessQuestionImportJob::dispatch($import->id)->afterCommit();
+        ProcessQuestionImportJob::dispatch($import->id)
+            ->onQueue(config('study.queues.imports'))
+            ->afterCommit();
 
         return redirect()
             ->route('admin.imports.show', $import)
