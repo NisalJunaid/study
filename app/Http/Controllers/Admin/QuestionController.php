@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Admin\UpsertQuestionAction;
+use App\Events\QuestionBankChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreQuestionRequest;
 use App\Http\Requests\Admin\UpdateQuestionRequest;
@@ -100,6 +101,7 @@ class QuestionController extends Controller
             user: $request->user(),
             image: $request->file('question_image')
         );
+        QuestionBankChanged::dispatch('created', $question->id);
 
         return redirect()
             ->route('admin.questions.edit', $question)
@@ -133,6 +135,7 @@ class QuestionController extends Controller
             question: $question,
             image: $request->file('question_image')
         );
+        QuestionBankChanged::dispatch('updated', $question->id);
 
         return redirect()
             ->route('admin.questions.index')
@@ -144,6 +147,7 @@ class QuestionController extends Controller
         $this->authorize('delete', $question);
 
         $question->delete();
+        QuestionBankChanged::dispatch('deleted', $question->id);
 
         return redirect()
             ->route('admin.questions.index')
@@ -158,6 +162,7 @@ class QuestionController extends Controller
             'is_published' => ! $question->is_published,
             'updated_by' => auth()->id(),
         ]);
+        QuestionBankChanged::dispatch('publish_toggled', $question->id);
 
         return redirect()
             ->route('admin.questions.index')

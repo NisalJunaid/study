@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ConfirmQuestionImportRequest;
 use App\Http\Requests\Admin\StoreQuestionImportRequest;
+use App\Events\ImportProgressUpdated;
 use App\Jobs\ProcessQuestionImportJob;
 use App\Models\Import;
 use App\Services\Import\QuestionImportService;
@@ -81,11 +82,12 @@ class ImportController extends Controller
             'imported_rows' => 0,
             'failed_rows' => max(0, $import->total_rows - $import->valid_rows),
         ])->save();
+        ImportProgressUpdated::dispatch($import->id);
 
         ProcessQuestionImportJob::dispatch($import->id)->afterCommit();
 
         return redirect()
             ->route('admin.imports.show', $import)
-            ->with('success', 'Import started. Refresh this page to monitor counts and row outcomes.');
+            ->with('success', 'Import started. This page updates live as progress events arrive.');
     }
 }

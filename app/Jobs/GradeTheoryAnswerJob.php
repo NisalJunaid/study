@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\Student\FinalizeQuizGradingAction;
+use App\Events\TheoryAnswerGraded;
 use App\Models\StudentAnswer;
 use App\Services\AI\TheoryGraderService;
 use Illuminate\Bus\Queueable;
@@ -96,6 +97,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
             ])->save();
         }
 
+        TheoryAnswerGraded::dispatch($answer->id);
         $finalizeQuizGradingAction->execute($answer->quizQuestion->quiz);
     }
 }

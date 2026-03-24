@@ -21,12 +21,14 @@
             </div>
         </div>
 
+        <p id="import-live-note" class="muted" style="display:none;margin-top:1rem;margin-bottom:0;">Live updates connected. Refresh to load newest row-level details.</p>
+
         <div class="card-grid" style="margin-top:1rem;">
-            <div class="card card-soft"><div class="muted">Status</div><h3 style="margin:.3rem 0 0">{{ $statusLabels[$import->status] ?? $import->status }}</h3></div>
-            <div class="card card-soft"><div class="muted">Total Rows</div><h3 style="margin:.3rem 0 0">{{ number_format($import->total_rows) }}</h3></div>
-            <div class="card card-soft"><div class="muted">Valid Rows</div><h3 style="margin:.3rem 0 0">{{ number_format($import->valid_rows) }}</h3></div>
-            <div class="card card-soft"><div class="muted">Imported Rows</div><h3 style="margin:.3rem 0 0">{{ number_format($import->imported_rows) }}</h3></div>
-            <div class="card card-soft"><div class="muted">Failed Rows</div><h3 style="margin:.3rem 0 0">{{ number_format($import->failed_rows) }}</h3></div>
+            <div class="card card-soft"><div class="muted">Status</div><h3 id="import-status-value" style="margin:.3rem 0 0">{{ $statusLabels[$import->status] ?? $import->status }}</h3></div>
+            <div class="card card-soft"><div class="muted">Total Rows</div><h3 id="import-total-rows" style="margin:.3rem 0 0">{{ number_format($import->total_rows) }}</h3></div>
+            <div class="card card-soft"><div class="muted">Valid Rows</div><h3 id="import-valid-rows" style="margin:.3rem 0 0">{{ number_format($import->valid_rows) }}</h3></div>
+            <div class="card card-soft"><div class="muted">Imported Rows</div><h3 id="import-imported-rows" style="margin:.3rem 0 0">{{ number_format($import->imported_rows) }}</h3></div>
+            <div class="card card-soft"><div class="muted">Failed Rows</div><h3 id="import-failed-rows" style="margin:.3rem 0 0">{{ number_format($import->failed_rows) }}</h3></div>
         </div>
 
         <div style="margin-top:1rem" class="stack-sm">
@@ -108,3 +110,50 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    <script>
+        (() => {
+            const teardown = window.createRealtimeChannel?.('import.{{ $import->id }}', {
+                'import.progress.updated': ({ import: payload }) => {
+                    if (!payload || Number(payload.id) !== {{ $import->id }}) {
+                        return;
+                    }
+
+                    const labels = @json($statusLabels);
+                    const noteEl = document.getElementById('import-live-note');
+                    const statusEl = document.getElementById('import-status-value');
+                    const totalRowsEl = document.getElementById('import-total-rows');
+                    const validRowsEl = document.getElementById('import-valid-rows');
+                    const importedRowsEl = document.getElementById('import-imported-rows');
+                    const failedRowsEl = document.getElementById('import-failed-rows');
+
+                    if (noteEl) {
+                        noteEl.style.display = 'block';
+                    }
+                    if (statusEl) {
+                        statusEl.textContent = labels[payload.status] ?? payload.status;
+                    }
+                    if (totalRowsEl) {
+                        totalRowsEl.textContent = Number(payload.total_rows ?? 0).toLocaleString();
+                    }
+                    if (validRowsEl) {
+                        validRowsEl.textContent = Number(payload.valid_rows ?? 0).toLocaleString();
+                    }
+                    if (importedRowsEl) {
+                        importedRowsEl.textContent = Number(payload.imported_rows ?? 0).toLocaleString();
+                    }
+                    if (failedRowsEl) {
+                        failedRowsEl.textContent = Number(payload.failed_rows ?? 0).toLocaleString();
+                    }
+                },
+            });
+
+            window.addEventListener('beforeunload', () => {
+                if (typeof teardown === 'function') {
+                    teardown();
+                }
+            });
+        })();
+    </script>
+@endpush

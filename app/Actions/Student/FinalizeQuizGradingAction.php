@@ -2,6 +2,7 @@
 
 namespace App\Actions\Student;
 
+use App\Events\QuizGradingProgressUpdated;
 use App\Models\Quiz;
 use App\Models\StudentAnswer;
 
@@ -33,6 +34,7 @@ class FinalizeQuizGradingAction
                 'status' => Quiz::STATUS_GRADING,
                 'graded_at' => null,
             ])->save();
+            QuizGradingProgressUpdated::dispatch($quiz->id);
 
             return $quiz;
         }
@@ -41,6 +43,7 @@ class FinalizeQuizGradingAction
             'status' => Quiz::STATUS_GRADED,
             'graded_at' => now(),
         ])->save();
+        QuizGradingProgressUpdated::dispatch($quiz->id);
 
         return $quiz;
     }
