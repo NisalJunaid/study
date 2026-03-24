@@ -79,6 +79,8 @@ class SubjectController extends Controller
 
     public function update(UpdateSubjectRequest $request, Subject $subject): RedirectResponse
     {
+        $this->authorize('update', $subject);
+
         $subject->update($request->validated());
 
         return redirect()

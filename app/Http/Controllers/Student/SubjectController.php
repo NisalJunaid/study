@@ -51,20 +51,22 @@ class SubjectController extends Controller
                 ->orderBy('name'),
         ]);
 
+        $modeCounts = $buildQuizAction->availableQuestionCountsByMode($subject);
+
         return view('pages.student.subjects.show', [
             'subject' => $subject,
             'quizModes' => [
                 Quiz::MODE_MCQ => [
                     'label' => 'MCQ only',
-                    'count' => $buildQuizAction->availableQuestionCount($subject, [], Quiz::MODE_MCQ, null),
+                    'count' => $modeCounts[Quiz::MODE_MCQ],
                 ],
                 Quiz::MODE_THEORY => [
                     'label' => 'Theory only',
-                    'count' => $buildQuizAction->availableQuestionCount($subject, [], Quiz::MODE_THEORY, null),
+                    'count' => $modeCounts[Quiz::MODE_THEORY],
                 ],
                 Quiz::MODE_MIXED => [
                     'label' => 'Mixed mode',
-                    'count' => $buildQuizAction->availableQuestionCount($subject, [], Quiz::MODE_MIXED, null),
+                    'count' => $modeCounts[Quiz::MODE_MIXED],
                 ],
             ],
         ]);
