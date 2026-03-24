@@ -1,62 +1,67 @@
-@extends('layouts.student', ['heading' => 'Quiz Results', 'subheading' => 'Review your answers, grading feedback, and next steps.'])
+@extends('layouts.student', ['heading' => 'Quiz Results', 'subheading' => 'Great effort — here is a clear breakdown of your performance.'])
 
 @section('content')
-<div class="stack-lg">
-    <section class="card">
-        <div class="row-between">
-            <div>
-                <h3 class="h2">{{ $quiz->subject?->name ?? 'General quiz' }}</h3>
-                <p class="muted text-sm mb-0">{{ strtoupper($quiz->mode) }} · {{ $quiz->total_questions }} question(s)</p>
-            </div>
-            <span id="quiz-status-pill" class="pill {{ $quiz->status === \App\Models\Quiz::STATUS_GRADED ? 'pill-success' : 'pill-muted' }}">{{ strtoupper($quiz->status) }}</span>
-        </div>
+@php
+    $awardedScore = $quiz->total_awarded_score !== null ? (float) $quiz->total_awarded_score : null;
+    $possibleScore = (float) $quiz->total_possible_score;
+    $scoreRatio = ($awardedScore !== null && $possibleScore > 0)
+        ? max(0, min(1, $awardedScore / $possibleScore))
+        : 0;
+    $accuracyPercent = ($awardedScore !== null && $possibleScore > 0)
+        ? round(($awardedScore / $possibleScore) * 100)
+        : null;
 
-        <div class="metric-grid" style="margin-top:1rem">
-            <div class="summary-tile">
-                <p class="muted mb-0 text-sm">Score</p>
-                <strong id="quiz-score-text">{{ $quiz->total_awarded_score !== null ? number_format((float) $quiz->total_awarded_score, 2) : 'Pending' }} / {{ number_format((float) $quiz->total_possible_score, 2) }}</strong>
-            </div>
-            <div class="summary-tile">
-                <p class="muted mb-0 text-sm">Submitted</p>
-                <strong>{{ optional($quiz->submitted_at)->format('M d, Y H:i') ?? 'N/A' }}</strong>
-            </div>
-            <div class="summary-tile">
-                <p class="muted mb-0 text-sm">Graded</p>
-                <strong id="quiz-graded-at-text">{{ optional($quiz->graded_at)->format('M d, Y H:i') ?? 'In progress' }}</strong>
-            </div>
-            <div class="summary-tile">
-                <p class="muted mb-0 text-sm">On-time answers</p>
-                <strong>
-                    @if($timingSummary['on_time_rate'] !== null)
-                        {{ $timingSummary['on_time'] }}/{{ $timingSummary['timed_answers'] }} ({{ number_format((float) $timingSummary['on_time_rate'], 1) }}%)
-                    @else
-                        Not tracked yet
-                    @endif
-                </strong>
-            </div>
-        </div>
+    $summaryTone = match (true) {
+        $accuracyPercent !== null && $accuracyPercent >= 80 => 'high',
+        $accuracyPercent !== null && $accuracyPercent >= 50 => 'mid',
+        default => 'low',
+    };
 
-        @if($timingSummary['on_time_rate'] !== null)
-            <p class="muted mb-0">
-                <strong>Timing insight:</strong>
-                @if($timingSummary['on_time_rate'] >= 75)
-                    Good time discipline — you stayed within ideal pacing on most questions.
-                @elseif($timingSummary['on_time_rate'] >= 45)
-                    Strong accuracy potential, but pacing is mixed. Tighten timing on longer questions.
-                @else
-                    You answered many questions late. Practice shorter timed sets to build pacing confidence.
-                @endif
-            </p>
-        @endif
+    $encouragement = match ($summaryTone) {
+        'high' => 'Excellent work! You are building strong mastery.',
+        'mid' => 'Nice progress! A little more practice will boost your score.',
+        default => 'Good effort — keep going, every attempt helps you improve.',
+    };
 
-        @if($quiz->status === \App\Models\Quiz::STATUS_GRADING)
-            <p id="quiz-live-status-note" class="muted" style="margin-top:.9rem;margin-bottom:0;">
-                Theory grading is still running. You can refresh this page for updated scores and detailed feedback.
-            </p>
-        @else
-            <p id="quiz-live-status-note" class="muted" style="margin-top:.9rem;margin-bottom:0;display:none;"></p>
-        @endif
-    </section>
+    $totalTimeSeconds = (int) $quiz->quizQuestions
+        ->pluck('studentAnswer.answer_duration_seconds')
+        ->filter(fn ($seconds) => $seconds !== null)
+        ->sum();
+
+    $formatDuration = static function (int $seconds): string {
+        if ($seconds <= 0) {
+            return 'Not recorded';
+        }
+
+        $hours = intdiv($seconds, 3600);
+        $minutes = intdiv($seconds % 3600, 60);
+        $remainingSeconds = $seconds % 60;
+
+        if ($hours > 0) {
+            return sprintf('%dh %02dm %02ds', $hours, $minutes, $remainingSeconds);
+        }
+
+        if ($minutes > 0) {
+            return sprintf('%dm %02ds', $minutes, $remainingSeconds);
+        }
+
+        return sprintf('%ds', $remainingSeconds);
+    };
+@endphp
+
+<div class="results-shell stack-lg">
+    <x-student.result-summary-card
+        :subject-name="$quiz->subject?->name ?? 'General quiz'"
+        :mode-label="strtoupper($quiz->mode)"
+        :question-count="$quiz->total_questions"
+        :score-text="$awardedScore !== null ? number_format($awardedScore, 2).' / '.number_format($possibleScore, 2) : 'Pending / '.number_format($possibleScore, 2)"
+        :accuracy-percent="$accuracyPercent"
+        :total-time="$formatDuration($totalTimeSeconds)"
+        :message="$encouragement"
+        :progress-percent="(int) round($scoreRatio * 100)"
+        :tone="$summaryTone"
+        :quiz-status="$quiz->status"
+    />
 
     <section class="stack-md">
         @foreach($quiz->quizQuestions as $quizQuestion)
@@ -64,80 +69,49 @@
                 $snapshot = $quizQuestion->question_snapshot ?? [];
                 $answer = $quizQuestion->studentAnswer;
                 $status = $answer?->grading_status ?? \App\Models\StudentAnswer::STATUS_PENDING;
-                $aiParsed = data_get($answer?->ai_result_json, 'parsed', []);
+                $scoreValue = $answer?->score;
+                $maxScore = (float) $quizQuestion->max_score;
+                $feedbackText = $answer?->feedback
+                    ?? (($snapshot['type'] ?? null) === \App\Models\Question::TYPE_MCQ ? ($snapshot['explanation'] ?: null) : null)
+                    ?? 'Keep practicing — review this topic and try again.';
+
+                $yourAnswerText = 'No answer submitted.';
+
+                if (($snapshot['type'] ?? null) === \App\Models\Question::TYPE_MCQ) {
+                    $selectedOption = collect($snapshot['options'] ?? [])->first(
+                        fn ($option) => (int) ($option['id'] ?? 0) === (int) ($answer?->selected_option_id ?? 0)
+                    );
+
+                    $yourAnswerText = $selectedOption
+                        ? (($selectedOption['option_key'] ?? '?').'. '.($selectedOption['option_text'] ?? ''))
+                        : 'No option selected.';
+                } elseif (! empty($answer?->answer_text)) {
+                    $yourAnswerText = $answer->answer_text;
+                }
+
+                $visualStatus = 'partial';
+                if (in_array($status, [\App\Models\StudentAnswer::STATUS_PENDING, \App\Models\StudentAnswer::STATUS_PROCESSING, \App\Models\StudentAnswer::STATUS_MANUAL_REVIEW], true)) {
+                    $visualStatus = 'partial';
+                } elseif ($scoreValue !== null && $maxScore > 0 && (float) $scoreValue >= $maxScore) {
+                    $visualStatus = 'correct';
+                } elseif ($scoreValue !== null && (float) $scoreValue <= 0) {
+                    $visualStatus = 'incorrect';
+                } elseif (($snapshot['type'] ?? null) === \App\Models\Question::TYPE_MCQ) {
+                    $visualStatus = $answer?->is_correct ? 'correct' : 'incorrect';
+                }
             @endphp
-            <article class="card stack-sm quiz-panel" data-answer-id="{{ $answer?->id }}">
-                <div class="row-between">
-                    <strong>Question {{ $quizQuestion->order_no }} · {{ strtoupper($snapshot['type'] ?? '-') }}</strong>
-                    <span class="pill js-answer-status-pill {{ in_array($status, [\App\Models\StudentAnswer::STATUS_GRADED, \App\Models\StudentAnswer::STATUS_OVERRIDDEN], true) ? 'pill-success' : 'pill-muted' }}">{{ strtoupper($status) }}</span>
-                </div>
 
-                <p class="mb-0">{{ $snapshot['question_text'] ?? '' }}</p>
-
-                @if(($snapshot['type'] ?? null) === \App\Models\Question::TYPE_MCQ)
-                    <div class="stack-sm">
-                        @foreach(($snapshot['options'] ?? []) as $option)
-                            @php
-                                $isSelected = (int) ($answer?->selected_option_id ?? 0) === (int) ($option['id'] ?? 0);
-                                $isCorrect = (bool) ($option['is_correct'] ?? false);
-                            @endphp
-                            <div class="result-option {{ $isSelected ? 'selected' : '' }} {{ $isCorrect ? 'correct' : '' }}">
-                                <span><strong>{{ $option['option_key'] ?? '?' }}.</strong> {{ $option['option_text'] ?? '' }}</span>
-                                <span class="muted text-sm">
-                                    {{ $isSelected ? 'Your choice' : '' }}
-                                    {{ $isSelected && $isCorrect ? ' · Correct' : '' }}
-                                    {{ $isSelected && ! $isCorrect ? ' · Incorrect' : '' }}
-                                    {{ ! $isSelected && $isCorrect ? 'Correct answer' : '' }}
-                                </span>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    <p class="muted mb-0"><strong>Explanation:</strong> {{ $snapshot['explanation'] ?: 'No explanation provided.' }}</p>
-                @else
-                    <p class="muted mb-0" style="white-space:pre-wrap;"><strong>Your answer:</strong> {{ $answer?->answer_text ?: 'No answer submitted.' }}</p>
-
-                    @if(in_array($status, [\App\Models\StudentAnswer::STATUS_PENDING, \App\Models\StudentAnswer::STATUS_PROCESSING], true))
-                        <p class="muted js-answer-pending-message" style="margin:0">Theory grading pending. Detailed feedback will appear once grading completes.</p>
-                        <p class="muted js-answer-feedback" style="white-space:pre-wrap;margin:0;display:none"><strong>Feedback:</strong> <span></span></p>
-                        <p class="muted js-answer-ai-meta" style="margin:0;display:none"></p>
-                    @else
-                        <p class="muted js-answer-pending-message" style="margin:0;display:none"></p>
-                        <p class="muted js-answer-feedback" style="white-space:pre-wrap;margin:0"><strong>Feedback:</strong> <span>{{ $answer?->feedback ?: 'No feedback yet.' }}</span></p>
-                        @if(!empty($aiParsed))
-                            <p class="muted js-answer-ai-meta" style="margin:0">
-                                Verdict: {{ strtoupper((string) ($aiParsed['verdict'] ?? 'n/a')) }}
-                                · Confidence: {{ $aiParsed['confidence'] ?? 'N/A' }}
-                            </p>
-                        @else
-                            <p class="muted js-answer-ai-meta" style="margin:0;display:none"></p>
-                        @endif
-
-                        @if($status === \App\Models\StudentAnswer::STATUS_MANUAL_REVIEW)
-                            <p class="alert alert-error js-answer-manual-review" style="margin:0;">
-                                This answer requires manual review before grading is final.
-                            </p>
-                        @elseif(!empty(data_get($answer?->ai_result_json, 'error')))
-                            <p class="alert alert-error js-answer-manual-review" style="margin:0;">
-                                Automatic grading failed and your answer has been sent for admin review.
-                            </p>
-                        @else
-                            <p class="js-answer-manual-review" style="display:none;margin:0;"></p>
-                        @endif
-                    @endif
-                @endif
-
-                <p class="muted js-answer-score" style="margin:0"><strong>Score:</strong> <span>{{ $answer?->score !== null ? number_format((float) $answer->score, 2) : 'Pending' }}</span> / {{ number_format((float) $quizQuestion->max_score, 2) }}</p>
-                <p class="muted" style="margin:0">
-                    <strong>Timing:</strong>
-                    @if($answer?->answer_duration_seconds !== null)
-                        {{ $answer->answer_duration_seconds }}s / ideal {{ $answer->ideal_time_seconds ?? ($snapshot['ideal_time_seconds'] ?? '-') }}s
-                        · {{ $answer->answered_on_time ? 'On time' : 'Delayed' }}
-                    @else
-                        Not recorded
-                    @endif
-                </p>
-            </article>
+            <x-student.question-result-card
+                :question-number="$quizQuestion->order_no"
+                :question-text="$snapshot['question_text'] ?? ''"
+                :answer-text="$yourAnswerText"
+                :feedback-text="$feedbackText"
+                :score-text="$scoreValue !== null ? number_format((float) $scoreValue, 2) : 'Pending'"
+                :max-score="number_format($maxScore, 2)"
+                :status="$visualStatus"
+                :answer-id="$answer?->id"
+                :is-pending="in_array($status, [\App\Models\StudentAnswer::STATUS_PENDING, \App\Models\StudentAnswer::STATUS_PROCESSING], true)"
+            />
         @endforeach
     </section>
 </div>
@@ -148,19 +122,27 @@
         (() => {
             const quizStatusPill = document.getElementById('quiz-status-pill');
             const quizScoreText = document.getElementById('quiz-score-text');
-            const quizGradedAtText = document.getElementById('quiz-graded-at-text');
-            const quizStatusNote = document.getElementById('quiz-live-status-note');
+            const quizAccuracyText = document.getElementById('quiz-accuracy-text');
+            const quizProgressBar = document.getElementById('quiz-score-progress');
 
             const formatScore = (value) => value === null || typeof value === 'undefined'
                 ? 'Pending'
                 : Number(value).toFixed(2);
 
-            const formatDateTime = (isoValue) => {
-                if (!isoValue) {
-                    return 'In progress';
+            const scorePercent = (score, total) => {
+                const safeTotal = Number(total ?? 0);
+                const safeScore = Number(score ?? 0);
+                if (safeTotal <= 0) {
+                    return 0;
                 }
 
-                return new Date(isoValue).toLocaleString();
+                return Math.max(0, Math.min(100, Math.round((safeScore / safeTotal) * 100)));
+            };
+
+            const summaryToneClass = (percent) => {
+                if (percent >= 80) return 'result-tone-high';
+                if (percent >= 50) return 'result-tone-mid';
+                return 'result-tone-low';
             };
 
             const updateQuizSummary = (quiz) => {
@@ -168,10 +150,14 @@
                     return;
                 }
 
+                const percent = scorePercent(quiz.total_awarded_score, quiz.total_possible_score);
+
                 if (quizStatusPill) {
-                    quizStatusPill.textContent = String(quiz.status ?? '').toUpperCase();
-                    quizStatusPill.classList.remove('pill-success', 'pill-muted');
-                    quizStatusPill.classList.add(quiz.status === 'graded' ? 'pill-success' : 'pill-muted');
+                    quizStatusPill.textContent = quiz.status === 'grading'
+                        ? 'Still grading'
+                        : quiz.status === 'graded'
+                            ? 'Final score'
+                            : 'In progress';
                 }
 
                 if (quizScoreText) {
@@ -179,21 +165,33 @@
                     quizScoreText.textContent = `${formatScore(quiz.total_awarded_score)} / ${maxScoreText}`;
                 }
 
-                if (quizGradedAtText) {
-                    quizGradedAtText.textContent = formatDateTime(quiz.graded_at);
+                if (quizAccuracyText) {
+                    quizAccuracyText.textContent = `${percent}% accuracy`;
                 }
 
-                if (quizStatusNote) {
-                    if (quiz.status === 'grading') {
-                        quizStatusNote.style.display = 'block';
-                        quizStatusNote.textContent = `Theory grading in progress (${quiz.theory_completed ?? 0}/${quiz.theory_total ?? 0} completed).`;
-                    } else if (quiz.status === 'graded') {
-                        quizStatusNote.style.display = 'block';
-                        quizStatusNote.textContent = 'Theory grading finished. Results are now final unless manually reviewed.';
-                    } else {
-                        quizStatusNote.style.display = 'none';
+                if (quizProgressBar) {
+                    quizProgressBar.style.width = `${percent}%`;
+                    const summaryCard = quizProgressBar.closest('.result-summary-card');
+                    if (summaryCard) {
+                        summaryCard.classList.remove('result-tone-high', 'result-tone-mid', 'result-tone-low');
+                        summaryCard.classList.add(summaryToneClass(percent));
                     }
                 }
+            };
+
+            const cardStatusFromAnswer = (answer) => {
+                if (['pending', 'processing', 'manual_review'].includes(answer.grading_status)) {
+                    return 'partial';
+                }
+
+                if (typeof answer.score !== 'undefined' && answer.score !== null) {
+                    if (Number(answer.score) <= 0) return 'incorrect';
+                    if (answer.max_score && Number(answer.score) >= Number(answer.max_score)) return 'correct';
+                }
+
+                if (answer.is_correct === true) return 'correct';
+                if (answer.is_correct === false) return 'incorrect';
+                return 'partial';
             };
 
             const updateTheoryAnswerCard = (answer) => {
@@ -206,18 +204,28 @@
                     return;
                 }
 
-                const statusPill = card.querySelector('.js-answer-status-pill');
+                const statusBadge = card.querySelector('.js-answer-status-badge');
                 const pendingMessage = card.querySelector('.js-answer-pending-message');
-                const feedbackRow = card.querySelector('.js-answer-feedback');
-                const feedbackText = feedbackRow?.querySelector('span');
-                const aiMetaRow = card.querySelector('.js-answer-ai-meta');
-                const manualReviewRow = card.querySelector('.js-answer-manual-review');
-                const scoreRow = card.querySelector('.js-answer-score span');
+                const feedbackText = card.querySelector('.js-answer-feedback-text');
+                const scoreText = card.querySelector('.js-answer-score-text');
+                const icon = card.querySelector('.js-answer-status-icon');
 
-                if (statusPill) {
-                    statusPill.textContent = String(answer.grading_status ?? '').toUpperCase();
-                    statusPill.classList.remove('pill-success', 'pill-muted');
-                    statusPill.classList.add(['graded', 'overridden'].includes(answer.grading_status) ? 'pill-success' : 'pill-muted');
+                const visualStatus = cardStatusFromAnswer(answer);
+                card.classList.remove('result-card-correct', 'result-card-incorrect', 'result-card-partial');
+                card.classList.add(`result-card-${visualStatus}`);
+
+                if (statusBadge) {
+                    statusBadge.classList.remove('result-status-correct', 'result-status-incorrect', 'result-status-partial');
+                    statusBadge.classList.add(`result-status-${visualStatus}`);
+                    statusBadge.textContent = visualStatus === 'correct'
+                        ? 'Correct'
+                        : visualStatus === 'incorrect'
+                            ? 'Not quite'
+                            : 'Partially graded';
+                }
+
+                if (icon) {
+                    icon.textContent = visualStatus === 'correct' ? '✅' : visualStatus === 'incorrect' ? '❌' : '⚠️';
                 }
 
                 const isPending = ['pending', 'processing'].includes(answer.grading_status);
@@ -226,36 +234,12 @@
                     pendingMessage.style.display = isPending ? 'block' : 'none';
                 }
 
-                if (feedbackRow) {
-                    feedbackRow.style.display = isPending ? 'none' : 'block';
-                }
-
                 if (feedbackText && !isPending) {
-                    feedbackText.textContent = answer.feedback || 'No feedback yet.';
+                    feedbackText.textContent = answer.feedback || 'Keep practicing — review this topic and try again.';
                 }
 
-                const parsed = answer.ai_result_json?.parsed || {};
-                if (aiMetaRow) {
-                    if (!isPending && parsed.verdict) {
-                        aiMetaRow.style.display = 'block';
-                        aiMetaRow.textContent = `Verdict: ${String(parsed.verdict).toUpperCase()} · Confidence: ${parsed.confidence ?? 'N/A'}`;
-                    } else {
-                        aiMetaRow.style.display = 'none';
-                    }
-                }
-
-                if (scoreRow) {
-                    scoreRow.textContent = formatScore(answer.score);
-                }
-
-                if (manualReviewRow) {
-                    if (answer.grading_status === 'manual_review') {
-                        manualReviewRow.style.display = 'block';
-                        manualReviewRow.textContent = 'This answer requires manual review before grading is final.';
-                    } else {
-                        manualReviewRow.style.display = 'none';
-                        manualReviewRow.textContent = '';
-                    }
+                if (scoreText) {
+                    scoreText.textContent = formatScore(answer.score);
                 }
             };
 
