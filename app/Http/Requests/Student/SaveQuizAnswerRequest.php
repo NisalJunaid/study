@@ -22,6 +22,11 @@ class SaveQuizAnswerRequest extends FormRequest
         return [
             'selected_option_id' => ['nullable', 'integer'],
             'answer_text' => ['nullable', 'string'],
+            'question_started_at' => ['nullable', 'date'],
+            'answered_at' => ['nullable', 'date'],
+            'ideal_time_seconds' => ['nullable', 'integer', 'min:1', 'max:3600'],
+            'answer_duration_seconds' => ['nullable', 'integer', 'min:0', 'max:3600'],
+            'answered_on_time' => ['nullable', 'boolean'],
         ];
     }
 

@@ -63,6 +63,7 @@ class AccessControlAndTheoryOverrideTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.quiz.store'), [
+                'level' => $subject->level,
                 'subject_id' => $subject->id,
                 'topic_ids' => [$topic->id],
                 'mode' => Quiz::MODE_THEORY,

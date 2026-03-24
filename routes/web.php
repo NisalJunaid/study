@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\TheoryReviewController;
 use App\Http\Controllers\Admin\TopicController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Student\HistoryController as StudentHistoryController;
+use App\Http\Controllers\Student\LevelController as StudentLevelController;
 use App\Http\Controllers\Student\ProgressController as StudentProgressController;
 use App\Http\Controllers\Student\QuizController as StudentQuizController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
@@ -30,10 +31,12 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'role:student'])->group(function () {
     Route::get('/dashboard', fn () => view('pages.student.dashboard'))->name('student.dashboard');
-    Route::get('/subjects', [StudentSubjectController::class, 'index'])->name('student.subjects.index');
-    Route::get('/subjects/{subject}', [StudentSubjectController::class, 'show'])->name('student.subjects.show');
+    Route::get('/levels', [StudentLevelController::class, 'index'])->name('student.levels.index');
+    Route::get('/levels/{level}/subjects', [StudentSubjectController::class, 'indexByLevel'])->name('student.levels.subjects.index');
+    Route::get('/subjects', fn () => redirect()->route('student.levels.index'))->name('student.subjects.index');
 
-    Route::get('/quiz/create', [StudentQuizController::class, 'create'])->name('student.quiz.builder');
+    Route::get('/quiz/create', fn () => redirect()->route('student.quiz.setup'))->name('student.quiz.builder');
+    Route::get('/quiz/setup', [StudentQuizController::class, 'create'])->name('student.quiz.setup');
     Route::post('/quiz', [StudentQuizController::class, 'store'])->name('student.quiz.store');
     Route::get('/quiz/{quiz}', [StudentQuizController::class, 'show'])->name('student.quiz.take');
     Route::put('/quiz/{quiz}/questions/{quizQuestion}/answer', [StudentQuizController::class, 'saveAnswer'])->name('student.quiz.answer.save');

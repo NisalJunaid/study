@@ -20,8 +20,16 @@ class QuizController extends Controller
 {
     public function create(): View
     {
+        $selectedLevel = request()->string('level')->toString();
+        if (! in_array($selectedLevel, Subject::levels(), true)) {
+            $selectedLevel = Subject::LEVEL_O;
+        }
+
+        $selectedSubjectId = (int) request()->integer('subject_id');
+
         $subjects = Subject::query()
             ->active()
+            ->forLevel($selectedLevel)
             ->with([
                 'topics' => fn ($query) => $query->active()->orderBy('sort_order')->orderBy('name'),
             ])
@@ -30,9 +38,19 @@ class QuizController extends Controller
             ])
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get(['id', 'name', 'description', 'color']);
+            ->get(['id', 'name', 'description', 'color', 'level']);
+
+        if ($selectedSubjectId > 0 && ! $subjects->contains('id', $selectedSubjectId)) {
+            $selectedSubjectId = 0;
+        }
 
         return view('pages.student.quiz.builder', [
+            'levels' => collect(Subject::levels())->map(fn (string $level) => [
+                'value' => $level,
+                'label' => Subject::levelLabel($level),
+            ])->all(),
+            'selectedLevel' => $selectedLevel,
+            'selectedSubjectId' => $selectedSubjectId,
             'subjects' => $subjects,
             'difficulties' => ['easy', 'medium', 'hard'],
             'modes' => [
@@ -40,6 +58,7 @@ class QuizController extends Controller
                 Quiz::MODE_THEORY => 'Theory',
                 Quiz::MODE_MIXED => 'Mixed',
             ],
+            'defaultQuestionCount' => 50,
         ]);
     }
 
@@ -68,7 +87,7 @@ class QuizController extends Controller
             'subject:id,name',
             'quizQuestions' => fn ($query) => $query
                 ->orderBy('order_no')
-                ->with('studentAnswer:id,quiz_question_id,selected_option_id,answer_text,grading_status,updated_at'),
+                ->with('studentAnswer:id,quiz_question_id,selected_option_id,answer_text,grading_status,updated_at,question_started_at,answered_at,ideal_time_seconds,answer_duration_seconds,answered_on_time'),
         ]);
 
         return view('pages.student.quiz.take', [
@@ -120,13 +139,28 @@ class QuizController extends Controller
             'quizQuestions' => fn ($query) => $query
                 ->orderBy('order_no')
                 ->with([
-                    'studentAnswer:id,quiz_question_id,selected_option_id,answer_text,is_correct,score,feedback,grading_status,ai_result_json,graded_at',
+                    'studentAnswer:id,quiz_question_id,selected_option_id,answer_text,is_correct,score,feedback,grading_status,ai_result_json,graded_at,question_started_at,answered_at,ideal_time_seconds,answer_duration_seconds,answered_on_time',
                     'studentAnswer.selectedOption:id,option_key,option_text',
                 ]),
         ]);
 
+        $timedAnswers = $quiz->quizQuestions
+            ->pluck('studentAnswer')
+            ->filter(fn ($answer) => $answer !== null && $answer->answer_duration_seconds !== null);
+
+        $answeredOnTimeCount = $timedAnswers->where('answered_on_time', true)->count();
+        $answeredLateCount = max(0, $timedAnswers->count() - $answeredOnTimeCount);
+
         return view('pages.student.quiz.results', [
             'quiz' => $quiz,
+            'timingSummary' => [
+                'timed_answers' => $timedAnswers->count(),
+                'on_time' => $answeredOnTimeCount,
+                'late' => $answeredLateCount,
+                'on_time_rate' => $timedAnswers->count() > 0
+                    ? round(($answeredOnTimeCount / $timedAnswers->count()) * 100, 1)
+                    : null,
+            ],
         ]);
     }
 }

@@ -22,6 +22,11 @@ class SaveQuizAnswerAction
             'ai_result_json' => null,
             'graded_by' => null,
             'graded_at' => null,
+            'question_started_at' => $payload['question_started_at'] ?? null,
+            'answered_at' => $payload['answered_at'] ?? null,
+            'ideal_time_seconds' => $payload['ideal_time_seconds'] ?? null,
+            'answer_duration_seconds' => $payload['answer_duration_seconds'] ?? null,
+            'answered_on_time' => $payload['answered_on_time'] ?? null,
         ];
 
         if ($questionType === 'mcq') {

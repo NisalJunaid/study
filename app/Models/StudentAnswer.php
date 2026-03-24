@@ -27,6 +27,11 @@ class StudentAnswer extends Model
         'feedback',
         'grading_status',
         'ai_result_json',
+        'question_started_at',
+        'answered_at',
+        'ideal_time_seconds',
+        'answer_duration_seconds',
+        'answered_on_time',
         'graded_by',
         'graded_at',
     ];
@@ -35,6 +40,11 @@ class StudentAnswer extends Model
         'is_correct' => 'boolean',
         'score' => 'decimal:2',
         'ai_result_json' => 'array',
+        'question_started_at' => 'datetime',
+        'answered_at' => 'datetime',
+        'ideal_time_seconds' => 'integer',
+        'answer_duration_seconds' => 'integer',
+        'answered_on_time' => 'boolean',
         'graded_at' => 'datetime',
     ];
 

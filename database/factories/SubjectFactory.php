@@ -20,6 +20,7 @@ class SubjectFactory extends Factory
         return [
             'name' => $name,
             'slug' => Str::slug($name),
+            'level' => fake()->randomElement(Subject::levels()),
             'description' => fake()->sentence(),
             'color' => fake()->hexColor(),
             'icon' => null,

@@ -11,6 +11,13 @@ use Illuminate\Validation\Validator;
 
 class StoreQuizRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'question_count' => $this->input('question_count', 50),
+        ]);
+    }
+
     public function authorize(): bool
     {
         return $this->user() !== null && ! $this->user()->isAdmin();
@@ -19,11 +26,12 @@ class StoreQuizRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'level' => ['required', Rule::in(Subject::levels())],
             'subject_id' => ['required', 'integer', Rule::exists('subjects', 'id')->where('is_active', true)],
             'topic_ids' => ['nullable', 'array'],
             'topic_ids.*' => ['integer', Rule::exists('topics', 'id')->where('is_active', true)],
             'mode' => ['required', Rule::in([Quiz::MODE_MCQ, Quiz::MODE_THEORY, Quiz::MODE_MIXED])],
-            'question_count' => ['required', 'integer', 'min:1', 'max:50'],
+            'question_count' => ['required', 'integer', 'min:1', 'max:100'],
             'difficulty' => ['nullable', Rule::in(['easy', 'medium', 'hard'])],
         ];
     }
@@ -38,6 +46,12 @@ class StoreQuizRequest extends FormRequest
             $subject = Subject::query()->active()->find($this->integer('subject_id'));
 
             if (! $subject) {
+                return;
+            }
+
+            if ($subject->level !== $this->string('level')->toString()) {
+                $validator->errors()->add('subject_id', 'The selected subject does not belong to the chosen level.');
+
                 return;
             }
 

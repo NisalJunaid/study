@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Subject;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -32,6 +33,7 @@ class UpdateSubjectRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique('subjects', 'name')->ignore($subjectId)],
             'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('subjects', 'slug')->ignore($subjectId)],
+            'level' => ['required', 'string', Rule::in(Subject::levels())],
             'description' => ['nullable', 'string'],
             'color' => ['nullable', 'string', 'max:50'],
             'icon' => ['nullable', 'string', 'max:100'],

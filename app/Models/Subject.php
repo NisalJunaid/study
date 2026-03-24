@@ -11,9 +11,13 @@ class Subject extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public const LEVEL_O = 'o_level';
+    public const LEVEL_A = 'a_level';
+
     protected $fillable = [
         'name',
         'slug',
+        'level',
         'description',
         'color',
         'icon',
@@ -24,6 +28,23 @@ class Subject extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    public static function levels(): array
+    {
+        return [
+            self::LEVEL_O,
+            self::LEVEL_A,
+        ];
+    }
+
+    public static function levelLabel(string $level): string
+    {
+        return match ($level) {
+            self::LEVEL_A => "A'Level",
+            self::LEVEL_O => "O'Level",
+            default => ucfirst(str_replace('_', ' ', $level)),
+        };
+    }
 
     public function topics(): HasMany
     {
@@ -38,5 +59,10 @@ class Subject extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeForLevel($query, string $level)
+    {
+        return $query->where('level', $level);
     }
 }
