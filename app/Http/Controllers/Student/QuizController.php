@@ -25,7 +25,7 @@ class QuizController extends Controller
             $selectedLevel = Subject::LEVEL_O;
         }
 
-        $selectedSubjectId = (int) request()->integer('subject_id');
+        $oldMulti = request()->boolean('multi_subject_mode', old('multi_subject_mode', false));
 
         $subjects = Subject::query()
             ->active()
@@ -40,9 +40,24 @@ class QuizController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'description', 'color', 'level']);
 
+        $selectedSubjectIds = collect(old('subject_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $selectedSubjectId = (int) old('subject_id', request()->integer('subject_id'));
         if ($selectedSubjectId > 0 && ! $subjects->contains('id', $selectedSubjectId)) {
             $selectedSubjectId = 0;
         }
+
+        if (! $oldMulti && $selectedSubjectId > 0) {
+            $selectedSubjectIds = collect([$selectedSubjectId]);
+        }
+
+        $selectedSubjectIds = $selectedSubjectIds
+            ->filter(fn (int $id) => $subjects->contains('id', $id))
+            ->values();
 
         return view('pages.student.quiz.builder', [
             'levels' => collect(Subject::levels())->map(fn (string $level) => [
@@ -51,6 +66,7 @@ class QuizController extends Controller
             ])->all(),
             'selectedLevel' => $selectedLevel,
             'selectedSubjectId' => $selectedSubjectId,
+            'selectedSubjectIds' => $selectedSubjectIds->all(),
             'subjects' => $subjects,
             'difficulties' => ['easy', 'medium', 'hard'],
             'modes' => [
@@ -59,6 +75,7 @@ class QuizController extends Controller
                 Quiz::MODE_MIXED => 'Mixed',
             ],
             'defaultQuestionCount' => 50,
+            'multiSubjectMode' => $oldMulti,
         ]);
     }
 
@@ -105,17 +122,25 @@ class QuizController extends Controller
 
         abort_unless($quizQuestion->quiz_id === $quiz->id, 404);
 
-        $savedAnswer = $saveQuizAnswerAction->execute(
-            quiz: $quiz,
-            quizQuestion: $quizQuestion,
-            studentId: $request->user()->id,
-            payload: $request->validated()
-        );
+        try {
+            $savedAnswer = $saveQuizAnswerAction->execute(
+                quiz: $quiz,
+                quizQuestion: $quizQuestion,
+                studentId: $request->user()->id,
+                payload: $request->validated()
+            );
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'status' => 'locked',
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
 
         return response()->json([
             'status' => 'saved',
             'saved_at' => optional($savedAnswer->updated_at)->toIso8601String(),
             'grading_status' => $savedAnswer->grading_status,
+            'is_locked' => $savedAnswer->answered_at !== null,
         ]);
     }
 

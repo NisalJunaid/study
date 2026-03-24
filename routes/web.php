@@ -30,7 +30,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'role:student'])->group(function () {
-    Route::get('/dashboard', fn () => view('pages.student.dashboard'))->name('student.dashboard');
+    Route::get('/dashboard', fn () => redirect()->route('student.quiz.setup'))->name('student.dashboard');
     Route::get('/levels', [StudentLevelController::class, 'index'])->name('student.levels.index');
     Route::get('/levels/{level}/subjects', [StudentSubjectController::class, 'indexByLevel'])->name('student.levels.subjects.index');
     Route::get('/subjects', fn () => redirect()->route('student.levels.index'))->name('student.subjects.index');

@@ -13,8 +13,13 @@ class StoreQuizRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        $subjectIds = $this->input('subject_ids', []);
+
         $this->merge([
             'question_count' => $this->input('question_count', 50),
+            'multi_subject_mode' => $this->boolean('multi_subject_mode'),
+            'subject_ids' => is_array($subjectIds) ? array_values(array_unique(array_map('intval', $subjectIds))) : [],
+            'topic_ids' => collect($this->input('topic_ids', []))->map(fn ($id) => (int) $id)->unique()->values()->all(),
         ]);
     }
 
@@ -27,7 +32,10 @@ class StoreQuizRequest extends FormRequest
     {
         return [
             'level' => ['required', Rule::in(Subject::levels())],
-            'subject_id' => ['required', 'integer', Rule::exists('subjects', 'id')->where('is_active', true)],
+            'multi_subject_mode' => ['required', 'boolean'],
+            'subject_id' => ['nullable', 'integer', Rule::exists('subjects', 'id')->where('is_active', true)],
+            'subject_ids' => ['nullable', 'array'],
+            'subject_ids.*' => ['integer', Rule::exists('subjects', 'id')->where('is_active', true)],
             'topic_ids' => ['nullable', 'array'],
             'topic_ids.*' => ['integer', Rule::exists('topics', 'id')->where('is_active', true)],
             'mode' => ['required', Rule::in([Quiz::MODE_MCQ, Quiz::MODE_THEORY, Quiz::MODE_MIXED])],
@@ -43,35 +51,58 @@ class StoreQuizRequest extends FormRequest
                 return;
             }
 
-            $subject = Subject::query()->active()->find($this->integer('subject_id'));
+            $multiMode = $this->boolean('multi_subject_mode');
+            $subjectIds = $this->selectedSubjectIds();
 
-            if (! $subject) {
-                return;
-            }
-
-            if ($subject->level !== $this->string('level')->toString()) {
-                $validator->errors()->add('subject_id', 'The selected subject does not belong to the chosen level.');
+            if ($subjectIds === []) {
+                $validator->errors()->add('subject_id', 'Select at least one subject to continue.');
 
                 return;
             }
 
-            $topicIds = collect($this->input('topic_ids', []))->map(fn ($id) => (int) $id)->all();
-            $validTopicIds = $subject->topics()
+            if (! $multiMode && count($subjectIds) !== 1) {
+                $validator->errors()->add('subject_id', 'Single-subject mode only allows one subject.');
+
+                return;
+            }
+
+            $subjects = Subject::query()
                 ->active()
-                ->whereIn('id', $topicIds)
-                ->pluck('id')
+                ->whereIn('id', $subjectIds)
+                ->with(['topics' => fn ($query) => $query->active()->select('topics.id', 'topics.subject_id')])
+                ->get(['id', 'level']);
+
+            if ($subjects->count() !== count($subjectIds)) {
+                $validator->errors()->add('subject_id', 'One or more selected subjects are invalid.');
+
+                return;
+            }
+
+            $level = $this->string('level')->toString();
+            if ($subjects->contains(fn (Subject $subject) => $subject->level !== $level)) {
+                $validator->errors()->add('subject_id', 'Selected subjects must belong to the chosen level.');
+
+                return;
+            }
+
+            $validTopicIds = $subjects
+                ->flatMap(fn (Subject $subject) => $subject->topics->pluck('id'))
                 ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
                 ->all();
 
-            if (count($validTopicIds) !== count(array_unique($topicIds))) {
-                $validator->errors()->add('topic_ids', 'Selected topics must belong to the chosen subject.');
+            $topicIds = collect($this->input('topic_ids', []))->map(fn ($id) => (int) $id)->all();
+            $invalidTopicIds = array_values(array_diff($topicIds, $validTopicIds));
+            if ($invalidTopicIds !== []) {
+                $validator->errors()->add('topic_ids', 'Selected topics must belong to selected subject(s).');
 
                 return;
             }
 
             $available = app(BuildQuizAction::class)->availableQuestionCount(
-                subject: $subject,
-                topicIds: $validTopicIds,
+                subjectIds: $subjectIds,
+                topicIds: $topicIds,
                 mode: (string) $this->string('mode'),
                 difficulty: $this->filled('difficulty') ? (string) $this->string('difficulty') : null
             );
@@ -83,5 +114,33 @@ class StoreQuizRequest extends FormRequest
                 );
             }
         });
+    }
+
+    public function validated($key = null, $default = null): mixed
+    {
+        $validated = parent::validated();
+
+        $subjectIds = $this->selectedSubjectIds();
+
+        $validated['subject_ids'] = $subjectIds;
+        $validated['subject_id'] = count($subjectIds) === 1 ? $subjectIds[0] : null;
+
+        return $validated;
+    }
+
+    private function selectedSubjectIds(): array
+    {
+        if ($this->boolean('multi_subject_mode')) {
+            return collect($this->input('subject_ids', []))
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $subjectId = (int) $this->input('subject_id');
+
+        return $subjectId > 0 ? [$subjectId] : [];
     }
 }
