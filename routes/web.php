@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\SubjectController;
+use App\Http\Controllers\Admin\TheoryReviewController;
 use App\Http\Controllers\Admin\TopicController;
 use App\Http\Controllers\Student\QuizController as StudentQuizController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
@@ -43,5 +44,7 @@ Route::prefix('admin')
         Route::resource('questions', QuestionController::class)->except('show');
         Route::patch('questions/{question}/toggle-publish', [QuestionController::class, 'togglePublish'])->name('questions.toggle-publish');
         Route::get('/imports', fn () => view('pages.admin.imports.index'))->name('imports.index');
-        Route::get('/theory-reviews', fn () => view('pages.admin.theory-reviews.index'))->name('theory-reviews.index');
+        Route::get('/theory-reviews', [TheoryReviewController::class, 'index'])->name('theory-reviews.index');
+        Route::get('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'show'])->name('theory-reviews.show');
+        Route::put('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'update'])->name('theory-reviews.update');
     });

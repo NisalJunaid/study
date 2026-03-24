@@ -12,6 +12,7 @@ class SubmitQuizAction
     public function __construct(
         private readonly GradeMcqQuizAction $gradeMcqQuizAction,
         private readonly AggregateQuizScoresAction $aggregateQuizScoresAction,
+        private readonly QueueTheoryGradingAction $queueTheoryGradingAction,
     ) {
     }
 
@@ -51,6 +52,9 @@ class SubmitQuizAction
                     'grading_status' => StudentAnswer::STATUS_PENDING,
                     'is_correct' => null,
                     'score' => null,
+                    'feedback' => null,
+                    'ai_result_json' => null,
+                    'graded_by' => null,
                     'graded_at' => null,
                 ])->save();
 
@@ -69,10 +73,14 @@ class SubmitQuizAction
 
             $this->aggregateQuizScoresAction->execute($quiz);
 
+            $queuedCount = $hasTheoryQuestions
+                ? $this->queueTheoryGradingAction->execute($quiz)
+                : 0;
+
             return [
                 'quiz' => $quiz,
                 'message' => $hasTheoryQuestions
-                    ? 'Quiz submitted. MCQ graded now; theory answers are pending grading.'
+                    ? "Quiz submitted. MCQ graded now; {$queuedCount} theory answer(s) queued for grading."
                     : 'Quiz submitted and graded successfully.',
             ];
         });

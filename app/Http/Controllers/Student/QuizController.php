@@ -119,7 +119,7 @@ class QuizController extends Controller
             'subject:id,name',
             'quizQuestions' => fn ($query) => $query
                 ->orderBy('order_no')
-                ->with('studentAnswer:id,quiz_question_id,answer_text,is_correct,score,feedback,grading_status'),
+                ->with('studentAnswer:id,quiz_question_id,answer_text,is_correct,score,feedback,grading_status,ai_result_json,graded_at'),
         ]);
 
         return view('pages.student.quiz.results', [
