@@ -6,16 +6,16 @@
     <title>Focus Lab</title>
     @vite(['resources/css/app.css'])
 </head>
-<body style="display:grid;place-items:center;min-height:100vh;padding:2rem">
-    <section class="card" style="max-width:720px;width:100%">
+<body class="centered-screen">
+    <section class="card centered-shell">
         <span class="pill">O'Level Study Help</span>
         <h1 style="margin:.75rem 0">Focus Lab is ready</h1>
         <p class="muted">Sign in to continue to your dashboard. New users can register as students.</p>
 
-        <div style="display:flex;gap:.75rem;margin-top:1.25rem;flex-wrap:wrap">
+        <div class="actions-inline" style="justify-content:flex-start;margin-top:1.25rem;">
             <a href="{{ route('login') }}" class="btn btn-primary">Login</a>
             @if (Route::has('register'))
-                <a href="{{ route('register') }}" class="btn btn-secondary">Register</a>
+                <a href="{{ route('register') }}" class="btn">Register</a>
             @endif
         </div>
     </section>

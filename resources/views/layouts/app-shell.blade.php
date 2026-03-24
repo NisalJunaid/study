@@ -7,15 +7,27 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
-<div class="shell">
-    <aside class="sidebar">
-        <div class="brand">Focus Lab</div>
-        <p class="muted mt-0">{{ $navDescription ?? "O'Level Study Help" }}</p>
+<div class="shell" data-shell>
+    <button class="mobile-nav-trigger" type="button" aria-controls="app-sidebar" aria-expanded="false" data-nav-toggle>
+        ☰ Menu
+    </button>
+
+    <div class="sidebar-overlay" data-nav-overlay></div>
+
+    <aside class="sidebar" id="app-sidebar" data-sidebar>
+        <div class="sidebar-top row-between">
+            <div>
+                <div class="brand">Focus Lab</div>
+                <p class="muted mt-0">{{ $navDescription ?? "O'Level Study Help" }}</p>
+            </div>
+            <button class="mobile-nav-close" type="button" aria-label="Close navigation" data-nav-close>✕</button>
+        </div>
+
         @yield('sidebar')
     </aside>
 
     <main class="main">
-        <header class="topbar">
+        <header class="topbar card">
             <div class="section-title">
                 <h1 class="h0">{{ $heading ?? 'Dashboard' }}</h1>
                 <p class="muted">{{ $subheading ?? 'Build momentum with focused practice.' }}</p>
@@ -30,9 +42,55 @@
 
         @include('components.admin.flash')
 
-        @yield('content')
+        <section class="page-content">
+            @yield('content')
+        </section>
     </main>
 </div>
+
+<script>
+    (() => {
+        const shell = document.querySelector('[data-shell]');
+        if (!shell) return;
+
+        const sidebar = shell.querySelector('[data-sidebar]');
+        const overlay = shell.querySelector('[data-nav-overlay]');
+        const toggleButton = shell.querySelector('[data-nav-toggle]');
+        const closeButton = shell.querySelector('[data-nav-close]');
+
+        const closeNav = () => {
+            shell.classList.remove('nav-open');
+            toggleButton?.setAttribute('aria-expanded', 'false');
+        };
+
+        const openNav = () => {
+            shell.classList.add('nav-open');
+            toggleButton?.setAttribute('aria-expanded', 'true');
+        };
+
+        toggleButton?.addEventListener('click', () => {
+            if (shell.classList.contains('nav-open')) {
+                closeNav();
+                return;
+            }
+
+            openNav();
+        });
+
+        closeButton?.addEventListener('click', closeNav);
+        overlay?.addEventListener('click', closeNav);
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeNav();
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 1024) {
+                closeNav();
+            }
+        });
+    })();
+</script>
 @stack('scripts')
 </body>
 </html>

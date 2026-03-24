@@ -3,8 +3,8 @@
 @section('content')
 <div class="stack-lg">
     <section class="card">
-        <form method="GET" action="{{ route('admin.theory-reviews.index') }}" class="grid" style="gap:1rem;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end;">
-            <label>
+        <form method="GET" action="{{ route('admin.theory-reviews.index') }}" class="filter-row" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end;">
+            <label class="field">
                 <span>Status</span>
                 <select name="status">
                     <option value="">All statuses</option>
@@ -14,7 +14,7 @@
                 </select>
             </label>
 
-            <label style="display:flex;align-items:center;gap:.5rem;">
+            <label class="checkbox-row" style="min-height: 46px; align-items: center;">
                 <input type="checkbox" name="manual_only" value="1" @checked($filters['manual_only'])>
                 <span>Manual review only</span>
             </label>
@@ -26,7 +26,8 @@
         </form>
     </section>
 
-    <section class="card" style="padding:0;overflow:auto;">
+    <section class="card" style="padding:0;">
+        <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
@@ -62,6 +63,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
     </section>
 
     {{ $reviews->links() }}
