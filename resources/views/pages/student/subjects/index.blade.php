@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Select Subject', 'subheading' => "Step 2 for {$levelLabel}: choose one subject to continue."])
+@extends('layouts.student', ['heading' => 'Select a Subject', 'subheading' => "Step 2 for {$levelLabel}: choose a subject to continue."])
 
 @section('content')
 <div class="stack-lg">
@@ -26,11 +26,7 @@
 
                     <p class="muted mb-0">{{ $subject->description ?: 'Focused exam practice by topic and difficulty.' }}</p>
 
-                    <div class="row-wrap">
-                        <span class="pill">{{ $subject->active_topics_count }} topics</span>
-                        <span class="pill">{{ $subject->mcq_questions_count }} MCQ</span>
-                        <span class="pill">{{ $subject->theory_questions_count }} theory</span>
-                    </div>
+                    <p class="muted text-sm mb-0">{{ $subject->active_topics_count }} topics · {{ $subject->mcq_questions_count }} MCQ · {{ $subject->theory_questions_count }} theory</p>
 
                     <a class="btn btn-primary" href="{{ route('student.quiz.setup', ['level' => $level, 'subject_id' => $subject->id]) }}">
                         Choose {{ $subject->name }}

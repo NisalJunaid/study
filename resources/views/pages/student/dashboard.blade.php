@@ -1,11 +1,11 @@
-@extends('layouts.student', ['heading' => 'Student Dashboard', 'subheading' => 'Start today\'s revision with confidence.'])
+@extends('layouts.student', ['heading' => 'Student Dashboard', 'subheading' => 'Plan your revision and keep your progress moving.'])
 
 @section('content')
 <div class="page-hero">
     <h2 class="h1">Welcome back 👋</h2>
     <p class="mb-0" style="opacity:.92">Pick a subject, start a quiz, and monitor weak areas over time.</p>
     <div class="actions-inline" style="margin-top:.8rem">
-        <a class="btn btn-primary" href="{{ route('student.levels.index') }}">Start Guided Quiz</a>
+        <a class="btn btn-primary" href="{{ route('student.levels.index') }}">Start Quiz Setup</a>
         <a class="btn" href="{{ route('student.history.index') }}">View History</a>
     </div>
 </div>

@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Build Your Quiz Mission', 'subheading' => 'Choose subjects, filter topics, tune settings, then launch.'])
+@extends('layouts.student', ['heading' => 'Build Your Quiz', 'subheading' => 'Choose subjects, optional topics, and settings for your next practice session.'])
 
 @section('content')
 @php
@@ -13,7 +13,7 @@
 <div class="stack-lg" id="guided-quiz-setup" data-multi-mode-initial="{{ $isMultiMode ? '1' : '0' }}">
     <section class="page-hero">
         <h2 class="h1">Subjects → Topics → Settings</h2>
-        <p class="mb-0" style="opacity:.92">Focus path unlocked. Pick your content and start a distraction-free quiz.</p>
+        <p class="mb-0" style="opacity:.92">Choose what you want to practice, then start your quiz.</p>
         <div class="row-wrap" style="margin-top:.65rem;">
             @foreach($levels as $level)
                 @if(in_array((string) $level['value'], $selectedLevelValues, true))
@@ -42,7 +42,7 @@
                 <div class="row-between">
                     <div>
                         <h3 class="h2">1) Select subject(s)</h3>
-                        <p class="muted text-sm mb-0">Choose one subject, or switch on multi-subject mode.</p>
+                        <p class="muted text-sm mb-0">Choose one subject, or enable multi-subject mode to combine them.</p>
                     </div>
                     <label class="toggle-row" style="gap:.55rem">
                         <span class="text-sm text-strong">Multi-subject mode</span>
@@ -87,7 +87,7 @@
 
             <section class="stack-sm section-block">
                 <h3 class="h2">2) Select topics <span class="muted text-sm">(Optional)</span></h3>
-                <p class="muted text-sm mb-0">Topics are grouped by subject with instant search and scrollable lists.</p>
+                <p class="muted text-sm mb-0">Topics are grouped by subject with quick search.</p>
 
                 <div class="stack-md" id="topic-groups">
                     @foreach($subjects as $subject)

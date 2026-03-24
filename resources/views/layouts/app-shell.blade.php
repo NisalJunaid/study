@@ -8,9 +8,12 @@
 </head>
 <body>
 <div class="shell" data-shell>
-    <header class="shell-topbar card">
-        <button class="menu-trigger" type="button" aria-controls="app-sidebar" aria-expanded="false" data-nav-toggle aria-label="Open menu">
-            ☰
+    <header class="shell-topbar card {{ $contentWidthClass ?? '' }}">
+        <button class="menu-trigger" type="button" aria-controls="app-sidebar" aria-expanded="false" data-nav-toggle aria-label="Open sidebar">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="3" y="5" width="5" height="14" rx="1.2"></rect>
+                <path d="M11 7.5h10M11 12h10M11 16.5h10" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+            </svg>
         </button>
 
         <a class="topbar-brand" href="{{ auth()->check() && auth()->user()->isAdmin() ? route('admin.dashboard') : route('student.dashboard') }}">Focus Lab</a>
@@ -53,7 +56,7 @@
 
     <main class="main">
         @if(!($minimalHeader ?? false))
-            <header class="topbar card">
+            <header class="topbar card {{ $contentWidthClass ?? '' }}">
                 <div class="section-title">
                     <h1 class="h0">{{ $heading ?? 'Dashboard' }}</h1>
                     <p class="muted">{{ $subheading ?? 'Build momentum with focused practice.' }}</p>
@@ -63,7 +66,7 @@
 
         @include('components.admin.flash')
 
-        <section class="page-content">
+        <section class="page-content {{ $contentWidthClass ?? '' }}">
             @yield('content')
         </section>
     </main>

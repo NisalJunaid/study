@@ -4,6 +4,7 @@
     'heading' => $heading ?? 'Student dashboard',
     'subheading' => $subheading ?? 'Track your progress and keep improving.',
     'minimalHeader' => $minimalHeader ?? false,
+    'contentWidthClass' => $contentWidthClass ?? 'content-shell',
 ])
 
 @section('sidebar')

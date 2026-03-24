@@ -757,8 +757,7 @@ label > textarea { resize: vertical; min-height: 120px; }
 }
 
 .results-shell {
-    max-width: min(920px, 100%);
-    margin: 0 auto;
+    width: 100%;
 }
 
 .result-summary-card {
@@ -958,8 +957,25 @@ label > textarea { resize: vertical; min-height: 120px; }
     border-radius: .65rem;
     width: 2.35rem;
     height: 2.35rem;
-    font-weight: 700;
+    padding: 0;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-trigger svg {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.menu-trigger svg rect {
+    fill: currentColor;
+}
+
+.menu-trigger:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
 }
 
 .topbar-user-menu {
@@ -1069,6 +1085,12 @@ label > textarea { resize: vertical; min-height: 120px; }
     padding: 1.15rem .95rem 1.75rem;
 }
 
+.content-shell {
+    width: min(980px, 100%);
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .nav-button {
     width: 100%;
     text-align: left;
@@ -1087,9 +1109,8 @@ label > textarea { resize: vertical; min-height: 120px; }
 
 .topic-group { padding: 1rem; }
 
-.level-home { max-width: min(980px, 100%); margin: 0 auto; }
+.level-home { width: 100%; }
 .level-hero { text-align: center; }
-.level-meta-row { margin-top: .7rem; display: flex; gap: .45rem; justify-content: center; flex-wrap: wrap; }
 .level-selector-shell { padding: 1.3rem; }
 .level-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .95rem; }
 
@@ -1128,8 +1149,16 @@ label > textarea { resize: vertical; min-height: 120px; }
 
 .level-badge {
     font-size: .74rem;
-    font-weight: 760;
-    color: #4338ca;
+    font-weight: 700;
+    color: #4f46e5;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 999px;
+    padding: .15rem .5rem;
+}
+
+.hide-continue #continue-to-subjects {
+    display: none;
 }
 
 .quiz-minimal-wrap {
