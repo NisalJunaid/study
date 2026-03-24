@@ -3,6 +3,7 @@
 namespace App\Services\Import;
 
 use App\Actions\Admin\UpsertQuestionAction;
+use App\Events\ImportProgressUpdated;
 use App\Models\Import;
 use App\Models\ImportRow;
 use App\Models\Question;
@@ -72,6 +73,7 @@ class QuestionImportService
             'imported_rows' => 0,
             'failed_rows' => 0,
         ])->save();
+        ImportProgressUpdated::dispatch($import->id);
 
         $import->importRows()->delete();
 
@@ -89,6 +91,7 @@ class QuestionImportService
                 'status' => Import::STATUS_FAILED,
                 'error_summary' => 'Missing required CSV columns: '.implode(', ', $missingHeaders),
             ])->save();
+            ImportProgressUpdated::dispatch($import->id);
 
             return;
         }
@@ -131,6 +134,7 @@ class QuestionImportService
             'failed_rows' => max(0, $totalRows - $validRows),
             'error_summary' => $totalRows === 0 ? 'The uploaded CSV has no data rows.' : null,
         ])->save();
+        ImportProgressUpdated::dispatch($import->id);
     }
 
     public function processImport(Import $import, User $admin): void
@@ -147,6 +151,7 @@ class QuestionImportService
             'failed_rows' => $import->total_rows - $import->valid_rows,
             'completed_at' => null,
         ])->save();
+        ImportProgressUpdated::dispatch($import->id);
 
         $importedCount = 0;
         $failedCount = max(0, $import->total_rows - $import->valid_rows);
@@ -189,6 +194,7 @@ class QuestionImportService
                 'imported_rows' => $importedCount,
                 'failed_rows' => $failedCount,
             ])->save();
+            ImportProgressUpdated::dispatch($import->id);
         }
 
         $status = $failedCount > 0 ? Import::STATUS_PARTIALLY_COMPLETED : Import::STATUS_COMPLETED;
@@ -199,6 +205,7 @@ class QuestionImportService
             'failed_rows' => $failedCount,
             'completed_at' => now(),
         ])->save();
+        ImportProgressUpdated::dispatch($import->id);
     }
 
     private function validateRow(array $row, Import $import): array

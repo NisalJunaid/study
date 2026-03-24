@@ -2,6 +2,7 @@
 
 namespace App\Actions\Student;
 
+use App\Events\QuizGradingProgressUpdated;
 use App\Models\Quiz;
 use App\Models\StudentAnswer;
 use Illuminate\Support\Facades\DB;
@@ -76,6 +77,8 @@ class SubmitQuizAction
             $queuedCount = $hasTheoryQuestions
                 ? $this->queueTheoryGradingAction->execute($quiz)
                 : 0;
+
+            QuizGradingProgressUpdated::dispatch($quiz->id);
 
             return [
                 'quiz' => $quiz,

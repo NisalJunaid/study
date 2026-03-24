@@ -5,7 +5,10 @@
 
 <div class="card stack-md">
     <div class="row-between">
-        <h3 style="margin:0">Questions</h3>
+        <div>
+            <h3 style="margin:0">Questions</h3>
+            <p id="question-bank-live-badge" class="muted" style="margin:.35rem 0 0;display:none;"></p>
+        </div>
         <a href="{{ route('admin.questions.create') }}" class="btn btn-primary">+ New Question</a>
     </div>
 
@@ -126,3 +129,28 @@
     @endif
 </div>
 @endsection
+
+@push('scripts')
+    <script>
+        (() => {
+            const badgeEl = document.getElementById('question-bank-live-badge');
+            const teardown = window.createRealtimeChannel?.('admin.questions', {
+                'question.bank.changed': (payload) => {
+                    if (!badgeEl) {
+                        return;
+                    }
+
+                    const action = String(payload.action || 'updated').replaceAll('_', ' ');
+                    badgeEl.style.display = 'block';
+                    badgeEl.textContent = `Question bank ${action} · ${payload.published_total ?? 0} published of ${payload.question_total ?? 0}. Refresh to load latest rows.`;
+                },
+            });
+
+            window.addEventListener('beforeunload', () => {
+                if (typeof teardown === 'function') {
+                    teardown();
+                }
+            });
+        })();
+    </script>
+@endpush
