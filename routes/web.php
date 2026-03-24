@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\TheoryReviewController;
 use App\Http\Controllers\Admin\TopicController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Student\HistoryController as StudentHistoryController;
 use App\Http\Controllers\Student\ProgressController as StudentProgressController;
 use App\Http\Controllers\Student\QuizController as StudentQuizController;
@@ -20,6 +21,12 @@ Route::get('/', function () {
         ? redirect()->route('admin.dashboard')
         : redirect()->route('student.dashboard');
 })->name('home');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
 
 Route::middleware(['auth', 'role:student'])->group(function () {
     Route::get('/dashboard', fn () => view('pages.student.dashboard'))->name('student.dashboard');
@@ -52,3 +59,5 @@ Route::prefix('admin')
         Route::get('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'show'])->name('theory-reviews.show');
         Route::put('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'update'])->name('theory-reviews.update');
     });
+
+require __DIR__.'/auth.php';
