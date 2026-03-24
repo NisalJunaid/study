@@ -116,10 +116,13 @@ class QuizController extends Controller
         $this->authorize('view', $quiz);
 
         $quiz->load([
-            'subject:id,name',
+            'subject:id,name,color',
             'quizQuestions' => fn ($query) => $query
                 ->orderBy('order_no')
-                ->with('studentAnswer:id,quiz_question_id,answer_text,is_correct,score,feedback,grading_status,ai_result_json,graded_at'),
+                ->with([
+                    'studentAnswer:id,quiz_question_id,selected_option_id,answer_text,is_correct,score,feedback,grading_status,ai_result_json,graded_at',
+                    'studentAnswer.selectedOption:id,option_key,option_text',
+                ]),
         ]);
 
         return view('pages.student.quiz.results', [

@@ -4,6 +4,8 @@ use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\TheoryReviewController;
 use App\Http\Controllers\Admin\TopicController;
+use App\Http\Controllers\Student\HistoryController as StudentHistoryController;
+use App\Http\Controllers\Student\ProgressController as StudentProgressController;
 use App\Http\Controllers\Student\QuizController as StudentQuizController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use Illuminate\Support\Facades\Route;
@@ -30,8 +32,8 @@ Route::middleware(['auth', 'role:student'])->group(function () {
     Route::post('/quiz/{quiz}/submit', [StudentQuizController::class, 'submit'])->name('student.quiz.submit');
     Route::get('/quiz/{quiz}/results', [StudentQuizController::class, 'results'])->name('student.quiz.results');
 
-    Route::get('/history', fn () => view('pages.student.history.index'))->name('student.history.index');
-    Route::get('/progress', fn () => view('pages.student.progress.index'))->name('student.progress.index');
+    Route::get('/history', [StudentHistoryController::class, 'index'])->name('student.history.index');
+    Route::get('/progress', StudentProgressController::class)->name('student.progress.index');
 });
 
 Route::prefix('admin')
