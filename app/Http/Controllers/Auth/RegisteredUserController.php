@@ -9,7 +9,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -36,12 +38,20 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => User::ROLE_STUDENT,
-        ]);
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->string('email')->lower()->value(),
+                'password' => Hash::make($request->password),
+                'role' => User::ROLE_STUDENT,
+            ]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            throw ValidationException::withMessages([
+                'email' => 'We could not create your account right now. Please try again shortly.',
+            ]);
+        }
 
         event(new Registered($user));
 
