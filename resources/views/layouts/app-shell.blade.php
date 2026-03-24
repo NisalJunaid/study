@@ -3,14 +3,24 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? "Focus Lab" }}</title>
+    <title>{{ $title ?? 'Focus Lab' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
 <div class="shell" data-shell>
-    <button class="mobile-nav-trigger" type="button" aria-controls="app-sidebar" aria-expanded="false" data-nav-toggle>
-        ☰ Menu
-    </button>
+    <header class="shell-topbar card">
+        <button class="menu-trigger" type="button" aria-controls="app-sidebar" aria-expanded="false" data-nav-toggle aria-label="Open menu">
+            ☰
+        </button>
+
+        <a class="topbar-brand" href="{{ auth()->check() && auth()->user()->isAdmin() ? route('admin.dashboard') : route('student.dashboard') }}">Focus Lab</a>
+
+        @auth
+            <div class="topbar-user muted text-sm">{{ auth()->user()->name }}</div>
+        @else
+            <div></div>
+        @endauth
+    </header>
 
     <div class="sidebar-overlay" data-nav-overlay></div>
 
@@ -27,18 +37,14 @@
     </aside>
 
     <main class="main">
-        <header class="topbar card">
-            <div class="section-title">
-                <h1 class="h0">{{ $heading ?? 'Dashboard' }}</h1>
-                <p class="muted">{{ $subheading ?? 'Build momentum with focused practice.' }}</p>
-            </div>
-            @auth
-                <div class="row-wrap">
-                    <span class="pill">{{ ucfirst(auth()->user()->role) }}</span>
-                    <span class="muted">{{ auth()->user()->name }}</span>
+        @if(!($minimalHeader ?? false))
+            <header class="topbar card">
+                <div class="section-title">
+                    <h1 class="h0">{{ $heading ?? 'Dashboard' }}</h1>
+                    <p class="muted">{{ $subheading ?? 'Build momentum with focused practice.' }}</p>
                 </div>
-            @endauth
-        </header>
+            </header>
+        @endif
 
         @include('components.admin.flash')
 
@@ -53,7 +59,6 @@
         const shell = document.querySelector('[data-shell]');
         if (!shell) return;
 
-        const sidebar = shell.querySelector('[data-sidebar]');
         const overlay = shell.querySelector('[data-nav-overlay]');
         const toggleButton = shell.querySelector('[data-nav-toggle]');
         const closeButton = shell.querySelector('[data-nav-close]');
@@ -79,15 +84,8 @@
 
         closeButton?.addEventListener('click', closeNav);
         overlay?.addEventListener('click', closeNav);
-
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') closeNav();
-        });
-
-        window.addEventListener('resize', () => {
-            if (window.innerWidth > 1024) {
-                closeNav();
-            }
         });
     })();
 </script>
