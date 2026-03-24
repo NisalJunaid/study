@@ -24,7 +24,7 @@
                 </span>
             </div>
         </div>
-        <p class="result-summary-message mb-0">🌟 {{ $message }}</p>
+        <p class="result-summary-message mb-0">{{ $message }}</p>
     </div>
 
     <div class="progress-track result-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $progressPercent }}">

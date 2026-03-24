@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Choose Your Learning Arena', 'subheading' => 'Start by selecting your level journey.'])
+@extends('layouts.student', ['heading' => 'Choose Your Learning Level', 'subheading' => 'Select your level to continue to quiz setup.'])
 
 @section('content')
 @php
@@ -7,20 +7,15 @@
 
 <div class="stack-lg level-home" id="levels-home" data-multi-initial="{{ ($multiLevelMode ?? false) ? '1' : '0' }}">
     <section class="page-hero level-hero">
-        <h2 class="h1">🎮 Pick your level to start the quest</h2>
-        <p class="mb-0" style="opacity:.92">Flow: <strong>Levels → Subjects → Topics → Settings → Start Quiz</strong></p>
-        <div class="level-meta-row">
-            <span class="pill">2 playable levels</span>
-            <span class="pill">Guided focus mode</span>
-            <span class="pill">Progress badges unlocked</span>
-        </div>
+        <h2 class="h1">Pick your level to begin</h2>
+        <p class="mb-0" style="opacity:.92">You can choose one level for a focused setup, or combine levels when multi-level is enabled.</p>
     </section>
 
     <section class="card stack-md level-selector-shell">
         <div class="row-between">
             <div class="stack-sm">
                 <h3 class="h2">Selection mode</h3>
-                <p class="muted mb-0">Turn on multi-level to combine subjects from both levels in one quiz setup.</p>
+                <p class="muted mb-0">Enable multi-level if you want to include subjects from both levels in one quiz.</p>
             </div>
             <label class="toggle-row" style="gap:.55rem">
                 <span class="text-sm text-strong">Multi-level mode</span>
@@ -48,7 +43,7 @@
                     <div class="stack-sm">
                         <div class="row-between">
                             <h3 class="h2">{{ $level['label'] }}</h3>
-                            <span class="level-badge">{{ $isSelected ? 'Selected' : 'Tap to select' }}</span>
+                            <span class="level-badge">{{ $isSelected ? 'Selected' : 'Select' }}</span>
                         </div>
                         <p class="muted mb-0">{{ $level['subjects_count'] }} subjects · {{ $level['questions_count'] }} questions</p>
                     </div>
@@ -56,7 +51,7 @@
             @endforeach
         </div>
 
-        <div class="actions-row" style="justify-content:space-between;align-items:center;">
+        <div class="actions-row" id="level-actions" style="justify-content:space-between;align-items:center;">
             <p class="muted text-sm mb-0" id="selected-level-hint">Select at least one level to continue.</p>
             <a class="btn btn-primary" id="continue-to-subjects" href="{{ route('student.quiz.setup') }}">Continue to subjects</a>
         </div>
@@ -71,28 +66,36 @@
     const cards = Array.from(root.querySelectorAll('[data-level-option]'));
     const multiToggle = root.querySelector('#multi-level-mode');
     const continueLink = root.querySelector('#continue-to-subjects');
+    const actions = root.querySelector('#level-actions');
     const hint = root.querySelector('#selected-level-hint');
 
     const isMulti = () => !!multiToggle?.checked;
 
     const selected = () => cards.filter((card) => card.classList.contains('active')).map((card) => card.dataset.levelValue);
 
-    const syncContinueLink = () => {
-        const levels = selected();
+    const nextUrl = (levels) => {
         const params = new URLSearchParams();
         levels.forEach((level) => params.append('levels[]', level));
-        continueLink.href = `${@json(route('student.quiz.setup'))}${levels.length ? `?${params.toString()}` : ''}`;
+        return `${@json(route('student.quiz.setup'))}${levels.length ? `?${params.toString()}` : ''}`;
+    };
+
+    const syncContinueLink = () => {
+        const levels = selected();
+        continueLink.href = nextUrl(levels);
         continueLink.classList.toggle('btn-disabled', levels.length === 0);
+        actions?.classList.toggle('hide-continue', !isMulti());
         hint.textContent = levels.length > 0
             ? `${levels.length} level${levels.length > 1 ? 's' : ''} selected.`
-            : 'Select at least one level to continue.';
+            : isMulti()
+                ? 'Select at least one level to continue.'
+                : 'Select a level to continue.';
     };
 
     const setCardState = (card, state) => {
         card.classList.toggle('active', state);
         card.setAttribute('aria-pressed', state ? 'true' : 'false');
         const badge = card.querySelector('.level-badge');
-        if (badge) badge.textContent = state ? 'Selected' : 'Tap to select';
+        if (badge) badge.textContent = state ? 'Selected' : 'Select';
     };
 
     cards.forEach((card) => {
@@ -101,11 +104,15 @@
 
             if (isMulti()) {
                 setCardState(card, !currentlyActive);
+                syncContinueLink();
             } else {
                 cards.forEach((other) => setCardState(other, other === card ? true : false));
+                const levels = selected();
+                if (levels.length > 0) {
+                    window.location.assign(nextUrl(levels));
+                    return;
+                }
             }
-
-            syncContinueLink();
         });
     });
 
