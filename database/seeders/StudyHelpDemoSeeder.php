@@ -39,26 +39,41 @@ class StudyHelpDemoSeeder extends Seeder
         );
 
         $subjects = [
-            'Mathematics' => ['Algebra', 'Geometry', 'Trigonometry'],
-            'English Language' => ['Grammar', 'Comprehension', 'Essay Writing'],
-            'Biology' => ['Cells', 'Genetics', 'Ecology'],
-            'Chemistry' => ['Atomic Structure', 'Chemical Reactions', 'Organic Chemistry'],
-            'Physics' => ['Mechanics', 'Electricity', 'Waves'],
+            'Mathematics' => [
+                'topics' => ['Algebra', 'Geometry', 'Trigonometry'],
+                'color' => '#4f46e5',
+            ],
+            'English Language' => [
+                'topics' => ['Grammar', 'Comprehension', 'Essay Writing'],
+                'color' => '#ec4899',
+            ],
+            'Biology' => [
+                'topics' => ['Cells', 'Genetics', 'Ecology'],
+                'color' => '#16a34a',
+            ],
+            'Chemistry' => [
+                'topics' => ['Atomic Structure', 'Chemical Reactions', 'Organic Chemistry'],
+                'color' => '#f97316',
+            ],
+            'Physics' => [
+                'topics' => ['Mechanics', 'Electricity', 'Waves'],
+                'color' => '#0ea5e9',
+            ],
         ];
 
-        foreach ($subjects as $subjectName => $topicNames) {
+        foreach ($subjects as $subjectName => $subjectMeta) {
             $subject = Subject::query()->updateOrCreate(
                 ['slug' => Str::slug($subjectName)],
                 [
                     'name' => $subjectName,
                     'level' => Subject::LEVEL_O,
                     'description' => "Core {$subjectName} topics for O'Level prep.",
-                    'color' => '#3B82F6',
+                    'color' => $subjectMeta['color'],
                     'is_active' => true,
                 ]
             );
 
-            foreach ($topicNames as $index => $topicName) {
+            foreach ($subjectMeta['topics'] as $index => $topicName) {
                 Topic::query()->updateOrCreate(
                     ['subject_id' => $subject->id, 'slug' => Str::slug($topicName)],
                     [

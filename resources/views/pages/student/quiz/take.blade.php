@@ -2,6 +2,7 @@
     'heading' => 'Quiz In Progress',
     'subheading' => 'Focused one-question flow',
     'minimalHeader' => true,
+    'suppressFlash' => true,
 ])
 
 @section('content')

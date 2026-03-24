@@ -64,6 +64,11 @@
     />
 
     <section class="stack-md">
+        <div class="card section-surface-secondary">
+            <h2 class="section-heading">Question breakdown</h2>
+            <p class="section-intro">Review each response, feedback, and awarded marks.</p>
+        </div>
+
         @foreach($quiz->quizQuestions as $quizQuestion)
             @php
                 $snapshot = $quizQuestion->question_snapshot ?? [];

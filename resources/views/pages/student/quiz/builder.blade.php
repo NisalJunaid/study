@@ -11,9 +11,7 @@
 @endphp
 
 <div class="stack-lg" id="guided-quiz-setup" data-multi-mode-initial="{{ $isMultiMode ? '1' : '0' }}">
-    <section class="card section-card">
-        <h2 class="h1">Build your quiz</h2>
-        <p class="muted mb-0">Select subjects, optionally filter topics, then choose your quiz settings.</p>
+    <section class="card section-card section-surface-secondary">
         <div class="row-wrap">
             @foreach($levels as $level)
                 @if(in_array((string) $level['value'], $selectedLevelValues, true))
@@ -41,8 +39,8 @@
             <section class="stack-sm section-block">
                 <div class="row-between">
                     <div>
-                        <h3 class="h2">1) Select subject(s)</h3>
-                        <p class="muted text-sm mb-0">Choose one subject or enable multi-subject mode.</p>
+                        <h2 class="section-heading step-heading"><span class="step-index">1</span><span>Select subject(s)</span></h2>
+                        <p class="section-intro">Choose one subject or enable multi-subject mode.</p>
                     </div>
                     <label class="toggle-row" style="gap:.55rem">
                         <span class="text-sm text-strong">Multi-subject mode</span>
@@ -60,7 +58,10 @@
                                 ? in_array((string) $subject->id, $selectedSubjectValues, true)
                                 : $selectedSubjectValue === (string) $subject->id;
                         @endphp
-                        <label class="select-card subject-option {{ $isChecked ? 'active' : '' }}" style="--subject-accent: {{ $subject->color ?: '#4f46e5' }};">
+                        @php
+                            $subjectColor = \App\Models\Subject::normalizeColor($subject->color);
+                        @endphp
+                        <label class="select-card subject-option {{ $isChecked ? 'active' : '' }}" style="--subject-accent: {{ $subjectColor }}; --subject-tint: {{ \App\Models\Subject::colorToRgba($subjectColor, 0.16) }};">
                             <input
                                 type="checkbox"
                                 class="subject-picker"
@@ -72,7 +73,7 @@
                             <input type="radio" name="subject_id" value="{{ $subject->id }}" class="subject-single-input" @checked(! $isMultiMode && $isChecked)>
                             <input type="checkbox" name="subject_ids[]" value="{{ $subject->id }}" class="subject-multi-input" @checked($isMultiMode && $isChecked)>
                             <div class="row-between">
-                                <span class="select-title">{{ $subject->name }}</span>
+                                <span class="select-title row-wrap"><span class="subject-color-dot" aria-hidden="true"></span>{{ $subject->name }}</span>
                                 <span class="pill">{{ \App\Models\Subject::levelLabel($subject->level) }}</span>
                             </div>
                             <span class="muted text-sm">{{ $subject->available_questions_count }} question(s)</span>
@@ -86,8 +87,8 @@
             <hr class="section-divider">
 
             <section class="stack-sm section-block">
-                <h3 class="h2">2) Select topics <span class="muted text-sm">(Optional)</span></h3>
-                <p class="muted text-sm mb-0">Topics are grouped by selected subject.</p>
+                <h2 class="section-heading step-heading"><span class="step-index">2</span><span>Select topics <span class="muted text-sm">(Optional)</span></span></h2>
+                <p class="section-intro">Topics are grouped by selected subject.</p>
                 <label class="field">
                     <span>Search topics across selected subjects</span>
                     <input type="search" class="field-control" id="shared-topic-search" placeholder="Search topics..." autocomplete="off">
@@ -95,9 +96,12 @@
 
                 <div class="stack-md" id="topic-groups">
                     @foreach($subjects as $subject)
-                        <article class="card card-soft topic-group" data-subject-id="{{ $subject->id }}" style="display:none;">
+                        @php
+                            $topicSubjectColor = \App\Models\Subject::normalizeColor($subject->color);
+                        @endphp
+                        <article class="card card-soft subject-card topic-group" data-subject-id="{{ $subject->id }}" style="display:none; --subject-accent: {{ $topicSubjectColor }}; --subject-tint: {{ \App\Models\Subject::colorToRgba($topicSubjectColor, 0.12) }};">
                             <div class="row-between">
-                                <h4 class="h3">{{ $subject->name }}</h4>
+                                <h3 class="h3 row-wrap"><span class="subject-color-dot" aria-hidden="true"></span>{{ $subject->name }}</h3>
                                 <span class="pill">{{ $subject->topics->count() }} topic(s)</span>
                             </div>
 
@@ -125,7 +129,7 @@
             <hr class="section-divider">
 
             <section class="stack-sm section-block">
-                <h3 class="h2">3) Quiz settings</h3>
+                <h2 class="section-heading step-heading"><span class="step-index">3</span><span>Quiz settings</span></h2>
                 <div class="grid-3">
                     <label class="field">
                         <span>Mode</span>
