@@ -5,6 +5,7 @@ namespace App\Actions\Student;
 use App\Models\Quiz;
 use App\Models\QuizQuestion;
 use App\Models\StudentAnswer;
+use RuntimeException;
 
 class SaveQuizAnswerAction
 {
@@ -12,6 +13,12 @@ class SaveQuizAnswerAction
     {
         $snapshot = $quizQuestion->question_snapshot ?? [];
         $questionType = $snapshot['type'] ?? null;
+
+        $existingAnswer = $quizQuestion->studentAnswer;
+
+        if ($existingAnswer && $existingAnswer->answered_at !== null) {
+            throw new RuntimeException('This question is already locked and cannot be edited.');
+        }
 
         $answerAttributes = [
             'question_id' => $quizQuestion->question_id,

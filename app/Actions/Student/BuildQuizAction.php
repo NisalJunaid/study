@@ -13,9 +13,9 @@ use RuntimeException;
 
 class BuildQuizAction
 {
-    public function availableQuestionCount(Subject $subject, array $topicIds, string $mode, ?string $difficulty): int
+    public function availableQuestionCount(array $subjectIds, array $topicIds, string $mode, ?string $difficulty): int
     {
-        $countByType = $this->countByType($subject, $topicIds, $difficulty);
+        $countByType = $this->countByType($subjectIds, $topicIds, $difficulty);
 
         return match ($mode) {
             Quiz::MODE_MCQ => $countByType[Question::TYPE_MCQ],
@@ -25,9 +25,9 @@ class BuildQuizAction
         };
     }
 
-    public function availableQuestionCountsByMode(Subject $subject, array $topicIds = [], ?string $difficulty = null): array
+    public function availableQuestionCountsByMode(array $subjectIds, array $topicIds = [], ?string $difficulty = null): array
     {
-        $countByType = $this->countByType($subject, $topicIds, $difficulty);
+        $countByType = $this->countByType($subjectIds, $topicIds, $difficulty);
 
         return [
             Quiz::MODE_MCQ => $countByType[Question::TYPE_MCQ],
@@ -38,20 +38,25 @@ class BuildQuizAction
 
     public function execute(User $student, array $payload): Quiz
     {
-        $subject = Subject::query()->active()->findOrFail($payload['subject_id']);
-        $level = $payload['level'] ?? $subject->level;
+        $subjectIds = collect($payload['subject_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
+        $subjects = Subject::query()->active()->whereIn('id', $subjectIds)->get(['id', 'name', 'level']);
 
-        if ($subject->level !== $level) {
-            throw new RuntimeException('Selected subject does not belong to the chosen level.');
+        if ($subjects->isEmpty()) {
+            throw new RuntimeException('Select at least one active subject.');
         }
 
-        $topicIds = $this->sanitizeTopicIds($subject, $payload['topic_ids'] ?? []);
+        $level = $payload['level'] ?? $subjects->first()->level;
+        if ($subjects->contains(fn (Subject $subject) => $subject->level !== $level)) {
+            throw new RuntimeException('Selected subjects do not belong to the chosen level.');
+        }
+
+        $topicIds = $this->sanitizeTopicIds($subjectIds, $payload['topic_ids'] ?? []);
         $mode = $payload['mode'];
         $questionCount = (int) $payload['question_count'];
         $difficulty = $payload['difficulty'] ?? null;
 
         $selectedQuestions = $this->selectQuestions(
-            subject: $subject,
+            subjectIds: $subjectIds,
             topicIds: $topicIds,
             mode: $mode,
             questionCount: $questionCount,
@@ -59,16 +64,18 @@ class BuildQuizAction
         );
 
         if ($selectedQuestions->count() < $questionCount) {
-            $available = $this->availableQuestionCount($subject, $topicIds, $mode, $difficulty);
+            $available = $this->availableQuestionCount($subjectIds, $topicIds, $mode, $difficulty);
 
             throw new RuntimeException("Only {$available} question(s) are available for this selection.");
         }
 
-        return DB::transaction(function () use ($student, $subject, $mode, $selectedQuestions): Quiz {
+        $singleSubjectId = count($subjectIds) === 1 ? $subjectIds[0] : null;
+
+        return DB::transaction(function () use ($student, $level, $singleSubjectId, $mode, $selectedQuestions): Quiz {
             $quiz = Quiz::query()->create([
                 'user_id' => $student->id,
-                'level' => $subject->level,
-                'subject_id' => $subject->id,
+                'level' => $level,
+                'subject_id' => $singleSubjectId,
                 'mode' => $mode,
                 'status' => Quiz::STATUS_IN_PROGRESS,
                 'total_questions' => $selectedQuestions->count(),
@@ -92,17 +99,17 @@ class BuildQuizAction
         });
     }
 
-    private function selectQuestions(Subject $subject, array $topicIds, string $mode, int $questionCount, ?string $difficulty): Collection
+    private function selectQuestions(array $subjectIds, array $topicIds, string $mode, int $questionCount, ?string $difficulty): Collection
     {
         if ($mode === Quiz::MODE_MCQ || $mode === Quiz::MODE_THEORY) {
-            return $this->baseQuestionQuery($subject, $topicIds, $difficulty)
+            return $this->baseQuestionQuery($subjectIds, $topicIds, $difficulty)
                 ->ofType($mode)
                 ->inRandomOrder()
                 ->limit($questionCount)
                 ->get();
         }
 
-        $counts = $this->countByType($subject, $topicIds, $difficulty);
+        $counts = $this->countByType($subjectIds, $topicIds, $difficulty);
 
         $targetMcq = (int) floor($questionCount / 2);
         $targetTheory = $questionCount - $targetMcq;
@@ -125,7 +132,7 @@ class BuildQuizAction
         }
 
         $mcqQuestions = $mcqTake > 0
-            ? $this->baseQuestionQuery($subject, $topicIds, $difficulty)
+            ? $this->baseQuestionQuery($subjectIds, $topicIds, $difficulty)
                 ->mcq()
                 ->inRandomOrder()
                 ->limit($mcqTake)
@@ -133,7 +140,7 @@ class BuildQuizAction
             : collect();
 
         $theoryQuestions = $theoryTake > 0
-            ? $this->baseQuestionQuery($subject, $topicIds, $difficulty)
+            ? $this->baseQuestionQuery($subjectIds, $topicIds, $difficulty)
                 ->theory()
                 ->inRandomOrder()
                 ->limit($theoryTake)
@@ -146,15 +153,16 @@ class BuildQuizAction
             ->values();
     }
 
-    private function baseQuestionQuery(Subject $subject, array $topicIds, ?string $difficulty): Builder
+    private function baseQuestionQuery(array $subjectIds, array $topicIds, ?string $difficulty): Builder
     {
         $query = Question::query()
             ->availableForStudents()
-            ->where('subject_id', $subject->id)
+            ->whereIn('subject_id', $subjectIds)
             ->with([
                 'mcqOptions' => fn ($builder) => $builder->orderBy('sort_order')->orderBy('id'),
                 'theoryMeta:id,question_id,sample_answer,grading_notes,keywords,acceptable_phrases,max_score',
                 'topic:id,name,subject_id',
+                'subject:id,name',
             ]);
 
         if ($topicIds !== []) {
@@ -168,11 +176,11 @@ class BuildQuizAction
         return $query;
     }
 
-    private function countByType(Subject $subject, array $topicIds, ?string $difficulty): array
+    private function countByType(array $subjectIds, array $topicIds, ?string $difficulty): array
     {
         $query = Question::query()
             ->availableForStudents()
-            ->where('subject_id', $subject->id);
+            ->whereIn('subject_id', $subjectIds);
 
         if ($topicIds !== []) {
             $query->whereIn('topic_id', $topicIds);
@@ -193,14 +201,15 @@ class BuildQuizAction
         ];
     }
 
-    private function sanitizeTopicIds(Subject $subject, array $topicIds): array
+    private function sanitizeTopicIds(array $subjectIds, array $topicIds): array
     {
         if ($topicIds === []) {
             return [];
         }
 
-        return $subject->topics()
-            ->active()
+        return DB::table('topics')
+            ->where('is_active', true)
+            ->whereIn('subject_id', $subjectIds)
             ->whereIn('id', $topicIds)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
@@ -212,6 +221,7 @@ class BuildQuizAction
         $snapshot = [
             'id' => $question->id,
             'subject_id' => $question->subject_id,
+            'subject_name' => $question->subject?->name,
             'topic_id' => $question->topic_id,
             'topic_name' => $question->topic?->name,
             'type' => $question->type,
