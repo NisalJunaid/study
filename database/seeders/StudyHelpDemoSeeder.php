@@ -1,0 +1,139 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\McqOption;
+use App\Models\Question;
+use App\Models\Subject;
+use App\Models\TheoryQuestionMeta;
+use App\Models\Topic;
+use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
+
+class StudyHelpDemoSeeder extends Seeder
+{
+    /**
+     * Seed the application's database with demo study-help data.
+     */
+    public function run(): void
+    {
+        $admin = User::query()->updateOrCreate(
+            ['email' => 'admin@olevel.test'],
+            [
+                'name' => 'Demo Admin',
+                'password' => 'password',
+                'role' => User::ROLE_ADMIN,
+                'email_verified_at' => now(),
+            ]
+        );
+
+        $student = User::query()->updateOrCreate(
+            ['email' => 'student@olevel.test'],
+            [
+                'name' => 'Demo Student',
+                'password' => 'password',
+                'role' => User::ROLE_STUDENT,
+                'email_verified_at' => now(),
+            ]
+        );
+
+        $subjects = [
+            'Mathematics' => ['Algebra', 'Geometry', 'Trigonometry'],
+            'English Language' => ['Grammar', 'Comprehension', 'Essay Writing'],
+            'Biology' => ['Cells', 'Genetics', 'Ecology'],
+            'Chemistry' => ['Atomic Structure', 'Chemical Reactions', 'Organic Chemistry'],
+            'Physics' => ['Mechanics', 'Electricity', 'Waves'],
+        ];
+
+        foreach ($subjects as $subjectName => $topicNames) {
+            $subject = Subject::query()->updateOrCreate(
+                ['slug' => Str::slug($subjectName)],
+                [
+                    'name' => $subjectName,
+                    'description' => "Core {$subjectName} topics for O'Level prep.",
+                    'color' => '#3B82F6',
+                    'is_active' => true,
+                ]
+            );
+
+            foreach ($topicNames as $index => $topicName) {
+                Topic::query()->updateOrCreate(
+                    ['subject_id' => $subject->id, 'slug' => Str::slug($topicName)],
+                    [
+                        'name' => $topicName,
+                        'description' => "{$topicName} practice questions.",
+                        'is_active' => true,
+                        'sort_order' => $index,
+                    ]
+                );
+            }
+        }
+
+        $math = Subject::query()->where('slug', 'mathematics')->firstOrFail();
+        $algebra = Topic::query()->where('subject_id', $math->id)->where('slug', 'algebra')->firstOrFail();
+
+        $mcqQuestion = Question::query()->updateOrCreate(
+            ['subject_id' => $math->id, 'topic_id' => $algebra->id, 'question_text' => 'What is 2x when x = 3?'],
+            [
+                'type' => Question::TYPE_MCQ,
+                'difficulty' => 'easy',
+                'marks' => 1,
+                'is_published' => true,
+                'explanation' => '2 multiplied by 3 equals 6.',
+                'created_by' => $admin->id,
+                'updated_by' => $admin->id,
+            ]
+        );
+
+        $options = [
+            ['A', '3', false, 1],
+            ['B', '5', false, 2],
+            ['C', '6', true, 3],
+            ['D', '8', false, 4],
+        ];
+
+        foreach ($options as [$key, $text, $isCorrect, $sortOrder]) {
+            McqOption::query()->updateOrCreate(
+                ['question_id' => $mcqQuestion->id, 'option_key' => $key],
+                [
+                    'option_text' => $text,
+                    'is_correct' => $isCorrect,
+                    'sort_order' => $sortOrder,
+                ]
+            );
+        }
+
+        $english = Subject::query()->where('slug', 'english-language')->firstOrFail();
+        $essay = Topic::query()->where('subject_id', $english->id)->where('slug', 'essay-writing')->firstOrFail();
+
+        $theoryQuestion = Question::query()->updateOrCreate(
+            ['subject_id' => $english->id, 'topic_id' => $essay->id, 'question_text' => 'Explain why punctuation is important in writing.'],
+            [
+                'type' => Question::TYPE_THEORY,
+                'difficulty' => 'medium',
+                'marks' => 3,
+                'is_published' => true,
+                'created_by' => $admin->id,
+                'updated_by' => $admin->id,
+            ]
+        );
+
+        TheoryQuestionMeta::query()->updateOrCreate(
+            ['question_id' => $theoryQuestion->id],
+            [
+                'sample_answer' => 'Punctuation helps clarify meaning, structure sentences, and guide pauses.',
+                'grading_notes' => 'Expect meaning, clarity, and sentence structure.',
+                'keywords' => ['clarity', 'meaning', 'structure'],
+                'acceptable_phrases' => ['guides pauses', 'separates ideas'],
+                'max_score' => 3,
+            ]
+        );
+
+        // Keep a few students for local testing.
+        User::factory()->student()->count(5)->create();
+
+        // Ensure demo student always exists and stays a student role.
+        $student->forceFill(['role' => User::ROLE_STUDENT])->save();
+    }
+}
