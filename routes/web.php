@@ -3,6 +3,8 @@
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\TopicController;
+use App\Http\Controllers\Student\QuizController as StudentQuizController;
+use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -17,8 +19,13 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'role:student'])->group(function () {
     Route::get('/dashboard', fn () => view('pages.student.dashboard'))->name('student.dashboard');
-    Route::get('/subjects', fn () => view('pages.student.subjects.index'))->name('student.subjects.index');
-    Route::get('/quiz/create', fn () => view('pages.student.quiz.builder'))->name('student.quiz.builder');
+    Route::get('/subjects', [StudentSubjectController::class, 'index'])->name('student.subjects.index');
+    Route::get('/subjects/{subject}', [StudentSubjectController::class, 'show'])->name('student.subjects.show');
+
+    Route::get('/quiz/create', [StudentQuizController::class, 'create'])->name('student.quiz.builder');
+    Route::post('/quiz', [StudentQuizController::class, 'store'])->name('student.quiz.store');
+    Route::get('/quiz/{quiz}', [StudentQuizController::class, 'show'])->name('student.quiz.take');
+
     Route::get('/history', fn () => view('pages.student.history.index'))->name('student.history.index');
     Route::get('/progress', fn () => view('pages.student.progress.index'))->name('student.progress.index');
 });
