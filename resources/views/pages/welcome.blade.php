@@ -10,7 +10,14 @@
     <section class="card" style="max-width:720px;width:100%">
         <span class="pill">O'Level Study Help</span>
         <h1 style="margin:.75rem 0">Focus Lab is ready</h1>
-        <p class="muted">Authentication scaffolding is not yet installed in this repo. Sign in with seeded users once auth pages are added to access student/admin dashboards.</p>
+        <p class="muted">Sign in to continue to your dashboard. New users can register as students.</p>
+
+        <div style="display:flex;gap:.75rem;margin-top:1.25rem;flex-wrap:wrap">
+            <a href="{{ route('login') }}" class="btn btn-primary">Login</a>
+            @if (Route::has('register'))
+                <a href="{{ route('register') }}" class="btn btn-secondary">Register</a>
+            @endif
+        </div>
     </section>
 </body>
 </html>
