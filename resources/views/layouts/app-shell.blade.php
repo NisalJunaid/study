@@ -8,7 +8,7 @@
 </head>
 <body>
 <div class="shell" data-shell>
-    <header class="shell-topbar card {{ $contentWidthClass ?? '' }}">
+    <header class="shell-topbar">
         <button class="menu-trigger" type="button" aria-controls="app-sidebar" aria-expanded="false" data-nav-toggle aria-label="Open sidebar">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <rect x="3" y="5" width="5" height="14" rx="1.2"></rect>
@@ -20,18 +20,18 @@
 
         @auth
             <div class="topbar-user-menu" data-user-menu>
-                <button class="topbar-user-button" type="button" data-user-menu-toggle aria-expanded="false" aria-haspopup="true">
+                <button class="topbar-user-button" type="button" data-user-menu-toggle aria-expanded="false" aria-haspopup="true" aria-controls="user-menu-panel">
                     <span class="avatar-circle">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
                     <span class="user-name text-sm">{{ auth()->user()->name }}</span>
                     <span aria-hidden="true">▾</span>
                 </button>
 
-                <div class="user-dropdown card" data-user-menu-panel hidden>
-                    <a href="{{ route('profile.edit') }}" class="user-dropdown-item">Profile & settings</a>
-                    <a href="{{ route('profile.edit') }}#account" class="user-dropdown-item">Account management</a>
+                <div class="user-dropdown card" id="user-menu-panel" data-user-menu-panel hidden>
+                    <a href="{{ route('profile.edit') }}" class="user-dropdown-item">Profile</a>
+                    <a href="{{ route('profile.settings') }}" class="user-dropdown-item">Settings</a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="user-dropdown-item user-dropdown-item-danger">Logout</button>
+                        <button type="submit" class="user-dropdown-item user-dropdown-item-danger">Sign out</button>
                     </form>
                 </div>
             </div>
