@@ -1064,3 +1064,17 @@ A feature is only done when:
 - Use queues and broadcasts for any action that may take noticeable time.
 - Build the system so theory grading failures degrade safely to manual review.
 - Preserve a clean separation between question authoring, quiz generation, and grading.
+---
+
+## Repository Baseline Notes (2026-03-24)
+
+These notes capture the current repository state so implementation tasks can align with existing conventions:
+
+- The repository is currently a near-default Laravel 10 skeleton.
+- Inertia.js and React page structure are not installed/scaffolded yet.
+- Existing backend structure is minimal (`Controller` base class and `User` model only).
+- Existing frontend JS has axios bootstrap and commented Echo scaffold.
+- Tailwind is not configured yet (no tailwind config file present); `resources/css/app.css` exists but is empty.
+- Route files are default starter routes (`/`, `/api/user`, default broadcast channel).
+
+When implementing features, extend the current Laravel conventions incrementally and avoid parallel/duplicate architecture patterns.
