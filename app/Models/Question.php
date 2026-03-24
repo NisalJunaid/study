@@ -85,6 +85,19 @@ class Question extends Model
         return $query->where('type', self::TYPE_MCQ);
     }
 
+
+    public function scopeAvailableForStudents($query)
+    {
+        return $query
+            ->published()
+            ->whereHas('subject', fn ($subjectQuery) => $subjectQuery->active())
+            ->where(function ($builder): void {
+                $builder
+                    ->whereNull('topic_id')
+                    ->orWhereHas('topic', fn ($topicQuery) => $topicQuery->active());
+            });
+    }
+
     public function scopeTheory($query)
     {
         return $query->where('type', self::TYPE_THEORY);

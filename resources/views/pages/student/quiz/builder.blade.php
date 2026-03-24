@@ -1,14 +1,103 @@
-@extends('layouts.student', ['heading' => 'Quiz Builder', 'subheading' => 'Create MCQ, theory, or mixed quizzes in a few steps.'])
+@extends('layouts.student', ['heading' => 'Quiz Builder', 'subheading' => 'Choose subject, topics, mode, and count — then start instantly.'])
 
 @section('content')
-<div class="card">
-    <h3 style="margin-top:0">Quiz setup placeholder</h3>
-    <p class="muted">This route is wired and protected. Full builder form logic will be added next.</p>
-    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem">
-        <span class="pill">Mode: Mixed</span>
-        <span class="pill">Questions: 10</span>
-        <span class="pill">Timed: Off</span>
-    </div>
-    <button class="btn btn-primary" style="margin-top:1rem">Start quiz</button>
+@php
+    $selectedSubjectId = old('subject_id', request('subject_id'));
+    $selectedMode = old('mode', request('mode', 'mixed'));
+@endphp
+
+<div class="stack-lg">
+    @if($subjects->isEmpty())
+        <section class="empty-state">
+            <h4>No active subjects available</h4>
+            <p class="muted">Ask an admin to activate a subject and publish questions before building a quiz.</p>
+        </section>
+    @else
+    <form class="card stack-md" method="POST" action="{{ route('student.quiz.store') }}">
+        @csrf
+
+        <div class="grid-2">
+            <label class="field">
+                <span>Subject</span>
+                <select name="subject_id" required>
+                    <option value="">Choose a subject</option>
+                    @foreach($subjects as $subject)
+                        <option value="{{ $subject->id }}" @selected((string) $selectedSubjectId === (string) $subject->id)>
+                            {{ $subject->name }} ({{ $subject->available_questions_count }} questions)
+                        </option>
+                    @endforeach
+                </select>
+                @error('subject_id') <small class="field-error">{{ $message }}</small> @enderror
+            </label>
+
+            <label class="field">
+                <span>Mode</span>
+                <select name="mode" required>
+                    @foreach($modes as $value => $label)
+                        <option value="{{ $value }}" @selected($selectedMode === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('mode') <small class="field-error">{{ $message }}</small> @enderror
+            </label>
+        </div>
+
+        <div class="grid-2">
+            <label class="field">
+                <span>Question count</span>
+                <input type="number" min="1" max="50" name="question_count" value="{{ old('question_count', 10) }}" required>
+                @error('question_count') <small class="field-error">{{ $message }}</small> @enderror
+            </label>
+
+            <label class="field">
+                <span>Difficulty (optional)</span>
+                <select name="difficulty">
+                    <option value="">Any difficulty</option>
+                    @foreach($difficulties as $difficulty)
+                        <option value="{{ $difficulty }}" @selected(old('difficulty') === $difficulty)>{{ ucfirst($difficulty) }}</option>
+                    @endforeach
+                </select>
+                @error('difficulty') <small class="field-error">{{ $message }}</small> @enderror
+            </label>
+        </div>
+
+        <div class="field">
+            <span>Topics (optional)</span>
+            <p class="muted" style="margin:.2rem 0 .5rem">Only topics for the selected subject will be used.</p>
+            <div class="card-grid">
+                @foreach($subjects as $subject)
+                    @foreach($subject->topics as $topic)
+                        <label class="card card-soft" style="display:flex;align-items:center;gap:.45rem;{{ (string) $selectedSubjectId !== (string) $subject->id ? 'opacity:.45;' : '' }}">
+                            <input
+                                type="checkbox"
+                                name="topic_ids[]"
+                                value="{{ $topic->id }}"
+                                @checked(in_array($topic->id, old('topic_ids', [])))
+                                {{ (string) $selectedSubjectId !== (string) $subject->id ? 'disabled' : '' }}
+                            >
+                            <span>{{ $topic->name }}</span>
+                            <span class="pill" style="margin-left:auto">{{ $subject->name }}</span>
+                        </label>
+                    @endforeach
+                @endforeach
+            </div>
+            @error('topic_ids') <small class="field-error">{{ $message }}</small> @enderror
+        </div>
+
+        <div class="actions-row">
+            <a href="{{ route('student.subjects.index') }}" class="btn">Back to subjects</a>
+            <button type="submit" class="btn btn-primary">Create quiz</button>
+        </div>
+    </form>
+
+    <section class="card card-soft">
+        <h3 style="margin-top:0">How quiz assignment works</h3>
+        <ul class="muted" style="margin:0;padding-left:1rem;display:grid;gap:.35rem">
+            <li>Only published questions are selected.</li>
+            <li>Inactive subjects/topics are excluded automatically.</li>
+            <li>Mixed mode balances MCQ and theory where possible.</li>
+            <li>If there are not enough questions, you will get a clear validation error.</li>
+        </ul>
+    </section>
+    @endif
 </div>
 @endsection
