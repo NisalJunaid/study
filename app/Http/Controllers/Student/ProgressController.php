@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Http\Controllers\Student;
+
+use App\Http\Controllers\Controller;
+use App\Services\Analytics\StudentProgressAnalyticsService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
+
+class ProgressController extends Controller
+{
+    public function __invoke(Request $request, StudentProgressAnalyticsService $analyticsService): View
+    {
+        $analytics = $analyticsService->summarize($request->user());
+
+        return view('pages.student.progress.index', [
+            'summary' => $analytics['summary'],
+            'subjectPerformance' => $analytics['subject_performance'],
+            'weakTopics' => $analytics['weak_topics'],
+            'recentActivity' => $analytics['recent_activity'],
+        ]);
+    }
+}
