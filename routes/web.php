@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\SubjectController;
+use App\Http\Controllers\Admin\TopicController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -25,8 +27,8 @@ Route::prefix('admin')
     ->middleware(['auth', 'role:admin'])
     ->group(function () {
         Route::get('/', fn () => view('pages.admin.dashboard'))->name('dashboard');
-        Route::get('/subjects', fn () => view('pages.admin.subjects.index'))->name('subjects.index');
-        Route::get('/topics', fn () => view('pages.admin.topics.index'))->name('topics.index');
+        Route::resource('subjects', SubjectController::class)->except('show');
+        Route::resource('topics', TopicController::class)->except('show');
         Route::get('/questions', fn () => view('pages.admin.questions.index'))->name('questions.index');
         Route::get('/imports', fn () => view('pages.admin.imports.index'))->name('imports.index');
         Route::get('/theory-reviews', fn () => view('pages.admin.theory-reviews.index'))->name('theory-reviews.index');
