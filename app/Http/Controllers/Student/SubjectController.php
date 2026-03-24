@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers\Student;
 
-use App\Actions\Student\BuildQuizAction;
 use App\Http\Controllers\Controller;
-use App\Models\Quiz;
 use App\Models\Subject;
 use Illuminate\Contracts\View\View;
 
 class SubjectController extends Controller
 {
-    public function index(): View
+    public function indexByLevel(string $level): View
     {
+        abort_unless(in_array($level, Subject::levels(), true), 404);
+
         $subjects = Subject::query()
             ->active()
+            ->forLevel($level)
             ->withCount([
                 'topics as active_topics_count' => fn ($query) => $query->active(),
                 'questions as available_questions_count' => fn ($query) => $query->availableForStudents(),
@@ -25,50 +26,9 @@ class SubjectController extends Controller
             ->get();
 
         return view('pages.student.subjects.index', [
+            'level' => $level,
+            'levelLabel' => Subject::levelLabel($level),
             'subjects' => $subjects,
-        ]);
-    }
-
-    public function show(Subject $subject, BuildQuizAction $buildQuizAction): View
-    {
-        abort_unless($subject->is_active, 404);
-
-        $subject->loadCount([
-            'questions as available_questions_count' => fn ($query) => $query->availableForStudents(),
-            'questions as mcq_questions_count' => fn ($query) => $query->availableForStudents()->mcq(),
-            'questions as theory_questions_count' => fn ($query) => $query->availableForStudents()->theory(),
-        ]);
-
-        $subject->load([
-            'topics' => fn ($query) => $query
-                ->active()
-                ->withCount([
-                    'questions as available_questions_count' => fn ($builder) => $builder->availableForStudents(),
-                    'questions as mcq_questions_count' => fn ($builder) => $builder->availableForStudents()->mcq(),
-                    'questions as theory_questions_count' => fn ($builder) => $builder->availableForStudents()->theory(),
-                ])
-                ->orderBy('sort_order')
-                ->orderBy('name'),
-        ]);
-
-        $modeCounts = $buildQuizAction->availableQuestionCountsByMode($subject);
-
-        return view('pages.student.subjects.show', [
-            'subject' => $subject,
-            'quizModes' => [
-                Quiz::MODE_MCQ => [
-                    'label' => 'MCQ only',
-                    'count' => $modeCounts[Quiz::MODE_MCQ],
-                ],
-                Quiz::MODE_THEORY => [
-                    'label' => 'Theory only',
-                    'count' => $modeCounts[Quiz::MODE_THEORY],
-                ],
-                Quiz::MODE_MIXED => [
-                    'label' => 'Mixed mode',
-                    'count' => $modeCounts[Quiz::MODE_MIXED],
-                ],
-            ],
         ]);
     }
 }

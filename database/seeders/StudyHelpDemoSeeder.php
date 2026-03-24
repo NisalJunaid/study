@@ -51,6 +51,7 @@ class StudyHelpDemoSeeder extends Seeder
                 ['slug' => Str::slug($subjectName)],
                 [
                     'name' => $subjectName,
+                    'level' => Subject::LEVEL_O,
                     'description' => "Core {$subjectName} topics for O'Level prep.",
                     'color' => '#3B82F6',
                     'is_active' => true,

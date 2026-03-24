@@ -23,6 +23,7 @@ class Quiz extends Model
 
     protected $fillable = [
         'user_id',
+        'level',
         'subject_id',
         'mode',
         'status',

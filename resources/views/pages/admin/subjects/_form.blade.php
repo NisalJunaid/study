@@ -21,6 +21,16 @@
             <input type="text" name="slug" value="{{ old('slug', $subject?->slug) }}" placeholder="Auto-generated from name if left blank">
             @error('slug')<small class="field-error">{{ $message }}</small>@enderror
         </label>
+
+        <label class="field">
+            <span>Level</span>
+            <select name="level" required>
+                @foreach(\App\Models\Subject::levels() as $level)
+                    <option value="{{ $level }}" @selected(old('level', $subject?->level ?? \App\Models\Subject::LEVEL_O) === $level)>{{ \App\Models\Subject::levelLabel($level) }}</option>
+                @endforeach
+            </select>
+            @error('level')<small class="field-error">{{ $message }}</small>@enderror
+        </label>
     </div>
 
     <label class="field">

@@ -24,7 +24,30 @@
                 <p class="muted mb-0 text-sm">Graded</p>
                 <strong id="quiz-graded-at-text">{{ optional($quiz->graded_at)->format('M d, Y H:i') ?? 'In progress' }}</strong>
             </div>
+            <div class="summary-tile">
+                <p class="muted mb-0 text-sm">On-time answers</p>
+                <strong>
+                    @if($timingSummary['on_time_rate'] !== null)
+                        {{ $timingSummary['on_time'] }}/{{ $timingSummary['timed_answers'] }} ({{ number_format((float) $timingSummary['on_time_rate'], 1) }}%)
+                    @else
+                        Not tracked yet
+                    @endif
+                </strong>
+            </div>
         </div>
+
+        @if($timingSummary['on_time_rate'] !== null)
+            <p class="muted mb-0">
+                <strong>Timing insight:</strong>
+                @if($timingSummary['on_time_rate'] >= 75)
+                    Good time discipline — you stayed within ideal pacing on most questions.
+                @elseif($timingSummary['on_time_rate'] >= 45)
+                    Strong accuracy potential, but pacing is mixed. Tighten timing on longer questions.
+                @else
+                    You answered many questions late. Practice shorter timed sets to build pacing confidence.
+                @endif
+            </p>
+        @endif
 
         @if($quiz->status === \App\Models\Quiz::STATUS_GRADING)
             <p id="quiz-live-status-note" class="muted" style="margin-top:.9rem;margin-bottom:0;">
@@ -105,6 +128,15 @@
                 @endif
 
                 <p class="muted js-answer-score" style="margin:0"><strong>Score:</strong> <span>{{ $answer?->score !== null ? number_format((float) $answer->score, 2) : 'Pending' }}</span> / {{ number_format((float) $quizQuestion->max_score, 2) }}</p>
+                <p class="muted" style="margin:0">
+                    <strong>Timing:</strong>
+                    @if($answer?->answer_duration_seconds !== null)
+                        {{ $answer->answer_duration_seconds }}s / ideal {{ $answer->ideal_time_seconds ?? ($snapshot['ideal_time_seconds'] ?? '-') }}s
+                        · {{ $answer->answered_on_time ? 'On time' : 'Delayed' }}
+                    @else
+                        Not recorded
+                    @endif
+                </p>
             </article>
         @endforeach
     </section>

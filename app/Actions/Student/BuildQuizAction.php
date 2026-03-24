@@ -39,6 +39,12 @@ class BuildQuizAction
     public function execute(User $student, array $payload): Quiz
     {
         $subject = Subject::query()->active()->findOrFail($payload['subject_id']);
+        $level = $payload['level'] ?? $subject->level;
+
+        if ($subject->level !== $level) {
+            throw new RuntimeException('Selected subject does not belong to the chosen level.');
+        }
+
         $topicIds = $this->sanitizeTopicIds($subject, $payload['topic_ids'] ?? []);
         $mode = $payload['mode'];
         $questionCount = (int) $payload['question_count'];
@@ -61,6 +67,7 @@ class BuildQuizAction
         return DB::transaction(function () use ($student, $subject, $mode, $selectedQuestions): Quiz {
             $quiz = Quiz::query()->create([
                 'user_id' => $student->id,
+                'level' => $subject->level,
                 'subject_id' => $subject->id,
                 'mode' => $mode,
                 'status' => Quiz::STATUS_IN_PROGRESS,
@@ -212,6 +219,7 @@ class BuildQuizAction
             'question_image_path' => $question->question_image_path,
             'difficulty' => $question->difficulty,
             'marks' => (float) $question->marks,
+            'ideal_time_seconds' => $this->idealTimeSecondsFor($question),
             'explanation' => $question->explanation,
         ];
 
@@ -239,5 +247,17 @@ class BuildQuizAction
         }
 
         return $snapshot;
+    }
+
+    private function idealTimeSecondsFor(Question $question): int
+    {
+        $base = $question->type === Question::TYPE_THEORY ? 180 : 60;
+        $difficultyBoost = match ($question->difficulty) {
+            'hard' => 60,
+            'medium' => 30,
+            default => 0,
+        };
+
+        return $base + $difficultyBoost;
     }
 }

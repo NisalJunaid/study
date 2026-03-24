@@ -9,8 +9,14 @@
         <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary">+ New Subject</a>
     </div>
 
-    <form method="GET" class="filter-row">
+    <form method="GET" class="filter-row-wide">
         <input type="text" name="q" value="{{ $filters['q'] }}" placeholder="Search name or slug">
+        <select name="level">
+            <option value="">All levels</option>
+            @foreach(\App\Models\Subject::levels() as $level)
+                <option value="{{ $level }}" @selected($filters['level'] === $level)>{{ \App\Models\Subject::levelLabel($level) }}</option>
+            @endforeach
+        </select>
         <select name="status">
             <option value="">All statuses</option>
             <option value="active" @selected($filters['status'] === 'active')>Active</option>
@@ -33,6 +39,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Slug</th>
+                    <th>Level</th>
                     <th>Status</th>
                     <th>Sort</th>
                     <th>Topics</th>
@@ -49,6 +56,7 @@
                             @endif
                         </td>
                         <td><code class="mono">{{ $subject->slug }}</code></td>
+                        <td><span class="pill">{{ \App\Models\Subject::levelLabel($subject->level) }}</span></td>
                         <td>
                             <span class="pill {{ $subject->is_active ? 'pill-success' : 'pill-muted' }}">
                                 {{ $subject->is_active ? 'Active' : 'Inactive' }}

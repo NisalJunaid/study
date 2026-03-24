@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Subject;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 
@@ -27,6 +28,7 @@ class StoreSubjectRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', 'unique:subjects,name'],
             'slug' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:subjects,slug'],
+            'level' => ['required', 'string', 'in:'.implode(',', Subject::levels())],
             'description' => ['nullable', 'string'],
             'color' => ['nullable', 'string', 'max:50'],
             'icon' => ['nullable', 'string', 'max:100'],

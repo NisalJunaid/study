@@ -362,6 +362,113 @@ a { color: inherit; text-decoration: none; }
     margin-top: 0.2rem;
 }
 
+.select-card {
+    border: 1px solid var(--border);
+    border-radius: .9rem;
+    padding: .9rem;
+    display: grid;
+    gap: .35rem;
+    background: #fff;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.select-card input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.select-card:hover {
+    border-color: #c7d2fe;
+    transform: translateY(-1px);
+}
+
+.select-card.active {
+    border-color: #6366f1;
+    background: #eef2ff;
+    box-shadow: 0 10px 20px rgba(79, 70, 229, 0.12);
+}
+
+.select-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.subject-option {
+    position: relative;
+    overflow: hidden;
+}
+
+.subject-option::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--subject-accent, var(--primary));
+}
+
+.topic-chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+}
+
+.topic-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .45rem .75rem;
+    background: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.topic-chip input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.topic-chip.active {
+    border-color: #6366f1;
+    background: #e0e7ff;
+    color: #312e81;
+}
+
+.level-card {
+    transition: transform .2s ease, border-color .2s ease;
+}
+
+.level-card:hover {
+    transform: translateY(-1px);
+    border-color: #c7d2fe;
+}
+
+.quiz-focus-body {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.quiz-focus-header {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.timer-track {
+    height: .7rem;
+}
+
+.timer-fill {
+    background: linear-gradient(90deg, #34d399, #10b981);
+}
+
+.timer-fill.timer-late {
+    background: linear-gradient(90deg, #fb7185, #e11d48);
+}
+
 .stack-sm { display:grid; gap: 0.6rem; }
 
 .result-summary-grid {

@@ -36,6 +36,10 @@ class SubjectController extends Controller
             }
         }
 
+        if ($level = $request->string('level')->toString()) {
+            $query->where('level', $level);
+        }
+
         $subjects = $query
             ->withCount('topics')
             ->orderBy('sort_order')
@@ -48,6 +52,7 @@ class SubjectController extends Controller
             'filters' => [
                 'q' => $request->string('q')->toString(),
                 'status' => $request->string('status')->toString(),
+                'level' => $request->string('level')->toString(),
             ],
         ]);
     }

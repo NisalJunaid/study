@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Quiz In Progress', 'subheading' => 'Answer one question at a time. Progress auto-saves as you work.'])
+@extends('layouts.student', ['heading' => 'Quiz In Progress', 'subheading' => 'Focused mode: question, timer, progress, answer.'])
 
 @section('content')
 @php
@@ -6,6 +6,7 @@
     $questionPayload = $quiz->quizQuestions->map(function ($quizQuestion) {
         $snapshot = $quizQuestion->question_snapshot ?? [];
         $answer = $quizQuestion->studentAnswer;
+        $idealTime = (int) ($snapshot['ideal_time_seconds'] ?? 90);
 
         return [
             'id' => $quizQuestion->id,
@@ -13,6 +14,7 @@
             'type' => $snapshot['type'] ?? null,
             'question_text' => $snapshot['question_text'] ?? '',
             'marks' => $quizQuestion->max_score,
+            'ideal_time_seconds' => $idealTime,
             'options' => collect($snapshot['options'] ?? [])->map(fn ($option) => [
                 'id' => $option['id'],
                 'option_key' => $option['option_key'],
@@ -21,6 +23,10 @@
             'answer' => [
                 'selected_option_id' => $answer?->selected_option_id,
                 'answer_text' => $answer?->answer_text,
+                'question_started_at' => optional($answer?->question_started_at)->toIso8601String(),
+                'answered_at' => optional($answer?->answered_at)->toIso8601String(),
+                'answer_duration_seconds' => $answer?->answer_duration_seconds,
+                'answered_on_time' => $answer?->answered_on_time,
             ],
         ];
     })->values();
@@ -32,34 +38,32 @@
     data-csrf="{{ csrf_token() }}"
     data-locked="{{ $isLocked ? '1' : '0' }}"
 >
-    <section class="card">
+    <section class="card quiz-focus-header">
         <div class="row-between">
-            <h3 class="h2">{{ $quiz->subject?->name ?? 'General quiz' }}</h3>
+            <strong id="question-counter">Question 1 of {{ $quiz->quizQuestions->count() }}</strong>
             <span class="pill">{{ strtoupper($quiz->mode) }}</span>
         </div>
-        <p class="muted text-sm mb-0">{{ $quiz->total_questions }} questions • Total marks: {{ $quiz->total_possible_score }} • Status: {{ str_replace('_', ' ', $quiz->status) }}</p>
-
-        @if($isLocked)
-            <div class="alert alert-success" style="margin:0">
-                This quiz is already submitted. Answers are read-only.
-                <a href="{{ route('student.quiz.results', $quiz) }}" style="text-decoration:underline">View results</a>
-            </div>
-        @endif
+        <div class="progress-track">
+            <div class="progress-fill" id="overall-progress-fill" style="width: 0%"></div>
+        </div>
+        <p class="muted text-sm mb-0">{{ $quiz->subject?->name ?? 'General quiz' }} · {{ $quiz->total_questions }} questions · {{ $quiz->total_possible_score }} marks</p>
     </section>
 
     @if($quiz->quizQuestions->isEmpty())
         <section class="empty-state">
             <h4>No quiz questions assigned</h4>
-            <p class="muted">This quiz could not be initialized. Please return to the quiz builder.</p>
+            <p class="muted">This quiz could not be initialized. Please return to quiz setup.</p>
         </section>
     @else
-        <section class="card stack-md quiz-panel">
+        <section class="card stack-md quiz-panel quiz-focus-body">
             <div class="row-between">
-                <strong id="question-counter">Question 1 of {{ $quiz->quizQuestions->count() }}</strong>
                 <span class="pill" id="autosave-indicator">All changes saved</span>
+                <span class="pill timer-pill" id="timer-pill">Timer: --</span>
             </div>
 
-            <div class="quiz-progress-track" id="quiz-progress-track"></div>
+            <div class="progress-track timer-track">
+                <div class="progress-fill timer-fill" id="timer-progress-fill" style="width: 0%"></div>
+            </div>
 
             <article class="card card-soft stack-md" id="active-question-panel"></article>
 
@@ -91,21 +95,27 @@
     const csrfToken = root.dataset.csrf;
     const isLocked = root.dataset.locked === '1';
 
+    const nowIso = () => new Date().toISOString();
+    const toTimestamp = (value) => value ? new Date(value).getTime() : null;
+
     const state = {
         currentIndex: 0,
         saveTimers: new Map(),
         savingByQuestion: new Map(),
         pendingByQuestion: new Map(),
+        timerInterval: null,
     };
 
     const els = {
         panel: document.getElementById('active-question-panel'),
         counter: document.getElementById('question-counter'),
-        progress: document.getElementById('quiz-progress-track'),
         autosave: document.getElementById('autosave-indicator'),
         prev: document.getElementById('prev-question'),
         next: document.getElementById('next-question'),
         submitForm: document.getElementById('submit-quiz-form'),
+        timerPill: document.getElementById('timer-pill'),
+        timerFill: document.getElementById('timer-progress-fill'),
+        overallFill: document.getElementById('overall-progress-fill'),
     };
 
     const isAnswered = (question) => {
@@ -130,25 +140,31 @@
         els.autosave.textContent = 'All changes saved';
     };
 
-    const renderProgress = () => {
-        els.progress.innerHTML = '';
+    const updateOverallProgress = () => {
+        const answered = questions.filter(isAnswered).length;
+        const percent = questions.length > 0 ? (answered / questions.length) * 100 : 0;
+        if (els.overallFill) els.overallFill.style.width = `${percent}%`;
+    };
 
-        questions.forEach((question, idx) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'quiz-nav-dot';
-            btn.textContent = question.order_no;
+    const computeTimingPayload = (question) => {
+        const startedAt = question.answer?.question_started_at || nowIso();
+        const answeredAt = nowIso();
+        const durationSeconds = Math.max(0, Math.round((toTimestamp(answeredAt) - toTimestamp(startedAt)) / 1000));
+        const ideal = Number(question.ideal_time_seconds || 90);
 
-            if (idx === state.currentIndex) btn.classList.add('active');
-            if (isAnswered(question)) btn.classList.add('answered');
+        question.answer = question.answer || {};
+        question.answer.question_started_at = startedAt;
+        question.answer.answered_at = answeredAt;
+        question.answer.answer_duration_seconds = durationSeconds;
+        question.answer.answered_on_time = durationSeconds <= ideal;
 
-            btn.addEventListener('click', () => {
-                state.currentIndex = idx;
-                render();
-            });
-
-            els.progress.appendChild(btn);
-        });
+        return {
+            question_started_at: startedAt,
+            answered_at: answeredAt,
+            ideal_time_seconds: ideal,
+            answer_duration_seconds: durationSeconds,
+            answered_on_time: durationSeconds <= ideal,
+        };
     };
 
     const scheduleSave = (question, payload) => {
@@ -185,16 +201,40 @@
             } finally {
                 state.savingByQuestion.set(question.id, false);
                 updateAutosaveLabel();
-                renderProgress();
+                updateOverallProgress();
             }
-        }, 600);
+        }, 450);
 
         state.saveTimers.set(question.id, timeout);
+    };
+
+    const updateTimerBar = () => {
+        const question = questions[state.currentIndex];
+        if (!question || !els.timerFill || !els.timerPill) return;
+
+        if (!question.answer?.question_started_at) {
+            question.answer = question.answer || {};
+            question.answer.question_started_at = nowIso();
+            scheduleSave(question, { question_started_at: question.answer.question_started_at, ideal_time_seconds: Number(question.ideal_time_seconds || 90) });
+        }
+
+        const started = toTimestamp(question.answer.question_started_at);
+        const elapsedSeconds = started ? Math.max(0, Math.round((Date.now() - started) / 1000)) : 0;
+        const ideal = Number(question.ideal_time_seconds || 90);
+        const progress = Math.min(100, (elapsedSeconds / ideal) * 100);
+
+        els.timerFill.style.width = `${progress}%`;
+        els.timerPill.textContent = `Ideal ${ideal}s · Elapsed ${elapsedSeconds}s`;
+        els.timerFill.classList.toggle('timer-late', elapsedSeconds > ideal);
     };
 
     const renderQuestion = () => {
         const question = questions[state.currentIndex];
         if (!question) return;
+
+        if (state.timerInterval) {
+            clearInterval(state.timerInterval);
+        }
 
         els.counter.textContent = `Question ${state.currentIndex + 1} of ${questions.length}`;
 
@@ -203,7 +243,7 @@
                 <strong>${question.type.toUpperCase()} Question</strong>
                 <span class="pill">${Number(question.marks).toFixed(2)} marks</span>
             </div>
-            <p style="margin:0">${question.question_text}</p>
+            <p style="margin:0;font-size:1.03rem;line-height:1.6">${question.question_text}</p>
         `;
 
         if (question.type === 'mcq') {
@@ -235,8 +275,11 @@
                 input.addEventListener('change', (event) => {
                     question.answer = question.answer || {};
                     question.answer.selected_option_id = Number(event.target.value);
-                    scheduleSave(question, { selected_option_id: Number(event.target.value) });
-                    renderProgress();
+                    scheduleSave(question, {
+                        selected_option_id: Number(event.target.value),
+                        ...computeTimingPayload(question),
+                    });
+                    updateOverallProgress();
                 });
             });
         }
@@ -246,8 +289,11 @@
             textarea?.addEventListener('input', (event) => {
                 question.answer = question.answer || {};
                 question.answer.answer_text = event.target.value;
-                scheduleSave(question, { answer_text: event.target.value });
-                renderProgress();
+                scheduleSave(question, {
+                    answer_text: event.target.value,
+                    ...computeTimingPayload(question),
+                });
+                updateOverallProgress();
             });
         }
 
@@ -255,37 +301,32 @@
         els.next.disabled = state.currentIndex >= questions.length - 1;
 
         updateAutosaveLabel();
-    };
-
-    const render = () => {
-        renderQuestion();
-        renderProgress();
+        updateTimerBar();
+        state.timerInterval = setInterval(updateTimerBar, 1000);
     };
 
     els.prev?.addEventListener('click', () => {
         if (state.currentIndex > 0) {
             state.currentIndex -= 1;
-            render();
+            renderQuestion();
         }
     });
 
     els.next?.addEventListener('click', () => {
         if (state.currentIndex < questions.length - 1) {
             state.currentIndex += 1;
-            render();
+            renderQuestion();
         }
     });
 
     els.submitForm?.addEventListener('submit', (event) => {
         const answeredCount = questions.filter(isAnswered).length;
         const confirmed = window.confirm(`Submit quiz now? You answered ${answeredCount} of ${questions.length} questions.`);
-
-        if (!confirmed) {
-            event.preventDefault();
-        }
+        if (!confirmed) event.preventDefault();
     });
 
-    render();
+    updateOverallProgress();
+    renderQuestion();
 })();
 </script>
 @endif

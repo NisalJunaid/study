@@ -28,6 +28,7 @@ class AdminCurriculumCrudTest extends TestCase
             ->post(route('admin.subjects.store'), [
                 'name' => 'Mathematics',
                 'slug' => 'mathematics',
+                'level' => \App\Models\Subject::LEVEL_O,
                 'description' => 'Numbers and logic',
                 'color' => '#3b82f6',
                 'icon' => 'calculator',
@@ -42,6 +43,7 @@ class AdminCurriculumCrudTest extends TestCase
             ->put(route('admin.subjects.update', $subject), [
                 'name' => 'Mathematics Updated',
                 'slug' => 'mathematics-updated',
+                'level' => \App\Models\Subject::LEVEL_A,
                 'description' => 'Updated',
                 'color' => '#0ea5e9',
                 'icon' => 'plus',
@@ -54,6 +56,7 @@ class AdminCurriculumCrudTest extends TestCase
             'id' => $subject->id,
             'name' => 'Mathematics Updated',
             'slug' => 'mathematics-updated',
+            'level' => \App\Models\Subject::LEVEL_A,
         ]);
 
         $this->actingAs($admin)
