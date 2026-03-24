@@ -55,31 +55,48 @@
             <p class="muted">This quiz could not be initialized. Please return to quiz setup.</p>
         </section>
     @else
-        <section class="card stack-md quiz-panel quiz-focus-body">
-            <div class="row-between">
-                <span class="pill" id="autosave-indicator">All changes saved</span>
-                <span class="pill timer-pill" id="timer-pill">Timer: --</span>
-            </div>
-
-            <div class="progress-track timer-track">
-                <div class="progress-fill timer-fill" id="timer-progress-fill" style="width: 0%"></div>
-            </div>
-
-            <article class="card card-soft stack-md" id="active-question-panel"></article>
-
-            <div class="actions-row" style="justify-content:space-between;align-items:center">
-                <div class="actions-inline">
-                    <button type="button" class="btn" id="prev-question">Previous</button>
-                    <button type="button" class="btn" id="next-question">Next</button>
+        <section class="quiz-focus-body">
+            <div class="card stack-md quiz-panel quiz-main-column">
+                <div class="row-between">
+                    <span class="pill" id="autosave-indicator">All changes saved</span>
+                    <span class="pill timer-pill" id="timer-pill">Timer: --</span>
                 </div>
 
-                @if(! $isLocked)
-                    <form method="POST" action="{{ route('student.quiz.submit', $quiz) }}" id="submit-quiz-form">
-                        @csrf
-                        <button type="submit" class="btn btn-primary">Submit Quiz</button>
-                    </form>
-                @endif
+                <div class="progress-track timer-track">
+                    <div class="progress-fill timer-fill" id="timer-progress-fill" style="width: 0%"></div>
+                </div>
+
+                <article class="card card-soft stack-md quiz-question-card" id="active-question-panel"></article>
+
+                <div class="actions-row" style="justify-content:space-between;align-items:center">
+                    <div class="actions-inline">
+                        <button type="button" class="btn" id="prev-question">Previous</button>
+                        <button type="button" class="btn" id="next-question">Next</button>
+                    </div>
+
+                    @if(! $isLocked)
+                        <form method="POST" action="{{ route('student.quiz.submit', $quiz) }}" id="submit-quiz-form">
+                            @csrf
+                            <button type="submit" class="btn btn-primary">Submit Quiz</button>
+                        </form>
+                    @endif
+                </div>
             </div>
+
+            <aside class="quiz-side-column">
+                <section class="card stack-md">
+                    <div class="row-between">
+                        <h3 class="h3">Question Navigator</h3>
+                        <span class="pill" id="answered-counter">0 answered</span>
+                    </div>
+                    <div class="quiz-progress-track" id="quiz-progress-track"></div>
+                </section>
+
+                <section class="card stack-sm card-soft">
+                    <h3 class="h3">Quiz Timing</h3>
+                    <p class="muted text-sm mb-0">Use the timer bar to keep a steady pace per question.</p>
+                </section>
+            </aside>
         </section>
     @endif
 </div>
@@ -116,6 +133,8 @@
         timerPill: document.getElementById('timer-pill'),
         timerFill: document.getElementById('timer-progress-fill'),
         overallFill: document.getElementById('overall-progress-fill'),
+        progressTrack: document.getElementById('quiz-progress-track'),
+        answeredCounter: document.getElementById('answered-counter'),
     };
 
     const isAnswered = (question) => {
@@ -140,10 +159,30 @@
         els.autosave.textContent = 'All changes saved';
     };
 
+    const renderProgressDots = () => {
+        if (!els.progressTrack) return;
+
+        const dotsHtml = questions.map((question, index) => {
+            const active = index === state.currentIndex ? 'active' : '';
+            const answered = isAnswered(question) ? 'answered' : '';
+            return `<button type="button" class="quiz-nav-dot ${active} ${answered}" data-question-index="${index}">${index + 1}</button>`;
+        }).join('');
+
+        els.progressTrack.innerHTML = dotsHtml;
+        els.progressTrack.querySelectorAll('[data-question-index]').forEach((dot) => {
+            dot.addEventListener('click', () => {
+                state.currentIndex = Number(dot.dataset.questionIndex || 0);
+                renderQuestion();
+            });
+        });
+    };
+
     const updateOverallProgress = () => {
         const answered = questions.filter(isAnswered).length;
         const percent = questions.length > 0 ? (answered / questions.length) * 100 : 0;
         if (els.overallFill) els.overallFill.style.width = `${percent}%`;
+        if (els.answeredCounter) els.answeredCounter.textContent = `${answered} answered`;
+        renderProgressDots();
     };
 
     const computeTimingPayload = (question) => {
@@ -239,11 +278,15 @@
         els.counter.textContent = `Question ${state.currentIndex + 1} of ${questions.length}`;
 
         let body = `
-            <div class="row-between">
-                <strong>${question.type.toUpperCase()} Question</strong>
-                <span class="pill">${Number(question.marks).toFixed(2)} marks</span>
+            <div class="quiz-metadata-grid">
+                <div class="card card-soft">
+                    <strong>${question.type.toUpperCase()} Question</strong>
+                </div>
+                <div class="card card-soft">
+                    <strong>${Number(question.marks).toFixed(2)} marks</strong>
+                </div>
             </div>
-            <p style="margin:0;font-size:1.03rem;line-height:1.6">${question.question_text}</p>
+            <p style="margin:0;font-size:1.08rem;line-height:1.7">${question.question_text}</p>
         `;
 
         if (question.type === 'mcq') {
@@ -263,7 +306,7 @@
             body += `
                 <label class="field" style="margin:0">
                     <span>Your theory answer</span>
-                    <textarea id="theory-answer" rows="8" placeholder="Write your response here..." ${isLocked ? 'disabled' : ''}>${safeText}</textarea>
+                    <textarea id="theory-answer" rows="10" placeholder="Write your response here..." ${isLocked ? 'disabled' : ''}>${safeText}</textarea>
                 </label>
             `;
         }

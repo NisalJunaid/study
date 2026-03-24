@@ -36,9 +36,9 @@
             <p class="muted" style="margin:0">No parsed AI payload available. Check raw JSON below.</p>
         @endif
 
-        <details>
+        <details class="card card-soft">
             <summary>Raw AI JSON</summary>
-            <pre style="white-space:pre-wrap;overflow:auto">{{ json_encode($review->ai_result_json, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES) }}</pre>
+            <pre style="white-space:pre-wrap;overflow:auto;margin:0">{{ json_encode($review->ai_result_json, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES) }}</pre>
         </details>
     </section>
 
@@ -48,13 +48,13 @@
             @csrf
             @method('PUT')
 
-            <label>
+            <label class="field">
                 <span>Score (max {{ $review->quizQuestion->max_score }})</span>
                 <input type="number" name="score" step="0.01" min="0" max="{{ $review->quizQuestion->max_score }}" value="{{ old('score', $review->score ?? 0) }}" required>
                 @error('score')<small class="field-error">{{ $message }}</small>@enderror
             </label>
 
-            <label>
+            <label class="field">
                 <span>Feedback to student</span>
                 <textarea name="feedback" rows="4" required>{{ old('feedback', $review->feedback) }}</textarea>
                 @error('feedback')<small class="field-error">{{ $message }}</small>@enderror
