@@ -16,6 +16,7 @@ class StoreQuizRequest extends FormRequest
         $subjectIds = $this->input('subject_ids', []);
 
         $this->merge([
+            'levels' => collect($this->input('levels', []))->map(fn ($value) => (string) $value)->unique()->values()->all(),
             'question_count' => $this->input('question_count', 50),
             'multi_subject_mode' => $this->boolean('multi_subject_mode'),
             'subject_ids' => is_array($subjectIds) ? array_values(array_unique(array_map('intval', $subjectIds))) : [],
@@ -31,7 +32,8 @@ class StoreQuizRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'level' => ['required', Rule::in(Subject::levels())],
+            'levels' => ['required', 'array', 'min:1'],
+            'levels.*' => [Rule::in(Subject::levels())],
             'multi_subject_mode' => ['required', 'boolean'],
             'subject_id' => ['nullable', 'integer', Rule::exists('subjects', 'id')->where('is_active', true)],
             'subject_ids' => ['nullable', 'array'],
@@ -78,9 +80,20 @@ class StoreQuizRequest extends FormRequest
                 return;
             }
 
-            $level = $this->string('level')->toString();
-            if ($subjects->contains(fn (Subject $subject) => $subject->level !== $level)) {
-                $validator->errors()->add('subject_id', 'Selected subjects must belong to the chosen level.');
+            $levels = collect($this->input('levels', []))
+                ->map(fn ($value) => (string) $value)
+                ->filter(fn (string $value) => in_array($value, Subject::levels(), true))
+                ->unique()
+                ->values();
+
+            if ($levels->isEmpty()) {
+                $validator->errors()->add('levels', 'Select at least one level.');
+
+                return;
+            }
+
+            if ($subjects->contains(fn (Subject $subject) => ! $levels->contains($subject->level))) {
+                $validator->errors()->add('subject_id', 'Selected subjects must belong to the chosen level selection.');
 
                 return;
             }

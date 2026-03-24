@@ -20,16 +20,24 @@ class QuizController extends Controller
 {
     public function create(): View
     {
-        $selectedLevel = request()->string('level')->toString();
-        if (! in_array($selectedLevel, Subject::levels(), true)) {
-            $selectedLevel = Subject::LEVEL_O;
+        $selectedLevels = collect(request()->input('levels', old('levels', [])))
+            ->map(fn ($value) => (string) $value)
+            ->filter(fn (string $value) => in_array($value, Subject::levels(), true))
+            ->unique()
+            ->values();
+
+        if ($selectedLevels->isEmpty()) {
+            $legacyLevel = request()->string('level')->toString();
+            $selectedLevels = in_array($legacyLevel, Subject::levels(), true)
+                ? collect([$legacyLevel])
+                : collect([Subject::LEVEL_O]);
         }
 
         $oldMulti = request()->boolean('multi_subject_mode', old('multi_subject_mode', false));
 
         $subjects = Subject::query()
             ->active()
-            ->forLevel($selectedLevel)
+            ->whereIn('level', $selectedLevels->all())
             ->with([
                 'topics' => fn ($query) => $query->active()->orderBy('sort_order')->orderBy('name'),
             ])
@@ -38,7 +46,7 @@ class QuizController extends Controller
             ])
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get(['id', 'name', 'description', 'color', 'level']);
+            ->get(['id', 'name', 'description', 'color', 'level', 'icon']);
 
         $selectedSubjectIds = collect(old('subject_ids', []))
             ->map(fn ($id) => (int) $id)
@@ -64,7 +72,7 @@ class QuizController extends Controller
                 'value' => $level,
                 'label' => Subject::levelLabel($level),
             ])->all(),
-            'selectedLevel' => $selectedLevel,
+            'selectedLevels' => $selectedLevels->all(),
             'selectedSubjectId' => $selectedSubjectId,
             'selectedSubjectIds' => $selectedSubjectIds->all(),
             'subjects' => $subjects,

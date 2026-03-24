@@ -10,6 +10,16 @@ class LevelController extends Controller
 {
     public function index(): View
     {
+        $selectedLevels = collect(request()->input('levels', [Subject::LEVEL_O]))
+            ->map(fn ($value) => (string) $value)
+            ->filter(fn (string $value) => in_array($value, Subject::levels(), true))
+            ->unique()
+            ->values();
+
+        if ($selectedLevels->isEmpty()) {
+            $selectedLevels = collect([Subject::LEVEL_O]);
+        }
+
         $levels = collect(Subject::levels())
             ->map(function (string $level): array {
                 $subjectsQuery = Subject::query()
@@ -32,6 +42,8 @@ class LevelController extends Controller
 
         return view('pages.student.levels.index', [
             'levels' => $levels,
+            'selectedLevels' => $selectedLevels->all(),
+            'multiLevelMode' => count($selectedLevels) > 1,
         ]);
     }
 }

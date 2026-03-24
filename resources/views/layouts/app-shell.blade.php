@@ -16,7 +16,22 @@
         <a class="topbar-brand" href="{{ auth()->check() && auth()->user()->isAdmin() ? route('admin.dashboard') : route('student.dashboard') }}">Focus Lab</a>
 
         @auth
-            <div class="topbar-user muted text-sm">{{ auth()->user()->name }}</div>
+            <div class="topbar-user-menu" data-user-menu>
+                <button class="topbar-user-button" type="button" data-user-menu-toggle aria-expanded="false" aria-haspopup="true">
+                    <span class="avatar-circle">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                    <span class="user-name text-sm">{{ auth()->user()->name }}</span>
+                    <span aria-hidden="true">▾</span>
+                </button>
+
+                <div class="user-dropdown card" data-user-menu-panel hidden>
+                    <a href="{{ route('profile.edit') }}" class="user-dropdown-item">Profile & settings</a>
+                    <a href="{{ route('profile.edit') }}#account" class="user-dropdown-item">Account management</a>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="user-dropdown-item user-dropdown-item-danger">Logout</button>
+                    </form>
+                </div>
+            </div>
         @else
             <div></div>
         @endauth
@@ -62,6 +77,10 @@
         const overlay = shell.querySelector('[data-nav-overlay]');
         const toggleButton = shell.querySelector('[data-nav-toggle]');
         const closeButton = shell.querySelector('[data-nav-close]');
+        const navItems = shell.querySelectorAll('[data-student-nav] .nav-item');
+        const userMenu = shell.querySelector('[data-user-menu]');
+        const userMenuToggle = shell.querySelector('[data-user-menu-toggle]');
+        const userMenuPanel = shell.querySelector('[data-user-menu-panel]');
 
         const closeNav = () => {
             shell.classList.remove('nav-open');
@@ -84,8 +103,32 @@
 
         closeButton?.addEventListener('click', closeNav);
         overlay?.addEventListener('click', closeNav);
+        navItems.forEach((item) => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 1024) closeNav();
+            });
+        });
+
+        userMenuToggle?.addEventListener('click', () => {
+            const isOpen = userMenuToggle.getAttribute('aria-expanded') === 'true';
+            userMenuToggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+            userMenuPanel.hidden = isOpen;
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!userMenu || userMenuPanel.hidden) return;
+            if (!userMenu.contains(event.target)) {
+                userMenuToggle?.setAttribute('aria-expanded', 'false');
+                userMenuPanel.hidden = true;
+            }
+        });
+
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') closeNav();
+            if (event.key === 'Escape') {
+                closeNav();
+                userMenuToggle?.setAttribute('aria-expanded', 'false');
+                if (userMenuPanel) userMenuPanel.hidden = true;
+            }
         });
     })();
 </script>
