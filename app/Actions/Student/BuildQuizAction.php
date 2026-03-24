@@ -199,6 +199,7 @@ class BuildQuizAction
                     'option_key' => $option->option_key,
                     'option_text' => $option->option_text,
                     'sort_order' => $option->sort_order,
+                    'is_correct' => (bool) $option->is_correct,
                 ])
                 ->values()
                 ->all();

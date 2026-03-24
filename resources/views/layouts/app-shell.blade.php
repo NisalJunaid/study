@@ -28,6 +28,8 @@
             @endauth
         </header>
 
+        @include('components.admin.flash')
+
         @yield('content')
     </main>
 </div>
