@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\TheoryReviewController;
@@ -45,7 +46,8 @@ Route::prefix('admin')
         Route::resource('topics', TopicController::class)->except('show');
         Route::resource('questions', QuestionController::class)->except('show');
         Route::patch('questions/{question}/toggle-publish', [QuestionController::class, 'togglePublish'])->name('questions.toggle-publish');
-        Route::get('/imports', fn () => view('pages.admin.imports.index'))->name('imports.index');
+        Route::resource('imports', ImportController::class)->only(['index', 'store', 'show']);
+        Route::post('imports/{import}/confirm', [ImportController::class, 'confirm'])->name('imports.confirm');
         Route::get('/theory-reviews', [TheoryReviewController::class, 'index'])->name('theory-reviews.index');
         Route::get('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'show'])->name('theory-reviews.show');
         Route::put('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'update'])->name('theory-reviews.update');
