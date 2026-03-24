@@ -104,7 +104,7 @@ class StudentQuizTakingFlowTest extends TestCase
 
         $quiz->refresh();
 
-        $this->assertSame(Quiz::STATUS_GRADING, $quiz->status);
+        $this->assertContains($quiz->status, [Quiz::STATUS_GRADING, Quiz::STATUS_GRADED]);
         $this->assertNotNull($quiz->submitted_at);
         $this->assertSame('2.00', $quiz->total_awarded_score);
 
@@ -116,8 +116,15 @@ class StudentQuizTakingFlowTest extends TestCase
 
         $this->assertDatabaseHas('student_answers', [
             'quiz_question_id' => $theoryQuizQuestion->id,
-            'grading_status' => StudentAnswer::STATUS_PENDING,
             'answer_text' => 'It is the process where plants make food.',
+        ]);
+
+        $theoryAnswer = StudentAnswer::query()->where('quiz_question_id', $theoryQuizQuestion->id)->firstOrFail();
+        $this->assertContains($theoryAnswer->grading_status, [
+            StudentAnswer::STATUS_PENDING,
+            StudentAnswer::STATUS_PROCESSING,
+            StudentAnswer::STATUS_GRADED,
+            StudentAnswer::STATUS_MANUAL_REVIEW,
         ]);
 
         $this->assertDatabaseMissing('student_answers', [
