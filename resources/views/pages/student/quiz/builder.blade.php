@@ -1,8 +1,8 @@
-@extends('layouts.student', ['heading' => 'Start a Quiz', 'subheading' => 'A focused path: level → subjects → topics → settings → start.'])
+@extends('layouts.student', ['heading' => 'Build Your Quiz Mission', 'subheading' => 'Choose subjects, filter topics, tune settings, then launch.'])
 
 @section('content')
 @php
-    $selectedLevelValue = old('level', $selectedLevel);
+    $selectedLevelValues = collect(old('levels', $selectedLevels ?? []))->map(fn ($value) => (string) $value)->all();
     $selectedSubjectValue = (string) old('subject_id', $selectedSubjectId ?: '');
     $selectedSubjectValues = collect(old('subject_ids', $selectedSubjectIds ?? []))->map(fn ($id) => (string) $id)->all();
     $selectedTopicIds = collect(old('topic_ids', []))->map(fn ($id) => (string) $id)->all();
@@ -12,40 +12,36 @@
 
 <div class="stack-lg" id="guided-quiz-setup" data-multi-mode-initial="{{ $isMultiMode ? '1' : '0' }}">
     <section class="page-hero">
-        <h2 class="h1">Guided Quiz Builder</h2>
-        <p class="mb-0" style="opacity:.92">Pick your level, choose one or more subjects, optionally narrow by topics, then begin.</p>
+        <h2 class="h1">Subjects → Topics → Settings</h2>
+        <p class="mb-0" style="opacity:.92">Focus path unlocked. Pick your content and start a distraction-free quiz.</p>
+        <div class="row-wrap" style="margin-top:.65rem;">
+            @foreach($levels as $level)
+                @if(in_array((string) $level['value'], $selectedLevelValues, true))
+                    <span class="pill">{{ $level['label'] }}</span>
+                @endif
+            @endforeach
+            <a class="btn btn-ghost" href="{{ route('student.levels.index') }}">Change levels</a>
+        </div>
     </section>
 
     @if($subjects->isEmpty())
         <section class="empty-state card">
-            <h4>No subjects available for this level</h4>
-            <p class="muted">Try another level or ask an admin to activate content.</p>
+            <h4>No subjects available for your selected level(s)</h4>
+            <p class="muted">Try another level selection or ask an admin to activate content.</p>
             <a class="btn" href="{{ route('student.levels.index') }}">Back to levels</a>
         </section>
     @else
         <form class="card stack-lg quiz-panel guided-form" method="POST" action="{{ route('student.quiz.store') }}" id="guided-quiz-form">
             @csrf
 
-            <section class="stack-sm section-block">
-                <h3 class="h2">1) Select level</h3>
-                <p class="muted text-sm mb-0">Only subjects for this level are shown below.</p>
-                <div class="card-grid level-grid">
-                    @foreach($levels as $level)
-                        <label class="select-card level-option {{ $selectedLevelValue === $level['value'] ? 'active' : '' }}">
-                            <input type="radio" name="level" value="{{ $level['value'] }}" @checked($selectedLevelValue === $level['value'])>
-                            <span class="select-title">{{ $level['label'] }}</span>
-                        </label>
-                    @endforeach
-                </div>
-                @error('level') <small class="field-error">{{ $message }}</small> @enderror
-            </section>
-
-            <hr class="section-divider">
+            @foreach($selectedLevelValues as $levelValue)
+                <input type="hidden" name="levels[]" value="{{ $levelValue }}">
+            @endforeach
 
             <section class="stack-sm section-block">
                 <div class="row-between">
                     <div>
-                        <h3 class="h2">2) Select subject(s)</h3>
+                        <h3 class="h2">1) Select subject(s)</h3>
                         <p class="muted text-sm mb-0">Choose one subject, or switch on multi-subject mode.</p>
                     </div>
                     <label class="toggle-row" style="gap:.55rem">
@@ -75,7 +71,10 @@
                             >
                             <input type="radio" name="subject_id" value="{{ $subject->id }}" class="subject-single-input" @checked(! $isMultiMode && $isChecked)>
                             <input type="checkbox" name="subject_ids[]" value="{{ $subject->id }}" class="subject-multi-input" @checked($isMultiMode && $isChecked)>
-                            <span class="select-title">{{ $subject->name }}</span>
+                            <div class="row-between">
+                                <span class="select-title">{{ $subject->name }}</span>
+                                <span class="pill">{{ \App\Models\Subject::levelLabel($subject->level) }}</span>
+                            </div>
                             <span class="muted text-sm">{{ $subject->available_questions_count }} question(s)</span>
                         </label>
                     @endforeach
@@ -87,8 +86,8 @@
             <hr class="section-divider">
 
             <section class="stack-sm section-block">
-                <h3 class="h2">3) Select topics <span class="muted text-sm">(Optional)</span></h3>
-                <p class="muted text-sm mb-0">Only topics from selected subjects appear. Leave blank to include all topics.</p>
+                <h3 class="h2">2) Select topics <span class="muted text-sm">(Optional)</span></h3>
+                <p class="muted text-sm mb-0">Topics are grouped by subject with instant search and scrollable lists.</p>
 
                 <div class="stack-md" id="topic-groups">
                     @foreach($subjects as $subject)
@@ -101,15 +100,20 @@
                             @if($subject->topics->isEmpty())
                                 <p class="muted text-sm mb-0">No active topics yet for this subject.</p>
                             @else
-                                <div class="topic-chip-grid">
+                                <label class="field mb-0">
+                                    <span>Search topics</span>
+                                    <input type="search" class="topic-search-input" placeholder="Type to filter topics..." data-topic-search>
+                                </label>
+                                <div class="topic-chip-grid topic-scroll-list" data-topic-list>
                                     @foreach($subject->topics as $topic)
                                         @php $checked = in_array((string) $topic->id, $selectedTopicIds, true); @endphp
-                                        <label class="topic-chip {{ $checked ? 'active' : '' }}" data-topic-id="{{ $topic->id }}">
+                                        <label class="topic-chip {{ $checked ? 'active' : '' }}" data-topic-id="{{ $topic->id }}" data-topic-name="{{ strtolower($topic->name) }}">
                                             <input type="checkbox" name="topic_ids[]" value="{{ $topic->id }}" @checked($checked)>
                                             <span>{{ $topic->name }}</span>
                                         </label>
                                     @endforeach
                                 </div>
+                                <small class="muted text-xs" data-topic-empty-message style="display:none;">No topics match your search.</small>
                             @endif
                         </article>
                     @endforeach
@@ -121,7 +125,7 @@
             <hr class="section-divider">
 
             <section class="stack-sm section-block">
-                <h3 class="h2">4) Quiz settings</h3>
+                <h3 class="h2">3) Quiz settings</h3>
                 <div class="grid-3">
                     <label class="field">
                         <span>Mode</span>
@@ -165,20 +169,11 @@
     const root = document.getElementById('guided-quiz-setup');
     if (!root) return;
 
-    const levelInputs = Array.from(root.querySelectorAll('input[name="level"]'));
     const multiModeInput = root.querySelector('#multi-subject-mode');
     const subjectCards = Array.from(root.querySelectorAll('.subject-option'));
     const topicGroups = Array.from(root.querySelectorAll('.topic-group'));
 
     const isMulti = () => !!multiModeInput?.checked;
-
-    const activateCardState = (inputs, optionClass) => {
-        inputs.forEach((input) => {
-            const card = input.closest(`.${optionClass}`);
-            if (!card) return;
-            card.classList.toggle('active', input.checked);
-        });
-    };
 
     const selectedSubjectIds = () => subjectCards
         .filter((card) => card.querySelector('.subject-picker')?.checked)
@@ -193,6 +188,7 @@
 
             if (isMulti()) {
                 picker.type = 'checkbox';
+                picker.name = '';
                 singleInput.disabled = true;
                 singleInput.required = false;
                 multiInput.disabled = !picker.checked;
@@ -227,17 +223,13 @@
     };
 
     const refreshSubjects = () => {
-        activateCardState(root.querySelectorAll('.subject-picker'), 'subject-option');
+        subjectCards.forEach((card) => {
+            const input = card.querySelector('.subject-picker');
+            card.classList.toggle('active', !!input?.checked);
+        });
         syncSubjectInputNames();
         syncTopicGroups();
     };
-
-    levelInputs.forEach((input) => {
-        input.addEventListener('change', () => {
-            activateCardState(levelInputs, 'level-option');
-            window.location.href = `{{ route('student.quiz.setup') }}?level=${encodeURIComponent(input.value)}`;
-        });
-    });
 
     subjectCards.forEach((card) => {
         const picker = card.querySelector('.subject-picker');
@@ -262,7 +254,7 @@
             subjectCards.forEach((card) => {
                 const picker = card.querySelector('.subject-picker');
                 if (!picker) return;
-                picker.checked = firstChecked ? card === firstChecked : false;
+                picker.checked = firstChecked ? card === firstChecked : card === subjectCards[0];
             });
         }
 
@@ -275,7 +267,27 @@
         });
     });
 
-    activateCardState(levelInputs, 'level-option');
+    root.querySelectorAll('[data-topic-search]').forEach((searchInput) => {
+        searchInput.addEventListener('input', () => {
+            const group = searchInput.closest('.topic-group');
+            if (!group) return;
+
+            const query = searchInput.value.trim().toLowerCase();
+            const chips = Array.from(group.querySelectorAll('.topic-chip'));
+            const emptyMessage = group.querySelector('[data-topic-empty-message]');
+
+            let visibleCount = 0;
+            chips.forEach((chip) => {
+                const name = chip.dataset.topicName || '';
+                const match = query === '' || name.includes(query);
+                chip.style.display = match ? 'inline-flex' : 'none';
+                if (match) visibleCount += 1;
+            });
+
+            if (emptyMessage) emptyMessage.style.display = visibleCount === 0 ? 'block' : 'none';
+        });
+    });
+
     refreshSubjects();
 })();
 </script>

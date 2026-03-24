@@ -45,9 +45,18 @@ class BuildQuizAction
             throw new RuntimeException('Select at least one active subject.');
         }
 
-        $level = $payload['level'] ?? $subjects->first()->level;
-        if ($subjects->contains(fn (Subject $subject) => $subject->level !== $level)) {
-            throw new RuntimeException('Selected subjects do not belong to the chosen level.');
+        $levels = collect($payload['levels'] ?? [])
+            ->map(fn ($value) => (string) $value)
+            ->filter(fn (string $value) => in_array($value, Subject::levels(), true))
+            ->unique()
+            ->values();
+
+        if ($levels->isEmpty()) {
+            $levels = collect([$subjects->first()->level]);
+        }
+
+        if ($subjects->contains(fn (Subject $subject) => ! $levels->contains($subject->level))) {
+            throw new RuntimeException('Selected subjects are outside your chosen level scope.');
         }
 
         $topicIds = $this->sanitizeTopicIds($subjectIds, $payload['topic_ids'] ?? []);
@@ -71,10 +80,10 @@ class BuildQuizAction
 
         $singleSubjectId = count($subjectIds) === 1 ? $subjectIds[0] : null;
 
-        return DB::transaction(function () use ($student, $level, $singleSubjectId, $mode, $selectedQuestions): Quiz {
+        return DB::transaction(function () use ($student, $levels, $singleSubjectId, $mode, $selectedQuestions): Quiz {
             $quiz = Quiz::query()->create([
                 'user_id' => $student->id,
-                'level' => $level,
+                'level' => $levels->first(),
                 'subject_id' => $singleSubjectId,
                 'mode' => $mode,
                 'status' => Quiz::STATUS_IN_PROGRESS,

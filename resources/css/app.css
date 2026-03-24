@@ -180,6 +180,7 @@ a { color: inherit; text-decoration: none; }
 .btn-primary:hover { background: #4338ca; border-color: #4338ca; }
 .btn-ghost { background: transparent; }
 .btn-danger { background:#fff1f2; border-color:#fecdd3; color:#be123c; }
+.btn-disabled { opacity: .55; pointer-events: none; }
 
 .page-hero {
     background: linear-gradient(120deg, #312e81, #4338ca);
@@ -545,6 +546,12 @@ label > textarea { resize: vertical; min-height: 120px; }
 .select-title { font-size: 1rem; font-weight: 700; }
 
 .topic-chip-grid { display: flex; flex-wrap: wrap; gap: .6rem; }
+.topic-scroll-list {
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: .2rem;
+    align-content: flex-start;
+}
 .topic-chip {
     display: inline-flex;
     align-items: center;
@@ -592,6 +599,7 @@ label > textarea { resize: vertical; min-height: 120px; }
 
 .timer-track { height: .78rem; }
 .timer-fill { background: linear-gradient(90deg, #34d399, #10b981); }
+.timer-fill.timer-warning { background: linear-gradient(90deg, #facc15, #f59e0b); }
 .timer-fill.timer-late { background: linear-gradient(90deg, #fb7185, #e11d48); }
 
 .progress-track {
@@ -934,7 +942,7 @@ label > textarea { resize: vertical; min-height: 120px; }
     top: 0;
     z-index: 40;
     margin: .85rem .9rem 0;
-    min-height: 3.25rem;
+    min-height: 4.1rem;
     display: grid;
     grid-template-columns: 44px 1fr 44px;
     align-items: center;
@@ -953,6 +961,67 @@ label > textarea { resize: vertical; min-height: 120px; }
     font-weight: 700;
     cursor: pointer;
 }
+
+.topbar-user-menu {
+    position: relative;
+    justify-self: end;
+}
+
+.topbar-user-button {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    border-radius: .9rem;
+    min-height: 2.5rem;
+    padding: .36rem .55rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.topbar-user-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
+.avatar-circle {
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    color: #312e81;
+    background: #e0e7ff;
+    border: 1px solid #a5b4fc;
+}
+
+.user-dropdown {
+    position: absolute;
+    top: calc(100% + .45rem);
+    right: 0;
+    min-width: 220px;
+    padding: .38rem;
+    z-index: 65;
+    animation: rise-in .2s ease;
+}
+
+.user-dropdown-item {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    border-radius: .66rem;
+    display: block;
+    text-align: left;
+    padding: .58rem .62rem;
+    font-weight: 620;
+    color: #1e293b;
+}
+
+.user-dropdown-item:hover { background: #eef2ff; color: #312e81; }
+.user-dropdown-item-danger { color: #be123c; }
 
 .topbar-brand {
     text-align: center;
@@ -1017,6 +1086,51 @@ label > textarea { resize: vertical; min-height: 120px; }
 .guided-form { padding: 1.2rem; }
 
 .topic-group { padding: 1rem; }
+
+.level-home { max-width: min(980px, 100%); margin: 0 auto; }
+.level-hero { text-align: center; }
+.level-meta-row { margin-top: .7rem; display: flex; gap: .45rem; justify-content: center; flex-wrap: wrap; }
+.level-selector-shell { padding: 1.3rem; }
+.level-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .95rem; }
+
+.level-play-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 1rem;
+    padding: 1.1rem;
+    background: linear-gradient(150deg, #ffffff, #eef2ff);
+    text-align: left;
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: .85rem;
+    align-items: center;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.level-play-card:hover { transform: translateY(-2px); border-color: #818cf8; box-shadow: 0 15px 26px rgba(79, 70, 229, 0.15); }
+.level-play-card.active {
+    border-color: #4f46e5;
+    background: linear-gradient(150deg, #eef2ff, #e0f2fe);
+    box-shadow: 0 16px 30px rgba(79, 70, 229, 0.2);
+}
+
+.level-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: .86rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: #fff;
+    border: 1px solid #c7d2fe;
+}
+
+.level-badge {
+    font-size: .74rem;
+    font-weight: 760;
+    color: #4338ca;
+}
 
 .quiz-minimal-wrap {
     width: min(860px, 100%);
@@ -1085,4 +1199,6 @@ label > textarea { resize: vertical; min-height: 120px; }
     .shell-topbar { margin: .6rem .6rem 0; }
     .main { padding-left: .7rem; padding-right: .7rem; }
     .guided-form { padding: .9rem; }
+    .level-card-grid { grid-template-columns: 1fr; }
+    .user-name { display: none; }
 }

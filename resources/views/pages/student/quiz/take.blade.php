@@ -15,7 +15,6 @@
         return [
             'id' => $quizQuestion->id,
             'order_no' => $quizQuestion->order_no,
-            'subject_name' => $snapshot['subject_name'] ?? null,
             'type' => $snapshot['type'] ?? null,
             'question_text' => $snapshot['question_text'] ?? '',
             'marks' => $quizQuestion->max_score,
@@ -30,6 +29,8 @@
                 'answer_text' => $answer?->answer_text,
                 'question_started_at' => optional($answer?->question_started_at)->toIso8601String(),
                 'answered_at' => optional($answer?->answered_at)->toIso8601String(),
+                'answer_duration_seconds' => $answer?->answer_duration_seconds,
+                'ideal_time_seconds' => $answer?->ideal_time_seconds,
             ],
             'locked' => $answer?->answered_at !== null,
         ];
@@ -42,13 +43,19 @@
     data-csrf="{{ csrf_token() }}"
     data-locked="{{ $isLockedQuiz ? '1' : '0' }}"
 >
-    <section class="card stack-md quiz-minimal-header">
-        <div class="row-between">
-            <strong id="question-counter">Question 1 of {{ $quiz->quizQuestions->count() }}</strong>
-            <span class="pill" id="status-pill">In Progress</span>
-        </div>
-        <div class="progress-track">
-            <div class="progress-fill" id="overall-progress-fill" style="width: 0%"></div>
+    <section class="card stack-sm quiz-minimal-header">
+        <div class="timer-panel">
+            <div class="row-between">
+                <strong id="question-counter">Question 1 of {{ $quiz->quizQuestions->count() }}</strong>
+                <span class="pill" id="status-pill">In Progress</span>
+            </div>
+            <div class="timer-track progress-track">
+                <div class="timer-fill progress-fill" id="question-timer-fill" style="width:0%"></div>
+            </div>
+            <div class="row-between text-xs muted">
+                <span id="elapsed-time-text">Elapsed: 0s</span>
+                <span id="ideal-time-text">Ideal: 0s</span>
+            </div>
         </div>
         <div class="quiz-step-list" id="quiz-step-list"></div>
     </section>
@@ -81,30 +88,30 @@
     const csrfToken = root.dataset.csrf;
     const quizLocked = root.dataset.locked === '1';
 
-    const state = { currentIndex: 0, busy: false };
+    const state = { currentIndex: 0, busy: false, timerInterval: null };
 
     const els = {
         panel: document.getElementById('active-question-panel'),
         counter: document.getElementById('question-counter'),
-        overallFill: document.getElementById('overall-progress-fill'),
         steps: document.getElementById('quiz-step-list'),
         submitForm: document.getElementById('submit-quiz-form'),
         statusPill: document.getElementById('status-pill'),
+        timerFill: document.getElementById('question-timer-fill'),
+        elapsedText: document.getElementById('elapsed-time-text'),
+        idealText: document.getElementById('ideal-time-text'),
     };
 
     const nowIso = () => new Date().toISOString();
-
     const isAnswered = (question) => !!question.answer?.answered_at;
+    const currentQuestion = () => questions[state.currentIndex];
+    const sanitize = (value) => String(value || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const selectedOption = (question) => Number(question.answer?.selected_option_id || 0);
+    const typedAnswer = (question) => (question.answer?.answer_text || '').trim();
 
     const ensureStartedAt = (question) => {
         if (!question.answer) question.answer = {};
         if (!question.answer.question_started_at) question.answer.question_started_at = nowIso();
     };
-
-    const sanitize = (value) => String(value || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-    const selectedOption = (question) => Number(question.answer?.selected_option_id || 0);
-    const typedAnswer = (question) => (question.answer?.answer_text || '').trim();
 
     const renderSteps = () => {
         const html = questions.map((q, i) => {
@@ -119,15 +126,44 @@
 
     const updateSummary = () => {
         const done = questions.filter(isAnswered).length;
-        const pct = questions.length ? Math.round((done / questions.length) * 100) : 0;
-
         els.counter.textContent = `Question ${state.currentIndex + 1} of ${questions.length}`;
-        els.overallFill.style.width = `${pct}%`;
         els.statusPill.textContent = quizLocked ? 'Locked' : `${done}/${questions.length} completed`;
         renderSteps();
     };
 
-    const currentQuestion = () => questions[state.currentIndex];
+    const updateTimerUi = () => {
+        const question = currentQuestion();
+        if (!question) return;
+
+        const ideal = Number(question.ideal_time_seconds || 90);
+        let elapsed = 0;
+
+        if (question.answer?.answered_at && question.answer?.answer_duration_seconds != null) {
+            elapsed = Number(question.answer.answer_duration_seconds);
+        } else {
+            const start = question.answer?.question_started_at ? new Date(question.answer.question_started_at).getTime() : Date.now();
+            elapsed = Math.max(0, Math.floor((Date.now() - start) / 1000));
+        }
+
+        const pct = Math.min(100, Math.round((elapsed / ideal) * 100));
+        els.timerFill.style.width = `${pct}%`;
+        els.timerFill.classList.remove('timer-warning', 'timer-late');
+
+        if (elapsed > ideal) {
+            els.timerFill.classList.add('timer-late');
+        } else if (elapsed >= ideal * 0.75) {
+            els.timerFill.classList.add('timer-warning');
+        }
+
+        els.elapsedText.textContent = `Elapsed: ${elapsed}s`;
+        els.idealText.textContent = `Ideal: ${ideal}s`;
+    };
+
+    const startTimer = () => {
+        if (state.timerInterval) clearInterval(state.timerInterval);
+        updateTimerUi();
+        state.timerInterval = window.setInterval(updateTimerUi, 250);
+    };
 
     const persistAndLock = async (question, payload) => {
         state.busy = true;
@@ -152,13 +188,16 @@
         question.locked = true;
         question.answer = question.answer || {};
         question.answer.answered_at = payload.answered_at;
+        question.answer.answer_duration_seconds = payload.answer_duration_seconds;
+        question.answer.ideal_time_seconds = payload.ideal_time_seconds;
     };
 
     const buildQuestionBody = (question) => {
         const locked = quizLocked || question.locked;
+        const progressLabel = `${state.currentIndex + 1}/${questions.length}`;
         let html = `
             <div class="row-between">
-                <span class="pill">${(question.subject_name || 'General').toString()}</span>
+                <strong>Question ${progressLabel}</strong>
                 <span class="pill">${String(question.type || '').toUpperCase()} · ${Number(question.marks).toFixed(2)} marks</span>
             </div>
             <article class="quiz-text-block">${sanitize(question.question_text)}</article>
@@ -184,10 +223,6 @@
                     <textarea id="theory-answer" rows="8" placeholder="Write your response here..." ${disabled}>${sanitize(question.answer?.answer_text || '')}</textarea>
                 </label>
             `;
-        }
-
-        if (locked) {
-            html += '<p class="muted text-sm mb-0">Answer locked after moving forward.</p>';
         }
 
         html += `
@@ -236,6 +271,7 @@
                     state.currentIndex += 1;
                     renderQuestion();
                     updateSummary();
+                    startTimer();
                 }
                 return;
             }
@@ -278,6 +314,7 @@
                 if (state.currentIndex < questions.length - 1) {
                     state.currentIndex += 1;
                     renderQuestion();
+                    startTimer();
                 } else if (els.submitForm) {
                     els.submitForm.style.display = 'flex';
                     els.submitForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -303,6 +340,7 @@
 
     updateSummary();
     renderQuestion();
+    startTimer();
 })();
 </script>
 @endif

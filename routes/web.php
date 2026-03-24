@@ -20,7 +20,7 @@ Route::get('/', function () {
 
     return auth()->user()->isAdmin()
         ? redirect()->route('admin.dashboard')
-        : redirect()->route('student.dashboard');
+        : redirect()->route('student.levels.index');
 })->name('home');
 
 Route::middleware('auth')->group(function () {
@@ -30,7 +30,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'role:student'])->group(function () {
-    Route::get('/dashboard', fn () => redirect()->route('student.quiz.setup'))->name('student.dashboard');
+    Route::get('/dashboard', fn () => redirect()->route('student.levels.index'))->name('student.dashboard');
     Route::get('/levels', [StudentLevelController::class, 'index'])->name('student.levels.index');
     Route::get('/levels/{level}/subjects', [StudentSubjectController::class, 'indexByLevel'])->name('student.levels.subjects.index');
     Route::get('/subjects', fn () => redirect()->route('student.levels.index'))->name('student.subjects.index');
@@ -42,6 +42,20 @@ Route::middleware(['auth', 'role:student'])->group(function () {
     Route::put('/quiz/{quiz}/questions/{quizQuestion}/answer', [StudentQuizController::class, 'saveAnswer'])->name('student.quiz.answer.save');
     Route::post('/quiz/{quiz}/submit', [StudentQuizController::class, 'submit'])->name('student.quiz.submit');
     Route::get('/quiz/{quiz}/results', [StudentQuizController::class, 'results'])->name('student.quiz.results');
+    Route::get('/results', function () {
+        $latest = \App\Models\Quiz::query()
+            ->forUser((int) request()->user()->id)
+            ->whereIn('status', [\App\Models\Quiz::STATUS_SUBMITTED, \App\Models\Quiz::STATUS_GRADING, \App\Models\Quiz::STATUS_GRADED])
+            ->latest('submitted_at')
+            ->latest('id')
+            ->first();
+
+        if (! $latest) {
+            return redirect()->route('student.history.index');
+        }
+
+        return redirect()->route('student.quiz.results', $latest);
+    })->name('student.results.index');
 
     Route::get('/history', [StudentHistoryController::class, 'index'])->name('student.history.index');
     Route::get('/progress', StudentProgressController::class)->name('student.progress.index');
