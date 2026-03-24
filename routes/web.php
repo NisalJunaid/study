@@ -25,6 +25,9 @@ Route::middleware(['auth', 'role:student'])->group(function () {
     Route::get('/quiz/create', [StudentQuizController::class, 'create'])->name('student.quiz.builder');
     Route::post('/quiz', [StudentQuizController::class, 'store'])->name('student.quiz.store');
     Route::get('/quiz/{quiz}', [StudentQuizController::class, 'show'])->name('student.quiz.take');
+    Route::put('/quiz/{quiz}/questions/{quizQuestion}/answer', [StudentQuizController::class, 'saveAnswer'])->name('student.quiz.answer.save');
+    Route::post('/quiz/{quiz}/submit', [StudentQuizController::class, 'submit'])->name('student.quiz.submit');
+    Route::get('/quiz/{quiz}/results', [StudentQuizController::class, 'results'])->name('student.quiz.results');
 
     Route::get('/history', fn () => view('pages.student.history.index'))->name('student.history.index');
     Route::get('/progress', fn () => view('pages.student.progress.index'))->name('student.progress.index');
