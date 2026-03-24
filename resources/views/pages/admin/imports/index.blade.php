@@ -20,14 +20,26 @@
             </div>
 
             <div class="grid-2">
-                <label class="checkbox-row">
-                    <input type="checkbox" name="allow_create_subjects" value="1" {{ old('allow_create_subjects') ? 'checked' : '' }}>
-                    <span>Allow creating missing subjects from CSV</span>
-                </label>
-                <label class="checkbox-row">
-                    <input type="checkbox" name="allow_create_topics" value="1" {{ old('allow_create_topics') ? 'checked' : '' }}>
-                    <span>Allow creating missing topics within matched subjects</span>
-                </label>
+                <div class="checkbox-row toggle-row">
+                    <div class="stack-sm">
+                        <div class="text-strong">Create missing subjects</div>
+                        <small class="muted">Enable when CSV may contain new subject names.</small>
+                    </div>
+                    <label class="switch" aria-label="Allow creating missing subjects">
+                        <input type="checkbox" name="allow_create_subjects" value="1" {{ old('allow_create_subjects') ? 'checked' : '' }}>
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
+                <div class="checkbox-row toggle-row">
+                    <div class="stack-sm">
+                        <div class="text-strong">Create missing topics</div>
+                        <small class="muted">Create topics only within matched/created subjects.</small>
+                    </div>
+                    <label class="switch" aria-label="Allow creating missing topics">
+                        <input type="checkbox" name="allow_create_topics" value="1" {{ old('allow_create_topics') ? 'checked' : '' }}>
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
             </div>
 
             <div class="actions-row">

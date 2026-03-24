@@ -3,7 +3,7 @@
     $isEdit = (bool) $topic;
 @endphp
 
-<form method="POST" action="{{ $isEdit ? route('admin.topics.update', $topic) : route('admin.topics.store') }}" class="stack-lg card quiz-panel">
+<form method="POST" action="{{ $isEdit ? route('admin.topics.update', $topic) : route('admin.topics.store') }}" class="stack-lg card quiz-panel form-shell">
     @csrf
     @if($isEdit)
         @method('PUT')
@@ -50,11 +50,17 @@
         @error('description')<small class="field-error">{{ $message }}</small>@enderror
     </label>
 
-    <label class="checkbox-row">
+    <div class="checkbox-row toggle-row">
+        <div class="stack-sm">
+            <div class="text-strong">Active topic</div>
+            <small class="muted">Inactive topics will not appear to students in quiz filters.</small>
+        </div>
         <input type="hidden" name="is_active" value="0">
-        <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $topic?->is_active ?? true))>
-        <span>Active topic</span>
-    </label>
+        <label class="switch" aria-label="Toggle topic active state">
+            <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $topic?->is_active ?? true))>
+            <span class="switch-track"></span>
+        </label>
+    </div>
     @error('is_active')<small class="field-error">{{ $message }}</small>@enderror
 
     <div class="actions-row">

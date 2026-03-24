@@ -6,9 +6,12 @@
     $correctOptionKey = old('correct_option_key', $correctOptionKey ?? 'A');
 @endphp
 
-<div id="mcq-fields" class="stack-md">
+<div id="mcq-fields" class="form-panel">
     <div class="row-between">
-        <h3 style="margin:0">MCQ Options</h3>
+        <div class="stack-sm">
+            <h3 class="h3">MCQ Options</h3>
+            <p class="panel-description">Provide at least two options and mark exactly one correct answer.</p>
+        </div>
         <button type="button" class="btn" data-add-mcq-option>Add Option</button>
     </div>
 
@@ -24,7 +27,7 @@
                         <input type="text" name="options[{{ $index }}][option_key]" value="{{ $option['option_key'] ?? '' }}" maxlength="5" placeholder="A" data-option-key required>
                         @error("options.$index.option_key")<small class="field-error">{{ $message }}</small>@enderror
                     </label>
-                    <label class="field" style="grid-column: span 2;">
+                    <label class="field" style="grid-column: span 2; min-width: 0;">
                         <span>Option Text</span>
                         <textarea name="options[{{ $index }}][option_text]" rows="2" data-option-text required>{{ $option['option_text'] ?? '' }}</textarea>
                         @error("options.$index.option_text")<small class="field-error">{{ $message }}</small>@enderror

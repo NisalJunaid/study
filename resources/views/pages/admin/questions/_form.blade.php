@@ -14,103 +14,128 @@
     $correctOptionKey = $question?->mcqOptions?->firstWhere('is_correct', true)?->option_key;
 @endphp
 
-<form method="POST" enctype="multipart/form-data" action="{{ $isEdit ? route('admin.questions.update', $question) : route('admin.questions.store') }}" class="stack-lg card quiz-panel">
+<form method="POST" enctype="multipart/form-data" action="{{ $isEdit ? route('admin.questions.update', $question) : route('admin.questions.store') }}" class="stack-lg card quiz-panel form-shell">
     @csrf
     @if($isEdit)
         @method('PUT')
     @endif
 
-    <div class="grid-2">
+    <section class="form-panel">
+        <h3 class="h3">Question Metadata</h3>
+        <p class="panel-description">Choose where this question belongs and how it should be scored.</p>
+
+        <div class="grid-2">
+            <label class="field">
+                <span>Subject</span>
+                <select name="subject_id" required data-subject-select>
+                    <option value="">Select subject...</option>
+                    @foreach($subjects as $subject)
+                        <option value="{{ $subject->id }}" @selected($selectedSubjectId === (string) $subject->id)>{{ $subject->name }}</option>
+                    @endforeach
+                </select>
+                @error('subject_id')<small class="field-error">{{ $message }}</small>@enderror
+            </label>
+
+            <label class="field">
+                <span>Topic (optional)</span>
+                <select name="topic_id" data-topic-select>
+                    <option value="">No topic</option>
+                    @foreach($topics as $topic)
+                        <option value="{{ $topic->id }}" data-subject-id="{{ $topic->subject_id }}" @selected($selectedTopicId === (string) $topic->id)>{{ $topic->name }}</option>
+                    @endforeach
+                </select>
+                @error('topic_id')<small class="field-error">{{ $message }}</small>@enderror
+            </label>
+        </div>
+
+        <div class="grid-3">
+            <label class="field">
+                <span>Question Type</span>
+                <select name="type" required data-question-type>
+                    <option value="mcq" @selected($selectedType === 'mcq')>MCQ</option>
+                    <option value="theory" @selected($selectedType === 'theory')>Theory</option>
+                </select>
+                @error('type')<small class="field-error">{{ $message }}</small>@enderror
+            </label>
+
+            <label class="field">
+                <span>Difficulty</span>
+                <select name="difficulty">
+                    <option value="">Unspecified</option>
+                    @foreach($difficulties as $difficulty)
+                        <option value="{{ $difficulty }}" @selected(old('difficulty', $question?->difficulty) === $difficulty)>{{ ucfirst($difficulty) }}</option>
+                    @endforeach
+                </select>
+                @error('difficulty')<small class="field-error">{{ $message }}</small>@enderror
+            </label>
+
+            <label class="field">
+                <span>Marks</span>
+                <input type="number" min="0" step="0.25" name="marks" value="{{ old('marks', $question?->marks ?? 1) }}" required>
+                <small>Use decimal scores for partial theory grading (e.g., 2.5).</small>
+                @error('marks')<small class="field-error">{{ $message }}</small>@enderror
+            </label>
+        </div>
+    </section>
+
+    <section class="form-panel">
+        <h3 class="h3">Core Question Content</h3>
+        <p class="panel-description">Write the prompt students will see during quiz attempts.</p>
         <label class="field">
-            <span>Subject</span>
-            <select name="subject_id" required data-subject-select>
-                <option value="">Select subject...</option>
-                @foreach($subjects as $subject)
-                    <option value="{{ $subject->id }}" @selected($selectedSubjectId === (string) $subject->id)>{{ $subject->name }}</option>
-                @endforeach
-            </select>
-            @error('subject_id')<small class="field-error">{{ $message }}</small>@enderror
+            <span>Question Text</span>
+            <textarea name="question_text" rows="5" required>{{ old('question_text', $question?->question_text) }}</textarea>
+            @error('question_text')<small class="field-error">{{ $message }}</small>@enderror
         </label>
+    </section>
 
-        <label class="field">
-            <span>Topic (optional)</span>
-            <select name="topic_id" data-topic-select>
-                <option value="">No topic</option>
-                @foreach($topics as $topic)
-                    <option value="{{ $topic->id }}" data-subject-id="{{ $topic->subject_id }}" @selected($selectedTopicId === (string) $topic->id)>{{ $topic->name }}</option>
-                @endforeach
-            </select>
-            @error('topic_id')<small class="field-error">{{ $message }}</small>@enderror
-        </label>
-    </div>
+    <section class="form-panel">
+        <h3 class="h3">Media and Explanation</h3>
+        <p class="panel-description">Optional enrichment for context and answer review feedback.</p>
+        <div class="grid-2">
+            <label class="field">
+                <span>Question Image (optional)</span>
+                <input type="file" name="question_image" accept="image/*">
+                <small>Accepted image formats up to 2MB.</small>
+                @error('question_image')<small class="field-error">{{ $message }}</small>@enderror
 
-    <div class="grid-3">
-        <label class="field">
-            <span>Question Type</span>
-            <select name="type" required data-question-type>
-                <option value="mcq" @selected($selectedType === 'mcq')>MCQ</option>
-                <option value="theory" @selected($selectedType === 'theory')>Theory</option>
-            </select>
-            @error('type')<small class="field-error">{{ $message }}</small>@enderror
-        </label>
+                @if($existingImage)
+                    <small class="muted">Current: {{ $existingImage }}</small>
+                    <img src="{{ asset('storage/' . $existingImage) }}" alt="Question image" class="question-image-preview">
+                @endif
+            </label>
 
-        <label class="field">
-            <span>Difficulty</span>
-            <select name="difficulty">
-                <option value="">Unspecified</option>
-                @foreach($difficulties as $difficulty)
-                    <option value="{{ $difficulty }}" @selected(old('difficulty', $question?->difficulty) === $difficulty)>{{ ucfirst($difficulty) }}</option>
-                @endforeach
-            </select>
-            @error('difficulty')<small class="field-error">{{ $message }}</small>@enderror
-        </label>
+            <label class="field">
+                <span>Explanation (optional)</span>
+                <textarea name="explanation" rows="4">{{ old('explanation', $question?->explanation) }}</textarea>
+                <small>Shown after quiz submission to support learning.</small>
+                @error('explanation')<small class="field-error">{{ $message }}</small>@enderror
+            </label>
+        </div>
 
-        <label class="field">
-            <span>Marks</span>
-            <input type="number" min="0" step="0.25" name="marks" value="{{ old('marks', $question?->marks ?? 1) }}" required>
-            @error('marks')<small class="field-error">{{ $message }}</small>@enderror
-        </label>
-    </div>
+        @if($existingImage)
+            <label class="checkbox-row">
+                <input type="hidden" name="remove_image" value="0">
+                <input type="checkbox" name="remove_image" value="1" @checked(old('remove_image'))>
+                <span>Remove existing image</span>
+            </label>
+        @endif
+    </section>
 
-    <label class="field">
-        <span>Question Text</span>
-        <textarea name="question_text" rows="4" required>{{ old('question_text', $question?->question_text) }}</textarea>
-        @error('question_text')<small class="field-error">{{ $message }}</small>@enderror
-    </label>
-
-    <div class="grid-2">
-        <label class="field">
-            <span>Question Image (optional)</span>
-            <input type="file" name="question_image" accept="image/*">
-            @error('question_image')<small class="field-error">{{ $message }}</small>@enderror
-
-            @if($existingImage)
-                <small class="muted">Current: {{ $existingImage }}</small>
-                <img src="{{ asset('storage/' . $existingImage) }}" alt="Question image" class="question-image-preview">
-            @endif
-        </label>
-
-        <label class="field">
-            <span>Explanation (optional)</span>
-            <textarea name="explanation" rows="4">{{ old('explanation', $question?->explanation) }}</textarea>
-            @error('explanation')<small class="field-error">{{ $message }}</small>@enderror
-        </label>
-    </div>
-
-    @if($existingImage)
-        <label class="checkbox-row">
-            <input type="hidden" name="remove_image" value="0">
-            <input type="checkbox" name="remove_image" value="1" @checked(old('remove_image'))>
-            <span>Remove existing image</span>
-        </label>
-    @endif
-
-    <label class="checkbox-row">
-        <input type="hidden" name="is_published" value="0">
-        <input type="checkbox" name="is_published" value="1" @checked(old('is_published', $question?->is_published ?? false))>
-        <span>Published (available for quiz generation)</span>
-    </label>
-    @error('is_published')<small class="field-error">{{ $message }}</small>@enderror
+    <section class="form-panel">
+        <h3 class="h3">Publish Settings</h3>
+        <div class="checkbox-row toggle-row">
+            <div class="stack-sm">
+                <div class="text-strong">Published</div>
+                <small class="muted">Published questions become available for quiz generation.</small>
+            </div>
+            <input type="hidden" name="is_published" value="0">
+            <label class="switch" aria-label="Toggle published status">
+                <input type="checkbox" name="is_published" value="1" @checked(old('is_published', $question?->is_published ?? false))>
+                <span class="switch-track"></span>
+            </label>
+        </div>
+        @error('is_published')<small class="field-error">{{ $message }}</small>@enderror
+    </section>
 
     @include('pages.admin.questions._mcq-options', [
         'options' => $mcqOptions,
@@ -119,7 +144,7 @@
 
     @include('pages.admin.questions._theory-rubric')
 
-    <div class="actions-row">
+    <div class="actions-row sticky-form-actions">
         <a href="{{ route('admin.questions.index') }}" class="btn">Cancel</a>
         <button type="submit" class="btn btn-primary">{{ $isEdit ? 'Update Question' : 'Create Question' }}</button>
     </div>
@@ -132,7 +157,7 @@
                 <span>Option Key</span>
                 <input type="text" data-name="option_key" maxlength="5" placeholder="A" data-option-key required>
             </label>
-            <label class="field" style="grid-column: span 2;">
+            <label class="field" style="grid-column: span 2; min-width: 0;">
                 <span>Option Text</span>
                 <textarea data-name="option_text" rows="2" data-option-text required></textarea>
             </label>
