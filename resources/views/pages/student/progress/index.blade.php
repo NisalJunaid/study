@@ -25,9 +25,9 @@
         />
     </section>
 
-    <section class="card stack-md">
+    <section class="card stack-md section-surface-primary">
         <div class="row-between">
-            <h3 style="margin:0">Performance by subject</h3>
+            <h2 class="section-heading">Performance by subject</h2>
             <span class="pill">{{ $subjectPerformance->count() }} subjects</span>
         </div>
 
@@ -44,11 +44,14 @@
                     @endphp
                     <div class="stack-sm">
                         <div class="row-between">
-                            <strong>{{ $subject->name }}</strong>
+                            @php
+                                $subjectColor = \App\Models\Subject::normalizeColor($subject->color);
+                            @endphp
+                            <strong class="row-wrap"><span class="subject-color-dot" style="--subject-accent: {{ $subjectColor }};" aria-hidden="true"></span>{{ $subject->name }}</strong>
                             <span class="muted">{{ $average !== null ? number_format($average, 1).'%' : 'Pending' }} · {{ $subject->attempts }} attempt(s)</span>
                         </div>
                         <div class="progress-track">
-                            <div class="progress-fill" style="width: {{ $average !== null ? min(100, max(0, $average)) : 0 }}%"></div>
+                            <div class="progress-fill" style="width: {{ $average !== null ? min(100, max(0, $average)) : 0 }}%; background: linear-gradient(90deg, {{ \App\Models\Subject::colorToRgba($subjectColor, 0.7) }}, {{ $subjectColor }});"></div>
                         </div>
                     </div>
                 @endforeach
@@ -57,9 +60,9 @@
     </section>
 
     <section class="card-grid-progress">
-        <article class="card stack-md">
+        <article class="card stack-md section-surface-secondary">
             <div class="row-between">
-                <h3 style="margin:0">Weak topics</h3>
+                <h2 class="section-heading">Weak topics</h2>
                 <span class="pill pill-muted">Lowest averages</span>
             </div>
 
@@ -83,9 +86,9 @@
             @endif
         </article>
 
-        <article class="card stack-md">
+        <article class="card stack-md section-surface-tertiary">
             <div class="row-between">
-                <h3 style="margin:0">Recent activity</h3>
+                <h2 class="section-heading">Recent activity</h2>
                 <span class="pill">Last 8</span>
             </div>
 

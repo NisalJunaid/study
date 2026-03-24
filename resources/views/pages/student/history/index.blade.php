@@ -2,6 +2,11 @@
 
 @section('content')
 <div class="stack-lg">
+    <section class="card section-surface-secondary">
+        <h2 class="section-heading">Recent quiz attempts</h2>
+        <p class="section-intro">Track your latest submissions and reopen result details any time.</p>
+    </section>
+
     @if($quizzes->isEmpty())
         <section class="empty-state card">
             <h4>No quiz attempts yet</h4>
@@ -9,7 +14,7 @@
             <a class="btn btn-primary" href="{{ route('student.quiz.setup') }}">Start a Quiz</a>
         </section>
     @else
-        <section class="card">
+        <section class="card section-surface-primary">
             <div class="table-wrap">
                 <table class="table">
                     <thead>

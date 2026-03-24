@@ -64,7 +64,9 @@
             </header>
         @endif
 
-        @include('components.admin.flash')
+        @unless($suppressFlash ?? false)
+            @include('components.admin.flash')
+        @endunless
 
         <section class="page-content {{ $contentWidthClass ?? '' }}">
             @yield('content')

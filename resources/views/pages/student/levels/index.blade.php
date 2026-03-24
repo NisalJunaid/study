@@ -6,16 +6,11 @@
 @endphp
 
 <div class="stack-lg level-home" id="levels-home" data-multi-initial="{{ ($multiLevelMode ?? false) ? '1' : '0' }}">
-    <section class="page-hero level-hero">
-        <h2 class="h1">Pick your level to begin</h2>
-        <p class="mb-0" style="opacity:.92">You can choose one level for a focused setup, or combine levels when multi-level is enabled.</p>
-    </section>
-
-    <section class="card stack-md level-selector-shell">
+    <section class="card stack-md level-selector-shell section-surface-secondary">
         <div class="row-between">
             <div class="stack-sm">
-                <h3 class="h2">Selection mode</h3>
-                <p class="muted mb-0">Enable multi-level if you want to include subjects from both levels in one quiz.</p>
+                <h2 class="section-heading step-heading"><span class="step-index">1</span><span>Select your level</span></h2>
+                <p class="section-intro">Enable multi-level mode if you want to include subjects from both levels in one quiz.</p>
             </div>
             <label class="toggle-row" style="gap:.55rem">
                 <span class="text-sm text-strong">Multi-level mode</span>

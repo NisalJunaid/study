@@ -2,10 +2,11 @@
 
 @section('content')
 <div class="stack-lg">
-    <section class="row-between">
+    <section class="row-between card section-surface-secondary">
         <div class="stack-sm">
             <span class="pill">{{ $levelLabel }}</span>
-            <p class="muted mb-0">Only subjects in this level are shown.</p>
+            <h2 class="section-heading step-heading"><span class="step-index">2</span><span>Select a subject</span></h2>
+            <p class="section-intro">Only subjects in this level are shown.</p>
         </div>
         <a class="btn" href="{{ route('student.levels.index') }}">Change level</a>
     </section>
@@ -18,9 +19,12 @@
     @else
         <section class="card-grid">
             @foreach($subjects as $subject)
-                <article class="card stack-md subject-card" style="--subject-accent: {{ $subject->color ?: '#4f46e5' }};">
+                @php
+                    $subjectColor = \App\Models\Subject::normalizeColor($subject->color);
+                @endphp
+                <article class="card stack-md subject-card" style="--subject-accent: {{ $subjectColor }}; --subject-tint: {{ \App\Models\Subject::colorToRgba($subjectColor, 0.18) }};">
                     <div class="row-between">
-                        <h3 class="h2">{{ $subject->name }}</h3>
+                        <h3 class="h2 row-wrap"><span class="subject-color-dot" aria-hidden="true"></span>{{ $subject->name }}</h3>
                         <span class="pill">{{ $subject->available_questions_count }} questions</span>
                     </div>
 
