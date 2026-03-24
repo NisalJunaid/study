@@ -1,9 +1,11 @@
-<div id="theory-fields" class="stack-md">
-    <h3 style="margin:0">Theory Rubric</h3>
+<div id="theory-fields" class="form-panel">
+    <h3 class="h3">Theory Rubric</h3>
+    <p class="panel-description">Reference data used for AI-assisted grading and admin review.</p>
 
     <label class="field">
         <span>Sample Answer</span>
         <textarea name="sample_answer" rows="5" placeholder="Reference answer for grading" required>{{ old('sample_answer', $question?->theoryMeta?->sample_answer) }}</textarea>
+        <small>Required for theory questions.</small>
         @error('sample_answer')<small class="field-error">{{ $message }}</small>@enderror
     </label>
 
@@ -17,12 +19,14 @@
         <label class="field">
             <span>Keywords (one per line or | separated)</span>
             <textarea name="keywords" rows="4" placeholder="clarity|structure|meaning">{{ old('keywords', collect($question?->theoryMeta?->keywords ?? [])->implode(PHP_EOL)) }}</textarea>
+            <small>Used to identify key expected points.</small>
             @error('keywords')<small class="field-error">{{ $message }}</small>@enderror
         </label>
 
         <label class="field">
             <span>Acceptable Phrases (one per line or | separated)</span>
             <textarea name="acceptable_phrases" rows="4" placeholder="guides pauses|separates ideas">{{ old('acceptable_phrases', collect($question?->theoryMeta?->acceptable_phrases ?? [])->implode(PHP_EOL)) }}</textarea>
+            <small>Alternative wording accepted during grading.</small>
             @error('acceptable_phrases')<small class="field-error">{{ $message }}</small>@enderror
         </label>
     </div>

@@ -3,7 +3,7 @@
     $isEdit = (bool) $subject;
 @endphp
 
-<form method="POST" action="{{ $isEdit ? route('admin.subjects.update', $subject) : route('admin.subjects.store') }}" class="stack-lg card quiz-panel">
+<form method="POST" action="{{ $isEdit ? route('admin.subjects.update', $subject) : route('admin.subjects.store') }}" class="stack-lg card quiz-panel form-shell">
     @csrf
     @if($isEdit)
         @method('PUT')
@@ -59,11 +59,17 @@
         </label>
     </div>
 
-    <label class="checkbox-row">
+    <div class="checkbox-row toggle-row">
+        <div class="stack-sm">
+            <div class="text-strong">Active subject</div>
+            <small class="muted">Controls whether students can use this subject in quiz building.</small>
+        </div>
         <input type="hidden" name="is_active" value="0">
-        <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $subject?->is_active ?? true))>
-        <span>Active subject (visible for quiz generation)</span>
-    </label>
+        <label class="switch" aria-label="Toggle subject active state">
+            <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $subject?->is_active ?? true))>
+            <span class="switch-track"></span>
+        </label>
+    </div>
     @error('is_active')<small class="field-error">{{ $message }}</small>@enderror
 
     <div class="actions-row">

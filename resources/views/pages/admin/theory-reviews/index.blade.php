@@ -14,10 +14,16 @@
                 </select>
             </label>
 
-            <label class="checkbox-row" style="min-height: 46px; align-items: center;">
-                <input type="checkbox" name="manual_only" value="1" @checked($filters['manual_only'])>
-                <span>Manual review only</span>
-            </label>
+            <div class="checkbox-row toggle-row">
+                <div class="stack-sm">
+                    <div class="text-strong">Manual review only</div>
+                    <small class="muted">Show only answers flagged for manual checks.</small>
+                </div>
+                <label class="switch" aria-label="Filter manual review answers">
+                    <input type="checkbox" name="manual_only" value="1" @checked($filters['manual_only'])>
+                    <span class="switch-track"></span>
+                </label>
+            </div>
 
             <div>
                 <button type="submit" class="btn btn-primary">Apply Filters</button>
