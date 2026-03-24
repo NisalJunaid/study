@@ -12,7 +12,7 @@ class QueueTheoryGradingAction
     {
         $quiz->loadMissing('quizQuestions.studentAnswer');
 
-        $dispatched = 0;
+        $theoryAnswerIds = [];
 
         foreach ($quiz->quizQuestions as $quizQuestion) {
             $snapshot = $quizQuestion->question_snapshot ?? [];
@@ -35,13 +35,17 @@ class QueueTheoryGradingAction
                 'graded_at' => null,
             ])->save();
 
-            GradeTheoryAnswerJob::dispatch($quizQuestion->studentAnswer->id)
-                ->onQueue(config('openai.queue'))
-                ->afterCommit();
-
-            $dispatched++;
+            $theoryAnswerIds[] = $quizQuestion->studentAnswer->id;
         }
 
-        return $dispatched;
+        $batchSize = max(1, (int) config('openai.batch_size', 5));
+
+        foreach (array_chunk($theoryAnswerIds, $batchSize) as $answerIdBatch) {
+            GradeTheoryAnswerJob::dispatch($quiz->id, $answerIdBatch)
+                ->onQueue(config('openai.queue'))
+                ->afterCommit();
+        }
+
+        return count($theoryAnswerIds);
     }
 }
