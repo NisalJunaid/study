@@ -1,5 +1,5 @@
 <article class="card">
-    <p class="muted" style="margin:0 0 .35rem">{{ $title }}</p>
-    <h3 style="margin:0">{{ $value }}</h3>
-    <p class="muted" style="margin:.4rem 0 0">{{ $subtitle }}</p>
+    <p class="muted mb-0 text-sm">{{ $title }}</p>
+    <h3 class="h1">{{ $value }}</h3>
+    <p class="muted mb-0 text-sm">{{ $subtitle }}</p>
 </article>

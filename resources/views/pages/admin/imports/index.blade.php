@@ -2,11 +2,11 @@
 
 @section('content')
 <div class="stack-lg">
-    <div class="card">
+    <div class="card quiz-panel">
         <div class="row-between" style="margin-bottom: 1rem;">
             <div>
-                <h3 style="margin:0">Upload Question CSV</h3>
-                <p class="muted" style="margin:.35rem 0 0">Supported format includes both MCQ and theory rows in one file.</p>
+                <h3 class="h2">Upload Question CSV</h3>
+                <p class="muted text-sm mb-0">Supported format includes both MCQ and theory rows in one file.</p>
             </div>
         </div>
 
@@ -36,8 +36,8 @@
         </form>
     </div>
 
-    <div class="card">
-        <h3 style="margin-top:0">Recent Imports</h3>
+    <div class="card quiz-panel">
+        <h3 class="h2 mt-0">Recent Imports</h3>
         @if($imports->count() === 0)
             <div class="empty-state">
                 <h4>No imports yet</h4>
@@ -62,7 +62,7 @@
                     <tbody>
                     @foreach($imports as $import)
                         <tr>
-                            <td><a href="{{ route('admin.imports.show', $import) }}" style="color:#4338ca;font-weight:700;">#{{ $import->id }}</a></td>
+                            <td><a href="{{ route('admin.imports.show', $import) }}" class="text-strong" style="color:#4338ca;">#{{ $import->id }}</a></td>
                             <td>{{ $import->file_name }}</td>
                             <td><span class="pill">{{ str_replace('_', ' ', $import->status) }}</span></td>
                             <td>{{ number_format($import->total_rows) }}</td>

@@ -10,9 +10,9 @@
     @else
         <div class="card-grid">
             @foreach($subjects as $subject)
-                <article class="card stack-md">
+                <article class="card stack-md subject-card" style="--subject-accent: {{ $subject->color ?: '#4f46e5' }};">
                     <div class="row-between">
-                        <h3 style="margin:0">{{ $subject->name }}</h3>
+                        <h3 class="h2">{{ $subject->name }}</h3>
                         @if($subject->color)
                             <span class="pill" style="background: {{ $subject->color }}22; color: {{ $subject->color }};">Active</span>
                         @else
@@ -20,11 +20,11 @@
                         @endif
                     </div>
 
-                    <p class="muted" style="margin:0">
+                    <p class="muted mb-0">
                         {{ $subject->description ?: 'Practice this subject with MCQ, theory, and mixed quizzes.' }}
                     </p>
 
-                    <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+                    <div class="row-wrap">
                         <span class="pill">{{ $subject->active_topics_count }} topics</span>
                         <span class="pill">{{ $subject->available_questions_count }} available questions</span>
                         <span class="pill">{{ $subject->mcq_questions_count }} MCQ</span>

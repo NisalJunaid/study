@@ -5,8 +5,8 @@
     <div class="card">
         <div class="row-between">
             <div>
-                <h3 style="margin:0">{{ $import->file_name }}</h3>
-                <p class="muted" style="margin:.35rem 0 0">
+                <h3 class="h2">{{ $import->file_name }}</h3>
+                <p class="muted text-sm mb-0">
                     Uploaded by {{ $import->uploadedBy?->name ?? 'Unknown' }} · {{ $import->created_at?->toDayDateTimeString() }}
                 </p>
             </div>
@@ -23,12 +23,12 @@
 
         <p id="import-live-note" class="muted" style="display:none;margin-top:1rem;margin-bottom:0;">Live updates connected. Refresh to load newest row-level details.</p>
 
-        <div class="card-grid" style="margin-top:1rem;">
-            <div class="card card-soft"><div class="muted">Status</div><h3 id="import-status-value" style="margin:.3rem 0 0">{{ $statusLabels[$import->status] ?? $import->status }}</h3></div>
-            <div class="card card-soft"><div class="muted">Total Rows</div><h3 id="import-total-rows" style="margin:.3rem 0 0">{{ number_format($import->total_rows) }}</h3></div>
-            <div class="card card-soft"><div class="muted">Valid Rows</div><h3 id="import-valid-rows" style="margin:.3rem 0 0">{{ number_format($import->valid_rows) }}</h3></div>
-            <div class="card card-soft"><div class="muted">Imported Rows</div><h3 id="import-imported-rows" style="margin:.3rem 0 0">{{ number_format($import->imported_rows) }}</h3></div>
-            <div class="card card-soft"><div class="muted">Failed Rows</div><h3 id="import-failed-rows" style="margin:.3rem 0 0">{{ number_format($import->failed_rows) }}</h3></div>
+        <div class="metric-grid" style="margin-top:1rem;">
+            <div class="summary-tile"><div class="muted text-sm">Status</div><h3 id="import-status-value" class="h3">{{ $statusLabels[$import->status] ?? $import->status }}</h3></div>
+            <div class="summary-tile"><div class="muted text-sm">Total Rows</div><h3 id="import-total-rows" class="h3">{{ number_format($import->total_rows) }}</h3></div>
+            <div class="summary-tile"><div class="muted text-sm">Valid Rows</div><h3 id="import-valid-rows" class="h3">{{ number_format($import->valid_rows) }}</h3></div>
+            <div class="summary-tile"><div class="muted text-sm">Imported Rows</div><h3 id="import-imported-rows" class="h3">{{ number_format($import->imported_rows) }}</h3></div>
+            <div class="summary-tile"><div class="muted text-sm">Failed Rows</div><h3 id="import-failed-rows" class="h3">{{ number_format($import->failed_rows) }}</h3></div>
         </div>
 
         <div style="margin-top:1rem" class="stack-sm">
@@ -45,7 +45,7 @@
     </div>
 
     <div class="card">
-        <h3 style="margin-top:0">Row Outcomes</h3>
+        <h3 class="h2 mt-0">Row Outcomes</h3>
 
         @if($rows->count() === 0)
             <div class="empty-state">

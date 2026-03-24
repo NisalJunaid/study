@@ -34,10 +34,10 @@
 >
     <section class="card">
         <div class="row-between">
-            <h3 style="margin:0">{{ $quiz->subject?->name ?? 'General quiz' }}</h3>
+            <h3 class="h2">{{ $quiz->subject?->name ?? 'General quiz' }}</h3>
             <span class="pill">{{ strtoupper($quiz->mode) }}</span>
         </div>
-        <p class="muted">{{ $quiz->total_questions }} questions • Total marks: {{ $quiz->total_possible_score }} • Status: {{ str_replace('_', ' ', $quiz->status) }}</p>
+        <p class="muted text-sm mb-0">{{ $quiz->total_questions }} questions • Total marks: {{ $quiz->total_possible_score }} • Status: {{ str_replace('_', ' ', $quiz->status) }}</p>
 
         @if($isLocked)
             <div class="alert alert-success" style="margin:0">
@@ -53,7 +53,7 @@
             <p class="muted">This quiz could not be initialized. Please return to the quiz builder.</p>
         </section>
     @else
-        <section class="card stack-md">
+        <section class="card stack-md quiz-panel">
             <div class="row-between">
                 <strong id="question-counter">Question 1 of {{ $quiz->quizQuestions->count() }}</strong>
                 <span class="pill" id="autosave-indicator">All changes saved</span>

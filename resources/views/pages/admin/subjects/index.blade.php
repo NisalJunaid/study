@@ -5,7 +5,7 @@
 
 <div class="card stack-md">
     <div class="row-between">
-        <h3 style="margin:0">Subject Directory</h3>
+        <h3 class="h2">Subject Directory</h3>
         <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary">+ New Subject</a>
     </div>
 
@@ -43,12 +43,12 @@
                 @foreach($subjects as $subject)
                     <tr>
                         <td>
-                            <div style="font-weight:600">{{ $subject->name }}</div>
+                            <div class="text-strong">{{ $subject->name }}</div>
                             @if($subject->description)
-                                <div class="muted">{{ \Illuminate\Support\Str::limit($subject->description, 80) }}</div>
+                                <div class="muted text-sm">{{ \Illuminate\Support\Str::limit($subject->description, 80) }}</div>
                             @endif
                         </td>
-                        <td><code>{{ $subject->slug }}</code></td>
+                        <td><code class="mono">{{ $subject->slug }}</code></td>
                         <td>
                             <span class="pill {{ $subject->is_active ? 'pill-success' : 'pill-muted' }}">
                                 {{ $subject->is_active ? 'Active' : 'Inactive' }}

@@ -5,7 +5,7 @@
 
 <div class="card stack-md">
     <div class="row-between">
-        <h3 style="margin:0">Topic Directory</h3>
+        <h3 class="h2">Topic Directory</h3>
         <a href="{{ route('admin.topics.create') }}" class="btn btn-primary">+ New Topic</a>
     </div>
 
@@ -49,13 +49,13 @@
                 @foreach($topics as $topic)
                     <tr>
                         <td>
-                            <div style="font-weight:600">{{ $topic->name }}</div>
+                            <div class="text-strong">{{ $topic->name }}</div>
                             @if($topic->description)
-                                <div class="muted">{{ \Illuminate\Support\Str::limit($topic->description, 80) }}</div>
+                                <div class="muted text-sm">{{ \Illuminate\Support\Str::limit($topic->description, 80) }}</div>
                             @endif
                         </td>
                         <td>{{ $topic->subject?->name }}</td>
-                        <td><code>{{ $topic->slug }}</code></td>
+                        <td><code class="mono">{{ $topic->slug }}</code></td>
                         <td>
                             <span class="pill {{ $topic->is_active ? 'pill-success' : 'pill-muted' }}">
                                 {{ $topic->is_active ? 'Active' : 'Inactive' }}

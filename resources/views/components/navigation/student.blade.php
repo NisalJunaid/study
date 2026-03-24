@@ -1,4 +1,4 @@
-<nav class="nav-list" style="margin-top:1.25rem">
+<nav class="nav-list">
     <a class="nav-item {{ request()->routeIs('student.dashboard') ? 'active' : '' }}" href="{{ route('student.dashboard') }}">Dashboard</a>
     <a class="nav-item {{ request()->routeIs('student.subjects.*') ? 'active' : '' }}" href="{{ route('student.subjects.index') }}">Subjects</a>
     <a class="nav-item {{ request()->routeIs('student.quiz.*') ? 'active' : '' }}" href="{{ route('student.quiz.builder') }}">Quiz Builder</a>
