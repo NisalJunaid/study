@@ -6,8 +6,8 @@
 <div class="card stack-md">
     <div class="row-between">
         <div>
-            <h3 style="margin:0">Questions</h3>
-            <p id="question-bank-live-badge" class="muted" style="margin:.35rem 0 0;display:none;"></p>
+            <h3 class="h2">Questions</h3>
+            <p id="question-bank-live-badge" class="muted text-sm mb-0" style="display:none;"></p>
         </div>
         <a href="{{ route('admin.questions.create') }}" class="btn btn-primary">+ New Question</a>
     </div>
@@ -78,17 +78,17 @@
                 @foreach($questions as $question)
                     <tr>
                         <td>
-                            <div style="font-weight:600">{{ \Illuminate\Support\Str::limit($question->question_text, 100) }}</div>
+                            <div class="text-strong">{{ \Illuminate\Support\Str::limit($question->question_text, 100) }}</div>
                             @if($question->type === 'mcq')
-                                <div class="muted">{{ $question->mcqOptions->count() }} options</div>
+                                <div class="muted text-sm">{{ $question->mcqOptions->count() }} options</div>
                             @endif
                             @if($question->type === 'theory')
-                                <div class="muted">Theory rubric configured</div>
+                                <div class="muted text-sm">Theory rubric configured</div>
                             @endif
                         </td>
                         <td>
                             <div>{{ $question->subject?->name }}</div>
-                            <div class="muted">{{ $question->topic?->name ?? 'No topic' }}</div>
+                            <div class="muted text-sm">{{ $question->topic?->name ?? 'No topic' }}</div>
                         </td>
                         <td>
                             <span class="pill">{{ strtoupper($question->type) }}</span>

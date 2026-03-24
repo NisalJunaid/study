@@ -13,7 +13,7 @@
             <p class="muted">Ask an admin to activate a subject and publish questions before building a quiz.</p>
         </section>
     @else
-    <form class="card stack-md" method="POST" action="{{ route('student.quiz.store') }}">
+    <form class="card stack-md quiz-panel" method="POST" action="{{ route('student.quiz.store') }}">
         @csrf
 
         <div class="grid-2">
@@ -62,7 +62,7 @@
 
         <div class="field">
             <span>Topics (optional)</span>
-            <p class="muted" style="margin:.2rem 0 .5rem">Only topics for the selected subject will be used.</p>
+            <p class="muted text-sm">Only topics for the selected subject will be used.</p>
             <div class="card-grid">
                 @foreach($subjects as $subject)
                     @foreach($subject->topics as $topic)
@@ -75,7 +75,7 @@
                                 {{ (string) $selectedSubjectId !== (string) $subject->id ? 'disabled' : '' }}
                             >
                             <span>{{ $topic->name }}</span>
-                            <span class="pill" style="margin-left:auto">{{ $subject->name }}</span>
+                            <span class="pill" style="margin-left:auto;background: {{ $subject->color ? $subject->color . '22' : '#e0e7ff' }}; color: {{ $subject->color ?: '#3730a3' }}">{{ $subject->name }}</span>
                         </label>
                     @endforeach
                 @endforeach
@@ -90,8 +90,8 @@
     </form>
 
     <section class="card card-soft">
-        <h3 style="margin-top:0">How quiz assignment works</h3>
-        <ul class="muted" style="margin:0;padding-left:1rem;display:grid;gap:.35rem">
+        <h3 class="h2 mt-0">How quiz assignment works</h3>
+        <ul class="muted text-sm mb-0" style="padding-left:1rem;display:grid;gap:.35rem">
             <li>Only published questions are selected.</li>
             <li>Inactive subjects/topics are excluded automatically.</li>
             <li>Mixed mode balances MCQ and theory where possible.</li>

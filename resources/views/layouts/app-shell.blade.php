@@ -10,20 +10,20 @@
 <div class="shell">
     <aside class="sidebar">
         <div class="brand">Focus Lab</div>
-        <p class="muted" style="margin-top:0">{{ $navDescription ?? "O'Level Study Help" }}</p>
+        <p class="muted mt-0">{{ $navDescription ?? "O'Level Study Help" }}</p>
         @yield('sidebar')
     </aside>
 
     <main class="main">
         <header class="topbar">
-            <div>
-                <h1 style="margin:0">{{ $heading ?? 'Dashboard' }}</h1>
-                <p class="muted" style="margin:.25rem 0 0">{{ $subheading ?? 'Build momentum with focused practice.' }}</p>
+            <div class="section-title">
+                <h1 class="h0">{{ $heading ?? 'Dashboard' }}</h1>
+                <p class="muted">{{ $subheading ?? 'Build momentum with focused practice.' }}</p>
             </div>
             @auth
-                <div>
+                <div class="row-wrap">
                     <span class="pill">{{ ucfirst(auth()->user()->role) }}</span>
-                    <span class="muted" style="margin-left:.5rem">{{ auth()->user()->name }}</span>
+                    <span class="muted">{{ auth()->user()->name }}</span>
                 </div>
             @endauth
         </header>

@@ -14,7 +14,7 @@
     $correctOptionKey = $question?->mcqOptions?->firstWhere('is_correct', true)?->option_key;
 @endphp
 
-<form method="POST" enctype="multipart/form-data" action="{{ $isEdit ? route('admin.questions.update', $question) : route('admin.questions.store') }}" class="stack-lg card">
+<form method="POST" enctype="multipart/form-data" action="{{ $isEdit ? route('admin.questions.update', $question) : route('admin.questions.store') }}" class="stack-lg card quiz-panel">
     @csrf
     @if($isEdit)
         @method('PUT')

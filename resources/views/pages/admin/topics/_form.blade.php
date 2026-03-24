@@ -3,7 +3,7 @@
     $isEdit = (bool) $topic;
 @endphp
 
-<form method="POST" action="{{ $isEdit ? route('admin.topics.update', $topic) : route('admin.topics.store') }}" class="stack-lg card">
+<form method="POST" action="{{ $isEdit ? route('admin.topics.update', $topic) : route('admin.topics.store') }}" class="stack-lg card quiz-panel">
     @csrf
     @if($isEdit)
         @method('PUT')
