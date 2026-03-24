@@ -9,7 +9,7 @@ class TopicPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->isAdmin();
     }
 
     public function view(User $user, Topic $topic): bool
