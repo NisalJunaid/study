@@ -1,22 +1,49 @@
 const DEFAULT_DELAY = 2800;
 
+const toCleanString = (value) => {
+    if (typeof value !== 'string') {
+        return '';
+    }
+
+    return value.trim();
+};
+
+const hasText = (value) => toCleanString(value).length > 0;
+
+const hasActionTarget = (value) => hasText(value);
+
 const normalizePayload = (payload = {}) => {
-    const redirectUrl = payload.redirect_url || payload.primary_url || null;
+    const redirectUrl = toCleanString(payload.redirect_url || payload.primary_url || '');
+    const primaryUrl = toCleanString(payload.primary_url || '');
+    const secondaryUrl = toCleanString(payload.secondary_url || '');
+    const title = toCleanString(payload.title);
+    const message = toCleanString(payload.message);
+    const primaryLabel = toCleanString(payload.primary_label);
+    const secondaryLabel = toCleanString(payload.secondary_label);
     const redirectDelay = Number(payload.redirect_delay_ms || payload.auto_redirect_delay_ms || DEFAULT_DELAY);
 
     return {
-        title: payload.title || '',
-        message: payload.message || '',
-        variant: payload.variant || 'info',
-        primaryLabel: payload.primary_label || 'Okay',
-        primaryUrl: payload.primary_url || null,
-        secondaryLabel: payload.secondary_label || null,
-        secondaryUrl: payload.secondary_url || null,
+        title,
+        message,
+        variant: toCleanString(payload.variant) || 'info',
+        primaryLabel,
+        primaryUrl: primaryUrl || null,
+        secondaryLabel,
+        secondaryUrl: secondaryUrl || null,
         dismissible: payload.dismissible !== false,
         blocking: payload.blocking === true,
-        redirectUrl,
+        redirectUrl: redirectUrl || null,
         redirectDelay: Number.isFinite(redirectDelay) && redirectDelay > 0 ? redirectDelay : DEFAULT_DELAY,
     };
+};
+
+const isMeaningfulPayload = (payload) => {
+    const hasPrimaryAction = hasText(payload.primaryLabel) && (hasActionTarget(payload.primaryUrl) || hasActionTarget(payload.redirectUrl));
+
+    return hasText(payload.title)
+        || hasText(payload.message)
+        || hasActionTarget(payload.redirectUrl)
+        || hasPrimaryAction;
 };
 
 const setupOverlay = () => {
@@ -89,6 +116,11 @@ const setupOverlay = () => {
 
     const show = (payload = {}) => {
         const data = normalizePayload(payload);
+        if (! isMeaningfulPayload(data)) {
+            close(false);
+            return false;
+        }
+
         clearTimers();
 
         container.dataset.variant = data.variant;
@@ -101,7 +133,9 @@ const setupOverlay = () => {
         if (titleEl) titleEl.textContent = data.title;
         if (messageEl) messageEl.textContent = data.message;
 
-        bindActionButton(primaryButton, data.primaryLabel, data.primaryUrl || data.redirectUrl, true);
+        const primaryActionUrl = data.primaryUrl || data.redirectUrl;
+        const resolvedPrimaryLabel = data.primaryLabel || (hasText(data.title) || hasText(data.message) || hasActionTarget(primaryActionUrl) ? 'Okay' : null);
+        bindActionButton(primaryButton, resolvedPrimaryLabel, primaryActionUrl, true);
         bindActionButton(secondaryButton, data.secondaryLabel, data.secondaryUrl, false);
 
         if (dismissButton) {
@@ -129,6 +163,8 @@ const setupOverlay = () => {
             state.interval = window.setInterval(tick, 250);
             state.redirectTimer = window.setTimeout(() => redirectNow(data.redirectUrl), data.redirectDelay);
         }
+
+        return true;
     };
 
     const confirm = (payload = {}) => new Promise((resolve) => {

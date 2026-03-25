@@ -20,17 +20,48 @@ import Pusher from 'pusher-js';
 
 window.Pusher = Pusher;
 
-const realtimeEnabled = Boolean(import.meta.env.VITE_PUSHER_APP_KEY);
+const normalizeEnvValue = (value) => {
+    if (typeof value !== 'string') {
+        return '';
+    }
+
+    return value.trim();
+};
+
+const isPlaceholderValue = (value) => {
+    const normalized = normalizeEnvValue(value).toLowerCase();
+
+    if (! normalized) {
+        return true;
+    }
+
+    return [
+        'null',
+        'undefined',
+        'false',
+        'study_app_key_change_me',
+        'change_me',
+        'your_app_key',
+    ].includes(normalized);
+};
+
+const pusherKey = normalizeEnvValue(import.meta.env.VITE_PUSHER_APP_KEY);
+const pusherCluster = normalizeEnvValue(import.meta.env.VITE_PUSHER_APP_CLUSTER) || 'mt1';
+const pusherHost = normalizeEnvValue(import.meta.env.VITE_PUSHER_HOST);
+const pusherPort = normalizeEnvValue(import.meta.env.VITE_PUSHER_PORT);
+const pusherScheme = normalizeEnvValue(import.meta.env.VITE_PUSHER_SCHEME) || 'https';
+
+const realtimeEnabled = ! isPlaceholderValue(pusherKey);
 
 window.Echo = realtimeEnabled
     ? new Echo({
         broadcaster: 'pusher',
-        key: import.meta.env.VITE_PUSHER_APP_KEY,
-        cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'mt1',
-        wsHost: import.meta.env.VITE_PUSHER_HOST || `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER ?? 'mt1'}.pusher.com`,
-        wsPort: Number(import.meta.env.VITE_PUSHER_PORT ?? 80),
-        wssPort: Number(import.meta.env.VITE_PUSHER_PORT ?? 443),
-        forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? 'https') === 'https',
+        key: pusherKey,
+        cluster: pusherCluster,
+        wsHost: pusherHost && ! isPlaceholderValue(pusherHost) ? pusherHost : `ws-${pusherCluster}.pusher.com`,
+        wsPort: Number(pusherPort || 80),
+        wssPort: Number(pusherPort || 443),
+        forceTLS: pusherScheme === 'https',
         enabledTransports: ['ws', 'wss'],
         authEndpoint: '/broadcasting/auth',
         withCredentials: true,
