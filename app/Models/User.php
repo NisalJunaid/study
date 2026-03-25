@@ -17,6 +17,9 @@ class User extends Authenticatable
     public const ROLE_ADMIN = 'admin';
     public const ROLE_STUDENT = 'student';
 
+    public const ONBOARDING_FREE_TRIAL = 'free_trial';
+    public const ONBOARDING_SUBSCRIBE = 'subscribe';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -27,6 +30,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'onboarding_intent',
     ];
 
     /**
@@ -106,7 +110,15 @@ class User extends Authenticatable
 
     public function hasTrialRemaining(): bool
     {
-        return ! $this->isAdmin() && $this->quizzes()->count() === 0;
+        if ($this->isAdmin()) {
+            return false;
+        }
+
+        if ($this->onboarding_intent === self::ONBOARDING_SUBSCRIBE) {
+            return false;
+        }
+
+        return $this->quizzes()->count() === 0;
     }
 
     public function hasTemporaryAccess(): bool

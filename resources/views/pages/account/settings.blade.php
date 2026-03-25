@@ -8,7 +8,7 @@
             <p class="muted">Change your password to keep your account secure.</p>
         </div>
         @if(auth()->user() && ! auth()->user()->isAdmin())
-            <p class="muted">Need to manage plan payments? <a href="{{ route('student.billing.index') }}">Open billing settings</a>.</p>
+            <p class="muted">Need to manage plan payments? <a href="{{ route('student.billing.subscription') }}">Open billing settings</a>.</p>
         @endif
 
         @if(($status ?? null) === 'password-updated')

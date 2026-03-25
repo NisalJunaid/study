@@ -12,6 +12,7 @@ export default function Register() {
         email: '',
         password: '',
         password_confirmation: '',
+        account_path: 'free_trial',
     });
 
     useEffect(() => {
@@ -97,6 +98,34 @@ export default function Register() {
                     />
 
                     <InputError message={errors.password_confirmation} className="mt-2" />
+                </div>
+
+
+                <div className="mt-4">
+                    <InputLabel value="Choose account path" />
+                    <div className="mt-2 space-y-2">
+                        <label className="flex items-start gap-2 text-sm text-gray-700">
+                            <input
+                                type="radio"
+                                name="account_path"
+                                value="free_trial"
+                                checked={data.account_path === 'free_trial'}
+                                onChange={(e) => setData('account_path', e.target.value)}
+                            />
+                            <span>Free Trial (1 quiz session, max 10 questions)</span>
+                        </label>
+                        <label className="flex items-start gap-2 text-sm text-gray-700">
+                            <input
+                                type="radio"
+                                name="account_path"
+                                value="subscribe"
+                                checked={data.account_path === 'subscribe'}
+                                onChange={(e) => setData('account_path', e.target.value)}
+                            />
+                            <span>Subscribe now (continue directly to plan and payment)</span>
+                        </label>
+                    </div>
+                    <InputError message={errors.account_path} className="mt-2" />
                 </div>
 
                 <div className="flex items-center justify-end mt-4">

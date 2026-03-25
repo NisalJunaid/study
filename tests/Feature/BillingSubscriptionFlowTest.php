@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\DailyQuizUsage;
+use App\Models\PaymentSetting;
 use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\SubscriptionPayment;
@@ -38,7 +39,7 @@ class BillingSubscriptionFlowTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.quiz.store'), $this->quizPayload($subject, 11))
-            ->assertRedirect(route('student.billing.index'));
+            ->assertRedirect(route('student.billing.subscription'));
     }
 
     public function test_trial_exhaustion_triggers_paywall_redirect(): void
@@ -59,7 +60,7 @@ class BillingSubscriptionFlowTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.quiz.store'), $this->quizPayload($subject, 5))
-            ->assertRedirect(route('student.billing.index'));
+            ->assertRedirect(route('student.billing.subscription'));
     }
 
     public function test_payment_slip_upload_grants_temporary_access(): void
@@ -74,7 +75,7 @@ class BillingSubscriptionFlowTest extends TestCase
                 'subscription_plan_id' => $plan->id,
                 'slip' => UploadedFile::fake()->image('slip.jpg'),
             ])
-            ->assertRedirect(route('student.billing.index'));
+            ->assertRedirect(route('student.billing.subscription'));
 
         $payment = SubscriptionPayment::query()->first();
 
@@ -122,7 +123,7 @@ class BillingSubscriptionFlowTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.quiz.store'), $this->quizPayload($subject, 5))
-            ->assertRedirect(route('student.billing.index'));
+            ->assertRedirect(route('student.billing.subscription'));
     }
 
     public function test_temporary_access_expires_after_twenty_four_hours_if_unverified(): void
@@ -259,6 +260,90 @@ class BillingSubscriptionFlowTest extends TestCase
         $this->artisan('subscriptions:enforce')->assertSuccessful();
 
         $this->assertDatabaseHas('user_subscriptions', ['status' => UserSubscription::STATUS_SUSPENDED]);
+    }
+
+
+    public function test_subscription_page_renders_monthly_and_annual_toggle_controls(): void
+    {
+        $student = User::factory()->student()->create();
+        SubscriptionPlan::query()->create($this->monthlyPlanData());
+        SubscriptionPlan::query()->create($this->annualPlanData());
+
+        $this->actingAs($student)
+            ->get(route('student.billing.subscription'))
+            ->assertOk()
+            ->assertSee('Monthly')
+            ->assertSee('Annual')
+            ->assertSee('Continue to payment');
+    }
+
+    public function test_selected_plan_is_used_on_payment_page_with_bank_details(): void
+    {
+        $student = User::factory()->student()->create();
+        $plan = SubscriptionPlan::query()->create($this->monthlyPlanData());
+
+        PaymentSetting::query()->create([
+            'bank_account_name' => 'Focus Lab',
+            'bank_account_number' => '1234567890',
+            'bank_name' => 'Demo Bank',
+            'currency' => 'USD',
+            'payment_instructions' => 'Upload clear transfer slip.',
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('student.billing.subscription.select-plan'), [
+                'subscription_plan_id' => $plan->id,
+            ])
+            ->assertRedirect(route('student.billing.payment'));
+
+        $this->actingAs($student)
+            ->get(route('student.billing.payment'))
+            ->assertOk()
+            ->assertSee('Amount due')
+            ->assertSee('1234567890')
+            ->assertSee((string) $plan->price);
+    }
+
+    public function test_suspended_user_is_redirected_to_billing_routes_only(): void
+    {
+        $student = User::factory()->student()->create();
+        $plan = SubscriptionPlan::query()->create($this->monthlyPlanData());
+
+        UserSubscription::query()->create([
+            'user_id' => $student->id,
+            'subscription_plan_id' => $plan->id,
+            'status' => UserSubscription::STATUS_SUSPENDED,
+            'billing_status' => UserSubscription::BILLING_SUSPENDED,
+            'suspended_reason' => 'Payment overdue.',
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.history.index'))
+            ->assertRedirect(route('student.billing.subscription'));
+
+        $this->actingAs($student)
+            ->get(route('student.billing.subscription'))
+            ->assertOk();
+    }
+
+    public function test_admin_can_update_bank_account_details(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->put(route('admin.billing.settings.update'), [
+                'bank_account_name' => 'Focus Lab Collections',
+                'bank_account_number' => '4444333322',
+                'bank_name' => 'Scholars Bank',
+                'currency' => 'USD',
+                'payment_instructions' => 'Reference your email in transfer note.',
+            ])
+            ->assertRedirect(route('admin.billing.settings.edit'));
+
+        $this->assertDatabaseHas('payment_settings', [
+            'bank_account_number' => '4444333322',
+            'bank_name' => 'Scholars Bank',
+        ]);
     }
 
     public function test_admin_can_manage_plans_and_discounts(): void

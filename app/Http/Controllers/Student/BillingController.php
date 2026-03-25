@@ -4,36 +4,85 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Student\StoreSubscriptionPaymentRequest;
+use App\Models\PaymentSetting;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
 use App\Services\Billing\QuizAccessService;
 use App\Services\Billing\SubscriptionPaymentService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class BillingController extends Controller
 {
-    public function index(QuizAccessService $quizAccessService): View
+    public function subscription(Request $request, QuizAccessService $quizAccessService): View
     {
-        $user = request()->user();
-
+        $user = $request->user();
         $plans = SubscriptionPlan::query()
             ->active()
-            ->with(['discounts' => fn ($query) => $query->currentlyActive()->orderBy('amount', 'desc')])
+            ->with(['discounts' => fn ($query) => $query->currentlyActive()->orderByDesc('amount')])
             ->orderBy('sort_order')
             ->get();
 
-        $subscription = $user->subscriptions()->with('plan')->latest()->first();
-        $payments = $user->payments()->with('plan')->latest('submitted_at')->limit(10)->get();
-        $access = $quizAccessService->evaluate($user, 1);
+        $selectedType = $request->string('type')->toString();
+        if (! in_array($selectedType, [SubscriptionPlan::TYPE_MONTHLY, SubscriptionPlan::TYPE_ANNUAL], true)) {
+            $selectedType = SubscriptionPlan::TYPE_MONTHLY;
+        }
 
-        return view('pages.student.billing.index', [
+        return view('pages.student.billing.subscription', [
             'plans' => $plans,
-            'subscription' => $subscription,
-            'payments' => $payments,
-            'access' => $access,
+            'subscription' => $user->subscriptions()->with('plan')->latest()->first(),
+            'payments' => $user->payments()->with('plan')->latest('submitted_at')->limit(10)->get(),
+            'access' => $quizAccessService->evaluate($user, 1),
             'trialRemaining' => $user->hasTrialRemaining(),
             'temporaryQuotaRemaining' => $user->temporaryQuizQuotaRemaining(),
+            'selectedType' => $selectedType,
+        ]);
+    }
+
+    public function selectPlan(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'subscription_plan_id' => ['required', 'integer', 'exists:subscription_plans,id'],
+        ]);
+
+        $plan = SubscriptionPlan::query()->active()->findOrFail((int) $data['subscription_plan_id']);
+        $request->session()->put('billing.selected_plan_id', $plan->id);
+
+        return redirect()->route('student.billing.payment');
+    }
+
+    public function payment(Request $request): View|RedirectResponse
+    {
+        $user = $request->user();
+        $planId = (int) $request->session()->get('billing.selected_plan_id', 0);
+        $plan = SubscriptionPlan::query()
+            ->active()
+            ->with(['discounts' => fn ($query) => $query->currentlyActive()->orderByDesc('amount')])
+            ->find($planId);
+
+        if (! $plan) {
+            return redirect()->route('student.billing.subscription')->with('error', 'Select a subscription plan to continue to payment.');
+        }
+
+        $discount = $plan->discounts->sortByDesc('amount')->first();
+        $basePrice = (float) $plan->price;
+        $discountAmount = 0.0;
+
+        if ($discount) {
+            $discountAmount = $discount->type === 'percentage'
+                ? round($basePrice * ((float) $discount->amount / 100), 2)
+                : min($basePrice, (float) $discount->amount);
+        }
+
+        return view('pages.student.billing.payment', [
+            'plan' => $plan,
+            'setting' => PaymentSetting::current(),
+            'discount' => $discount,
+            'basePrice' => $basePrice,
+            'discountAmount' => $discountAmount,
+            'amountDue' => max(0, $basePrice - $discountAmount),
+            'isSuspended' => (bool) optional($user->subscriptions()->latest()->first())->isSuspended(),
         ]);
     }
 
@@ -59,7 +108,7 @@ class BillingController extends Controller
         }
 
         return redirect()
-            ->route('student.billing.index')
+            ->route('student.billing.subscription')
             ->with('success', 'Payment proof submitted. Temporary access is now active for up to 6 quizzes today while admin verification is pending.');
     }
 

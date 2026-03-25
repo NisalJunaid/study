@@ -26,7 +26,7 @@ class EnsureStudentCanStartQuiz
 
         if (! ($access['allowed'] ?? false)) {
             return redirect()
-                ->route('student.billing.index')
+                ->route('student.billing.subscription')
                 ->with('error', $access['message'] ?? 'Billing access required before starting another quiz.');
         }
 

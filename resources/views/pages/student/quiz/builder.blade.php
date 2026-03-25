@@ -15,7 +15,7 @@
         <section class="card alert alert-warning">
             <strong>Quiz access is currently limited.</strong>
             <p class="mb-0">{{ $billingAccess['message'] ?? 'Please open billing to continue.' }}</p>
-            <a class="btn mt-2" href="{{ route('student.billing.index') }}">Open Billing</a>
+            <a class="btn mt-2" href="{{ route('student.billing.subscription') }}">Open Billing</a>
         </section>
     @elseif(($billingAccess['access_type'] ?? null) === \App\Services\Billing\QuizAccessService::ACCESS_FREE_TRIAL)
         <section class="card alert alert-success">
