@@ -12,6 +12,7 @@ use App\Models\Quiz;
 use App\Models\QuizQuestion;
 use App\Models\Subject;
 use App\Services\Billing\QuizAccessService;
+use App\Support\OverlayMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -99,7 +100,15 @@ class QuizController extends Controller
         $access = $request->attributes->get('quiz_access_context', $quizAccessService->evaluate($request->user(), (int) $request->input('question_count', 1)));
 
         if (! ($access['allowed'] ?? false)) {
-            return redirect()->route('student.billing.subscription')->with('error', $access['message'] ?? 'Billing access required before starting a quiz.');
+            return redirect()->route('student.billing.subscription')->with('overlay', OverlayMessage::redirect(
+                title: 'Unable to start quiz',
+                message: $access['message'] ?? 'Billing access required before starting a quiz.',
+                redirectUrl: route('student.billing.subscription'),
+                variant: 'warning',
+                overrides: [
+                    'primary_label' => 'Choose a Plan',
+                ],
+            ));
         }
 
         try {
@@ -120,7 +129,7 @@ class QuizController extends Controller
 
         return redirect()
             ->route('student.quiz.take', $quiz)
-            ->with('success', $access['message'] ?? 'Quiz created. Start with question 1.');
+            ->with('overlay', OverlayMessage::make('Quiz ready', $access['message'] ?? 'Quiz created. Start with question 1.', 'success', ['primary_label' => 'Begin']));
     }
 
     public function show(Quiz $quiz): View
@@ -179,7 +188,7 @@ class QuizController extends Controller
 
         return redirect()
             ->route('student.quiz.results', $quiz)
-            ->with('success', $result['message']);
+            ->with('overlay', OverlayMessage::make('Quiz submitted', $result['message'], 'success', ['primary_label' => 'View Results']));
     }
 
     public function results(Request $request, Quiz $quiz): View|JsonResponse

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\OverlayMessage;
 use App\Services\Billing\QuizAccessService;
 use Closure;
 use Illuminate\Http\Request;
@@ -27,7 +28,15 @@ class EnsureStudentCanStartQuiz
         if (! ($access['allowed'] ?? false)) {
             return redirect()
                 ->route('student.billing.subscription')
-                ->with('error', $access['message'] ?? 'Billing access required before starting another quiz.');
+                ->with('overlay', OverlayMessage::redirect(
+                    title: 'Billing access required',
+                    message: $access['message'] ?? 'Billing access required before starting another quiz.',
+                    redirectUrl: route('student.billing.subscription'),
+                    variant: 'warning',
+                    overrides: [
+                        'primary_label' => 'Choose a Plan',
+                    ],
+                ));
         }
 
         $request->attributes->set('quiz_access_context', $access);

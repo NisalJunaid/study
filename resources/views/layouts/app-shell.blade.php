@@ -85,9 +85,26 @@
             </header>
         @endif
 
-        @unless($suppressFlash ?? false)
-            @include('components.admin.flash')
-        @endunless
+        @php
+            $overlayPayload = session('overlay');
+            if (! $overlayPayload && session('success')) {
+                $overlayPayload = [
+                    'title' => 'Success',
+                    'message' => session('success'),
+                    'variant' => 'success',
+                    'primary_label' => 'Okay',
+                ];
+            }
+
+            if (! $overlayPayload && session('error')) {
+                $overlayPayload = [
+                    'title' => 'Action needed',
+                    'message' => session('error'),
+                    'variant' => 'warning',
+                    'primary_label' => 'Okay',
+                ];
+            }
+        @endphp
 
         <section class="page-content {{ $contentWidthClass ?? '' }}">
             @yield('content')
@@ -104,6 +121,22 @@
         </div>
     </div>
 @endif
+
+@php
+    $initialOverlay = ! $showSuspensionOverlay ? ($overlayPayload ?? null) : null;
+@endphp
+<div class="global-overlay" data-global-overlay @if($initialOverlay) data-initial-overlay='@json($initialOverlay)' @endif hidden>
+    <div class="global-overlay-card card" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Important message">
+        <button type="button" class="global-overlay-dismiss" data-overlay-dismiss aria-label="Close message">✕</button>
+        <h2 class="h2 mb-0" data-overlay-title></h2>
+        <p class="muted mb-0" data-overlay-message></p>
+        <p class="text-sm muted mb-0" data-overlay-countdown hidden></p>
+        <div class="actions-row global-overlay-actions">
+            <button type="button" class="btn" data-overlay-secondary hidden>Cancel</button>
+            <button type="button" class="btn btn-primary" data-overlay-primary>Okay</button>
+        </div>
+    </div>
+</div>
 
 <script>
     (() => {

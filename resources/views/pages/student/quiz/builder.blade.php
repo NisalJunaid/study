@@ -12,17 +12,17 @@
 
 <div class="stack-lg" id="guided-quiz-setup" data-multi-mode-initial="{{ $isMultiMode ? '1' : '0' }}">
     @if(($billingAccess['allowed'] ?? false) === false)
-        <section class="card alert alert-warning">
+        <section class="card stack-sm section-surface-secondary">
             <strong>Quiz access is currently limited.</strong>
             <p class="mb-0">{{ $billingAccess['message'] ?? 'Please open billing to continue.' }}</p>
             <a class="btn mt-2" href="{{ route('student.billing.subscription') }}">Open Billing</a>
         </section>
     @elseif(($billingAccess['access_type'] ?? null) === \App\Services\Billing\QuizAccessService::ACCESS_FREE_TRIAL)
-        <section class="card alert alert-success">
+        <section class="card stack-sm section-surface-secondary">
             <strong>Free trial available:</strong> You can start one quiz with up to 10 questions.
         </section>
     @elseif(($billingAccess['access_type'] ?? null) === \App\Services\Billing\QuizAccessService::ACCESS_TEMPORARY_PENDING_PAYMENT)
-        <section class="card alert alert-info">
+        <section class="card stack-sm section-surface-secondary">
             <strong>Payment submitted — temporary access unlocked.</strong>
             <p class="mb-0">{{ $billingAccess['message'] }}</p>
         </section>

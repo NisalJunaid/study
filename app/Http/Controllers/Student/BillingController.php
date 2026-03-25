@@ -9,6 +9,7 @@ use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
 use App\Services\Billing\QuizAccessService;
 use App\Services\Billing\SubscriptionPaymentService;
+use App\Support\OverlayMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -62,7 +63,7 @@ class BillingController extends Controller
             ->find($planId);
 
         if (! $plan) {
-            return redirect()->route('student.billing.subscription')->with('error', 'Select a subscription plan to continue to payment.');
+            return redirect()->route('student.billing.subscription')->with('overlay', OverlayMessage::make('Plan required', 'Select a subscription plan to continue to payment.', 'info', ['primary_label' => 'Okay']));
         }
 
         $discount = $plan->discounts->sortByDesc('amount')->first();
@@ -109,7 +110,18 @@ class BillingController extends Controller
 
         return redirect()
             ->route('student.billing.subscription')
-            ->with('success', 'Payment proof submitted. Temporary access is now active for up to 6 quizzes today while admin verification is pending.');
+            ->with('overlay', OverlayMessage::redirect(
+                title: 'Payment submitted successfully',
+                message: 'Temporary access is now active for up to 6 quizzes today while admin verification is pending.',
+                redirectUrl: route('student.quiz.setup'),
+                variant: 'success',
+                overrides: [
+                    'primary_label' => 'Start Quiz',
+                    'blocking' => false,
+                    'dismissible' => true,
+                    'redirect_delay_ms' => 3200,
+                ],
+            ));
     }
 
     public function slip(SubscriptionPayment $payment)

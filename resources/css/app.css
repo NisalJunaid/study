@@ -1481,3 +1481,52 @@ label > textarea {
     display: grid;
     gap: 0.8rem;
 }
+
+body.overlay-open {
+    overflow: hidden;
+}
+
+.global-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 140;
+    display: grid;
+    place-items: center;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
+    padding: 1rem;
+}
+
+.global-overlay-card {
+    width: min(100%, 560px);
+    border-radius: 1rem;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.3);
+    display: grid;
+    gap: 0.85rem;
+    position: relative;
+}
+
+.global-overlay[data-variant="success"] .global-overlay-card { border-color: #86efac; }
+.global-overlay[data-variant="warning"] .global-overlay-card { border-color: #facc15; }
+.global-overlay[data-variant="danger"] .global-overlay-card { border-color: #fda4af; }
+.global-overlay[data-variant="confirm"] .global-overlay-card { border-color: #a5b4fc; }
+
+.global-overlay-dismiss {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+}
+
+.global-overlay-dismiss:hover { background: #f1f5f9; }
+
+.global-overlay-actions {
+    justify-content: flex-end;
+    margin-top: 0.15rem;
+}

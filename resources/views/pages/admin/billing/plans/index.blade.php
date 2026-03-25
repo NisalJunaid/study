@@ -22,7 +22,7 @@
                         <td>{{ $plan->subscriptions_count }}</td>
                         <td class="actions-inline">
                             <a class="btn" href="{{ route('admin.billing.plans.edit', $plan) }}">Edit</a>
-                            <form method="POST" action="{{ route('admin.billing.plans.destroy', $plan) }}" onsubmit="return confirm('Delete this plan?')">
+                            <form method="POST" action="{{ route('admin.billing.plans.destroy', $plan) }}" data-confirm-title="Delete plan" data-confirm-message="Delete this plan?" data-confirm-variant="danger" data-confirm-primary="Delete" data-confirm-secondary="Cancel">
                                 @csrf
                                 @method('DELETE')
                                 <button class="btn btn-danger" type="submit">Delete</button>

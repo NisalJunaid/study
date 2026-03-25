@@ -110,7 +110,7 @@
                                     <button type="submit" class="btn">{{ $question->is_published ? 'Unpublish' : 'Publish' }}</button>
                                 </form>
 
-                                <form method="POST" action="{{ route('admin.questions.destroy', $question) }}" onsubmit="return confirm('Delete this question? This cannot be undone for authoring.');">
+                                <form method="POST" action="{{ route('admin.questions.destroy', $question) }}" data-confirm-title="Delete question" data-confirm-message="Delete this question? This cannot be undone for authoring." data-confirm-variant="danger" data-confirm-primary="Delete" data-confirm-secondary="Cancel">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger">Delete</button>

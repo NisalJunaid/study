@@ -65,7 +65,7 @@
                         <td class="text-right">
                             <div class="actions-inline">
                                 <a class="btn" href="{{ route('admin.topics.edit', $topic) }}">Edit</a>
-                                <form method="POST" action="{{ route('admin.topics.destroy', $topic) }}" onsubmit="return confirm('Delete this topic?');">
+                                <form method="POST" action="{{ route('admin.topics.destroy', $topic) }}" data-confirm-title="Delete topic" data-confirm-message="Delete this topic?" data-confirm-variant="danger" data-confirm-primary="Delete" data-confirm-secondary="Cancel">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger">Delete</button>

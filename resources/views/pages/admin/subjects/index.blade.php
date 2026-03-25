@@ -67,7 +67,7 @@
                         <td class="text-right">
                             <div class="actions-inline">
                                 <a class="btn" href="{{ route('admin.subjects.edit', $subject) }}">Edit</a>
-                                <form method="POST" action="{{ route('admin.subjects.destroy', $subject) }}" onsubmit="return confirm('Delete this subject? Related topics/questions may be affected.');">
+                                <form method="POST" action="{{ route('admin.subjects.destroy', $subject) }}" data-confirm-title="Delete subject" data-confirm-message="Delete this subject? Related topics/questions may be affected." data-confirm-variant="danger" data-confirm-primary="Delete" data-confirm-secondary="Cancel">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger">Delete</button>
