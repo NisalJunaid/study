@@ -93,6 +93,19 @@ class GlobalOverlayMessagingTest extends TestCase
             ->assertSee('data-global-overlay', false);
     }
 
+    public function test_success_flash_message_does_not_auto_promote_to_global_overlay(): void
+    {
+        $student = User::factory()->student()->create();
+
+        $this->actingAs($student)
+            ->withSession([
+                'success' => 'Quiz created successfully.',
+            ])
+            ->get(route('student.billing.subscription'))
+            ->assertOk()
+            ->assertDontSee('data-initial-overlay', false);
+    }
+
     public function test_quiz_take_script_does_not_use_native_browser_dialogs(): void
     {
         $script = file_get_contents(resource_path('js/pages/quiz-take.js'));

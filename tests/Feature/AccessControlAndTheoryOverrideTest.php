@@ -69,7 +69,8 @@ class AccessControlAndTheoryOverrideTest extends TestCase
                 'mode' => Quiz::MODE_THEORY,
                 'question_count' => 1,
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionMissing('overlay');
 
         $quiz = Quiz::query()->firstOrFail();
         $quizQuestion = $quiz->quizQuestions()->firstOrFail();

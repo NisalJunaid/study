@@ -83,17 +83,9 @@
         @php
             $suppressFlashOverlay = (bool) ($suppressFlash ?? false);
             $rawOverlay = session('overlay');
-            $candidateOverlay = is_array($rawOverlay)
+            $overlayPayload = ! $suppressFlashOverlay && is_array($rawOverlay)
                 ? OverlayMessage::renderableOrNull($rawOverlay)
                 : null;
-
-            $overlayPayload = $suppressFlashOverlay
-                ? null
-                : OverlayMessage::fromFlash(
-                    $candidateOverlay,
-                    session('success'),
-                    session('error'),
-                );
         @endphp
 
         <section class="page-content {{ $contentWidthClass ?? '' }}">
@@ -120,12 +112,15 @@
 <div class="global-overlay" data-global-overlay @if(!is_null($initialOverlay)) data-initial-overlay='@json($initialOverlay)' @endif hidden aria-hidden="true">
     <div class="global-overlay-card card" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Important message">
         <button type="button" class="global-overlay-dismiss" data-overlay-dismiss aria-label="Close message">✕</button>
-        <h2 class="h2 mb-0" data-overlay-title></h2>
-        <p class="muted mb-0" data-overlay-message></p>
-        <p class="text-sm muted mb-0" data-overlay-countdown hidden></p>
+        <div class="global-overlay-header">
+            <span class="global-overlay-icon" data-overlay-icon aria-hidden="true">ℹ️</span>
+            <h2 class="h2 mb-0 global-overlay-title" data-overlay-title></h2>
+        </div>
+        <p class="muted mb-0 global-overlay-message" data-overlay-message></p>
+        <p class="text-sm muted mb-0 global-overlay-countdown" data-overlay-countdown hidden></p>
         <div class="actions-row global-overlay-actions">
-            <button type="button" class="btn" data-overlay-secondary hidden>Cancel</button>
-            <button type="button" class="btn btn-primary" data-overlay-primary>Okay</button>
+            <button type="button" class="btn btn-ghost global-overlay-secondary" data-overlay-secondary hidden>Cancel</button>
+            <button type="button" class="btn btn-primary global-overlay-primary" data-overlay-primary>Okay</button>
         </div>
     </div>
 </div>
