@@ -1459,11 +1459,19 @@ body.overlay-open {
     position: fixed;
     inset: 0;
     z-index: 140;
-    display: grid;
+    display: none;
     place-items: center;
     background: rgba(15, 23, 42, 0.45);
     backdrop-filter: blur(3px);
     padding: 1rem;
+}
+
+.global-overlay[hidden] {
+    display: none !important;
+}
+
+.global-overlay.is-open:not([hidden]) {
+    display: grid;
 }
 
 .global-overlay-card {

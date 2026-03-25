@@ -114,7 +114,7 @@
         ? OverlayMessage::renderableOrNull($overlayPayload)
         : null;
 @endphp
-<div class="global-overlay" data-global-overlay @if(!is_null($initialOverlay)) data-initial-overlay='@json($initialOverlay)' @endif hidden>
+<div class="global-overlay" data-global-overlay @if(!is_null($initialOverlay)) data-initial-overlay='@json($initialOverlay)' @endif hidden aria-hidden="true">
     <div class="global-overlay-card card" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Important message">
         <button type="button" class="global-overlay-dismiss" data-overlay-dismiss aria-label="Close message">✕</button>
         <h2 class="h2 mb-0" data-overlay-title></h2>
