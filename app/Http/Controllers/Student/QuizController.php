@@ -12,7 +12,6 @@ use App\Models\Quiz;
 use App\Models\QuizQuestion;
 use App\Models\Subject;
 use App\Services\Billing\QuizAccessService;
-use App\Support\OverlayMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -174,11 +173,9 @@ class QuizController extends Controller
     {
         $this->authorize('update', $quiz);
 
-        $result = $submitQuizAction->execute($quiz, (int) request()->user()->id);
+        $submitQuizAction->execute($quiz, (int) request()->user()->id);
 
-        return redirect()
-            ->route('student.quiz.results', $quiz)
-            ->with('overlay', OverlayMessage::make('Quiz submitted', $result['message'], 'success', ['primary_label' => 'View Results']));
+        return redirect()->route('student.quiz.results', $quiz);
     }
 
     public function results(Request $request, Quiz $quiz): View|JsonResponse

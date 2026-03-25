@@ -100,7 +100,8 @@ class StudentQuizTakingFlowTest extends TestCase
         ]);
 
         $this->post(route('student.quiz.submit', $quiz))
-            ->assertRedirect(route('student.quiz.results', $quiz));
+            ->assertRedirect(route('student.quiz.results', $quiz))
+            ->assertSessionMissing('overlay');
 
         $quiz->refresh();
 

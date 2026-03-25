@@ -125,22 +125,24 @@ class OverlayPayloadFactory
 
     public static function hasMeaningfulPurpose(array $payload): bool
     {
+        if (! self::hasHeadline($payload)) {
+            return false;
+        }
+
         if (($payload['blocking'] ?? false) === true) {
             return self::hasHeadline($payload) && self::hasBlockingActionPath($payload);
         }
 
-        return filled($payload['title'] ?? null)
-            || filled($payload['message'] ?? null)
-            || filled($payload['redirect_url'] ?? null)
+        return filled($payload['redirect_url'] ?? null)
             || filled($payload['primary_url'] ?? null)
             || (($payload['variant'] ?? null) === 'confirm' && filled($payload['primary_label'] ?? null));
     }
 
     public static function hasBlockingActionPath(array $payload): bool
     {
-        return filled($payload['primary_url'] ?? null)
-            || filled($payload['redirect_url'] ?? null)
-            || filled($payload['secondary_url'] ?? null);
+        return self::isValidActionPath($payload['primary_url'] ?? null)
+            || self::isValidActionPath($payload['redirect_url'] ?? null)
+            || self::isValidActionPath($payload['secondary_url'] ?? null);
     }
 
     public static function hasHeadline(array $payload): bool
@@ -175,5 +177,24 @@ class OverlayPayloadFactory
         $delay = (int) $value;
 
         return $delay > 0 ? $delay : self::DEFAULT_REDIRECT_DELAY_MS;
+    }
+
+    private static function isValidActionPath(mixed $value): bool
+    {
+        if (! is_string($value)) {
+            return false;
+        }
+
+        $path = trim($value);
+
+        if ($path === '') {
+            return false;
+        }
+
+        if (str_starts_with($path, '/') || str_starts_with($path, '#')) {
+            return true;
+        }
+
+        return filter_var($path, FILTER_VALIDATE_URL) !== false;
     }
 }

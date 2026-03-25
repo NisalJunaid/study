@@ -57,8 +57,24 @@ const hasBlockingActionPath = (payload) => hasText(payload.primaryUrl)
     || hasText(payload.redirectUrl)
     || hasText(payload.secondaryUrl);
 
+const isValidActionPath = (value) => {
+    if (!hasText(value)) return false;
+
+    return value.startsWith('/')
+        || value.startsWith('#')
+        || /^https?:\/\//i.test(value);
+};
+
 const isRenderablePayload = (payload) => {
+    if (!hasHeadline(payload)) {
+        return false;
+    }
+
     if (payload.blocking && (!hasHeadline(payload) || !hasBlockingActionPath(payload))) {
+        return false;
+    }
+
+    if (payload.blocking && ![payload.primaryUrl, payload.redirectUrl, payload.secondaryUrl].some(isValidActionPath)) {
         return false;
     }
 
@@ -79,6 +95,7 @@ const setupOverlay = () => {
     const primaryButton = container.querySelector('[data-overlay-primary]');
     const secondaryButton = container.querySelector('[data-overlay-secondary]');
     const dismissButton = container.querySelector('[data-overlay-dismiss]');
+    const iconEl = container.querySelector('[data-overlay-icon]');
 
     const state = {
         open: false,
@@ -142,6 +159,14 @@ const setupOverlay = () => {
         }
     };
 
+    const overlayIcon = (variant) => {
+        if (variant === 'success') return '✅';
+        if (variant === 'warning') return '⚠️';
+        if (variant === 'danger') return '⛔';
+        if (variant === 'confirm') return '❔';
+        return 'ℹ️';
+    };
+
     const redirectNow = (url) => {
         if (!url) {
             close(true);
@@ -193,6 +218,7 @@ const setupOverlay = () => {
 
         if (titleEl) titleEl.textContent = data.title;
         if (messageEl) messageEl.textContent = data.message;
+        if (iconEl) iconEl.textContent = overlayIcon(data.variant);
 
         const primaryActionUrl = data.primaryUrl || data.redirectUrl;
         bindActionButton(primaryButton, data.primaryLabel, primaryActionUrl, true);
@@ -238,6 +264,7 @@ const setupOverlay = () => {
     container.addEventListener('click', (event) => {
         if (event.target !== container) return;
         if (container.dataset.blocking === '1') return;
+        if (dismissButton?.hidden) return;
         close(false);
     });
 
