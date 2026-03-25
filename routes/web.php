@@ -2,7 +2,10 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin\ImportController;
+use App\Http\Controllers\Admin\BillingPlanController;
+use App\Http\Controllers\Admin\PlanDiscountController;
 use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\SubscriptionPaymentController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\TheoryReviewController;
 use App\Http\Controllers\Admin\TopicController;
@@ -12,6 +15,7 @@ use App\Http\Controllers\Student\HistoryController as StudentHistoryController;
 use App\Http\Controllers\Student\LevelController as StudentLevelController;
 use App\Http\Controllers\Student\ProgressController as StudentProgressController;
 use App\Http\Controllers\Student\QuizController as StudentQuizController;
+use App\Http\Controllers\Student\BillingController as StudentBillingController;
 use App\Http\Controllers\Student\ResultController as StudentResultController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use Illuminate\Support\Facades\Route;
@@ -41,7 +45,7 @@ Route::middleware(['auth', 'role:student'])->group(function () {
 
     Route::get('/quiz/create', fn () => redirect()->route('student.quiz.setup'))->name('student.quiz.builder');
     Route::get('/quiz/setup', [StudentQuizController::class, 'create'])->name('student.quiz.setup');
-    Route::post('/quiz', [StudentQuizController::class, 'store'])->name('student.quiz.store');
+    Route::post('/quiz', [StudentQuizController::class, 'store'])->middleware('quiz.access')->name('student.quiz.store');
     Route::get('/quiz/{quiz}', [StudentQuizController::class, 'show'])->name('student.quiz.take');
     Route::put('/quiz/{quiz}/questions/{quizQuestion}/answer', [StudentQuizController::class, 'saveAnswer'])->name('student.quiz.answer.save');
     Route::post('/quiz/{quiz}/submit', [StudentQuizController::class, 'submit'])->name('student.quiz.submit');
@@ -50,6 +54,10 @@ Route::middleware(['auth', 'role:student'])->group(function () {
 
     Route::get('/history', [StudentHistoryController::class, 'index'])->name('student.history.index');
     Route::get('/progress', StudentProgressController::class)->name('student.progress.index');
+
+    Route::get('/billing', [StudentBillingController::class, 'index'])->name('student.billing.index');
+    Route::post('/billing/payments', [StudentBillingController::class, 'storePayment'])->name('student.billing.payments.store');
+    Route::get('/billing/payments/{payment}/slip', [StudentBillingController::class, 'slip'])->name('student.billing.payments.slip');
 });
 
 Route::prefix('admin')
@@ -66,6 +74,15 @@ Route::prefix('admin')
         Route::get('/theory-reviews', [TheoryReviewController::class, 'index'])->name('theory-reviews.index');
         Route::get('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'show'])->name('theory-reviews.show');
         Route::put('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'update'])->name('theory-reviews.update');
+
+        Route::prefix('billing')->name('billing.')->group(function () {
+            Route::resource('plans', BillingPlanController::class)->except('show');
+            Route::resource('discounts', PlanDiscountController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::get('payments', [SubscriptionPaymentController::class, 'index'])->name('payments.index');
+            Route::post('payments/{payment}/verify', [SubscriptionPaymentController::class, 'verify'])->name('payments.verify');
+            Route::post('payments/{payment}/reject', [SubscriptionPaymentController::class, 'reject'])->name('payments.reject');
+            Route::get('payments/{payment}/slip', [SubscriptionPaymentController::class, 'slip'])->name('payments.slip');
+        });
     });
 
 require __DIR__.'/auth.php';

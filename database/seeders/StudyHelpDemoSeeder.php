@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\McqOption;
 use App\Models\Question;
+use App\Models\SubscriptionPlan;
 use App\Models\Subject;
 use App\Models\TheoryQuestionMeta;
 use App\Models\Topic;
@@ -35,6 +36,34 @@ class StudyHelpDemoSeeder extends Seeder
                 'password' => 'password',
                 'role' => User::ROLE_STUDENT,
                 'email_verified_at' => now(),
+            ]
+        );
+
+        SubscriptionPlan::query()->updateOrCreate(
+            ['code' => 'monthly-standard'],
+            [
+                'name' => 'Monthly Plan',
+                'type' => SubscriptionPlan::TYPE_MONTHLY,
+                'price' => 9.99,
+                'currency' => 'USD',
+                'billing_cycle_days' => 30,
+                'description' => 'Monthly access with manual payment verification.',
+                'is_active' => true,
+                'sort_order' => 1,
+            ]
+        );
+
+        SubscriptionPlan::query()->updateOrCreate(
+            ['code' => 'annual-standard'],
+            [
+                'name' => 'Annual Plan',
+                'type' => SubscriptionPlan::TYPE_ANNUAL,
+                'price' => 99.00,
+                'currency' => 'USD',
+                'billing_cycle_days' => 365,
+                'description' => 'Annual one-off payment with 3-day grace after expiry.',
+                'is_active' => true,
+                'sort_order' => 2,
             ]
         );
 

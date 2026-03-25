@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -53,6 +54,26 @@ class User extends Authenticatable
         return $this->hasMany(Quiz::class);
     }
 
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(UserSubscription::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(SubscriptionPayment::class);
+    }
+
+    public function dailyQuizUsages(): HasMany
+    {
+        return $this->hasMany(DailyQuizUsage::class);
+    }
+
+    public function currentSubscription(): HasOne
+    {
+        return $this->hasOne(UserSubscription::class)->latestOfMany();
+    }
+
     public function imports(): HasMany
     {
         return $this->hasMany(Import::class, 'uploaded_by');
@@ -81,5 +102,50 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;
+    }
+
+    public function hasTrialRemaining(): bool
+    {
+        return ! $this->isAdmin() && $this->quizzes()->count() === 0;
+    }
+
+    public function hasTemporaryAccess(): bool
+    {
+        $latestPendingPayment = $this->payments()
+            ->where('status', SubscriptionPayment::STATUS_PENDING)
+            ->latest('submitted_at')
+            ->first();
+
+        return $latestPendingPayment?->temporaryAccessStillValid() ?? false;
+    }
+
+    public function temporaryQuizQuotaRemaining(): int
+    {
+        $payment = $this->payments()
+            ->where('status', SubscriptionPayment::STATUS_PENDING)
+            ->latest('submitted_at')
+            ->first();
+
+        if (! $payment || ! $payment->temporaryAccessStillValid()) {
+            return 0;
+        }
+
+        $used = (int) $this->dailyQuizUsages()
+            ->where('subscription_payment_id', $payment->id)
+            ->whereDate('usage_date', now()->toDateString())
+            ->value('quiz_count');
+
+        return max(0, $payment->temporary_quiz_limit - $used);
+    }
+
+    public function currentBillingState(): string
+    {
+        $subscription = $this->currentSubscription()->first();
+
+        if (! $subscription) {
+            return UserSubscription::BILLING_INACTIVE;
+        }
+
+        return (string) $subscription->billing_status;
     }
 }

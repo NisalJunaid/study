@@ -7,6 +7,9 @@
             <h2 class="h1">Security settings</h2>
             <p class="muted">Change your password to keep your account secure.</p>
         </div>
+        @if(auth()->user() && ! auth()->user()->isAdmin())
+            <p class="muted">Need to manage plan payments? <a href="{{ route('student.billing.index') }}">Open billing settings</a>.</p>
+        @endif
 
         @if(($status ?? null) === 'password-updated')
             <div class="alert alert-success" role="status">Password updated successfully.</div>
