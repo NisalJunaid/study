@@ -63,7 +63,15 @@ class BillingController extends Controller
             ->find($planId);
 
         if (! $plan) {
-            return redirect()->route('student.billing.subscription')->with('overlay', OverlayMessage::make('Plan required', 'Select a subscription plan to continue to payment.', 'info', ['primary_label' => 'Okay']));
+            return redirect()
+                ->route('student.billing.subscription')
+                ->with('overlay', OverlayMessage::redirect(
+                    'Plan required',
+                    'Select a subscription plan to continue to payment.',
+                    route('student.billing.subscription'),
+                    'info',
+                    ['primary_label' => 'Choose a Plan', 'blocking' => false, 'dismissible' => true],
+                ));
         }
 
         $discount = $plan->discounts->sortByDesc('amount')->first();
@@ -110,18 +118,7 @@ class BillingController extends Controller
 
         return redirect()
             ->route('student.billing.subscription')
-            ->with('overlay', OverlayMessage::redirect(
-                title: 'Payment submitted successfully',
-                message: 'Temporary access is now active for up to 6 quizzes today while admin verification is pending.',
-                redirectUrl: route('student.quiz.setup'),
-                variant: 'success',
-                overrides: [
-                    'primary_label' => 'Start Quiz',
-                    'blocking' => false,
-                    'dismissible' => true,
-                    'redirect_delay_ms' => 3200,
-                ],
-            ));
+            ->with('overlay', OverlayMessage::paymentSubmitted());
     }
 
     public function slip(SubscriptionPayment $payment)

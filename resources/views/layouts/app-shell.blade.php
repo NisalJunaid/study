@@ -7,6 +7,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
+    @php use App\Support\OverlayMessage; @endphp
     @php
         $activeSubscription = $activeSubscription ?? null;
         $showSuspensionOverlay = ($showSuspensionOverlay ?? false)
@@ -80,24 +81,11 @@
         @endif
 
         @php
-            $overlayPayload = session('overlay');
-            if (! $overlayPayload && session('success')) {
-                $overlayPayload = [
-                    'title' => 'Success',
-                    'message' => session('success'),
-                    'variant' => 'success',
-                    'primary_label' => 'Okay',
-                ];
-            }
-
-            if (! $overlayPayload && session('error')) {
-                $overlayPayload = [
-                    'title' => 'Action needed',
-                    'message' => session('error'),
-                    'variant' => 'warning',
-                    'primary_label' => 'Okay',
-                ];
-            }
+            $overlayPayload = OverlayMessage::fromFlash(
+                is_array(session('overlay')) ? session('overlay') : null,
+                session('success'),
+                session('error'),
+            );
         @endphp
 
         <section class="page-content {{ $contentWidthClass ?? '' }}">
@@ -117,15 +105,9 @@
 @endif
 
 @php
-    $initialOverlay = ! $showSuspensionOverlay ? ($overlayPayload ?? null) : null;
-    $hasPrimaryAction = filled(data_get($initialOverlay, 'primary_label'))
-        && (filled(data_get($initialOverlay, 'primary_url')) || filled(data_get($initialOverlay, 'redirect_url')));
-    $hasMeaningfulOverlayContent = filled(data_get($initialOverlay, 'title'))
-        || filled(data_get($initialOverlay, 'message'))
-        || filled(data_get($initialOverlay, 'redirect_url'))
-        || $hasPrimaryAction;
+    $initialOverlay = ! $showSuspensionOverlay ? OverlayMessage::renderableOrNull($overlayPayload) : null;
 @endphp
-<div class="global-overlay" data-global-overlay @if($hasMeaningfulOverlayContent) data-initial-overlay='@json($initialOverlay)' @endif hidden>
+<div class="global-overlay" data-global-overlay @if($initialOverlay) data-initial-overlay='@json($initialOverlay)' @endif hidden>
     <div class="global-overlay-card card" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Important message">
         <button type="button" class="global-overlay-dismiss" data-overlay-dismiss aria-label="Close message">✕</button>
         <h2 class="h2 mb-0" data-overlay-title></h2>

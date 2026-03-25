@@ -100,15 +100,7 @@ class QuizController extends Controller
         $access = $request->attributes->get('quiz_access_context', $quizAccessService->evaluate($request->user(), (int) $request->input('question_count', 1)));
 
         if (! ($access['allowed'] ?? false)) {
-            return redirect()->route('student.billing.subscription')->with('overlay', OverlayMessage::redirect(
-                title: 'Unable to start quiz',
-                message: $access['message'] ?? 'Billing access required before starting a quiz.',
-                redirectUrl: route('student.billing.subscription'),
-                variant: 'warning',
-                overrides: [
-                    'primary_label' => 'Choose a Plan',
-                ],
-            ));
+            return redirect()->route('student.billing.subscription')->with('overlay', OverlayMessage::billingAccessRequired($access));
         }
 
         try {

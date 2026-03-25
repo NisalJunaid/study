@@ -324,7 +324,7 @@ class BillingSubscriptionFlowTest extends TestCase
         $this->actingAs($student)
             ->get(route('student.history.index'))
             ->assertRedirect(route('student.billing.subscription'))
-            ->assertSessionHas('overlay', fn (array $overlay) => ($overlay['primary_label'] ?? null) === 'Go to Payment');
+            ->assertSessionHas('overlay', fn (array $overlay) => ($overlay['primary_label'] ?? null) === 'Resolve Subscription');
 
         $this->actingAs($student)
             ->get(route('student.billing.subscription'))

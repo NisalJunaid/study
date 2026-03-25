@@ -10,40 +10,61 @@ const toCleanString = (value) => {
 
 const hasText = (value) => toCleanString(value).length > 0;
 
-const hasActionTarget = (value) => hasText(value);
+const normalizeDelay = (value) => {
+    const parsed = Number(value);
 
-const normalizePayload = (payload = {}) => {
-    const redirectUrl = toCleanString(payload.redirect_url || payload.primary_url || '');
-    const primaryUrl = toCleanString(payload.primary_url || '');
-    const secondaryUrl = toCleanString(payload.secondary_url || '');
-    const title = toCleanString(payload.title);
-    const message = toCleanString(payload.message);
-    const primaryLabel = toCleanString(payload.primary_label);
-    const secondaryLabel = toCleanString(payload.secondary_label);
-    const redirectDelay = Number(payload.redirect_delay_ms || payload.auto_redirect_delay_ms || DEFAULT_DELAY);
-
-    return {
-        title,
-        message,
-        variant: toCleanString(payload.variant) || 'info',
-        primaryLabel,
-        primaryUrl: primaryUrl || null,
-        secondaryLabel,
-        secondaryUrl: secondaryUrl || null,
-        dismissible: payload.dismissible !== false,
-        blocking: payload.blocking === true,
-        redirectUrl: redirectUrl || null,
-        redirectDelay: Number.isFinite(redirectDelay) && redirectDelay > 0 ? redirectDelay : DEFAULT_DELAY,
-    };
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_DELAY;
 };
 
-const isMeaningfulPayload = (payload) => {
-    const hasPrimaryAction = hasText(payload.primaryLabel) && (hasActionTarget(payload.primaryUrl) || hasActionTarget(payload.redirectUrl));
+const normalizePayload = (payload = {}) => {
+    const primaryUrl = toCleanString(payload.primary_url || '');
+    const redirectUrl = toCleanString(payload.redirect_url || primaryUrl || '');
 
-    return hasText(payload.title)
-        || hasText(payload.message)
-        || hasActionTarget(payload.redirectUrl)
-        || hasPrimaryAction;
+    const normalized = {
+        title: toCleanString(payload.title),
+        message: toCleanString(payload.message),
+        variant: toCleanString(payload.variant) || 'info',
+        primaryLabel: toCleanString(payload.primary_label),
+        primaryUrl: primaryUrl || null,
+        secondaryLabel: toCleanString(payload.secondary_label),
+        secondaryUrl: toCleanString(payload.secondary_url) || null,
+        redirectUrl: redirectUrl || null,
+        redirectDelay: normalizeDelay(payload.redirect_delay_ms || payload.auto_redirect_delay_ms),
+        dismissible: payload.dismissible !== false,
+        blocking: payload.blocking === true,
+    };
+
+    if (!hasText(normalized.primaryLabel) && normalized.redirectUrl) {
+        normalized.primaryLabel = 'Continue';
+    }
+
+    if (!hasText(normalized.primaryLabel) && (hasText(normalized.title) || hasText(normalized.message))) {
+        normalized.primaryLabel = 'Okay';
+    }
+
+    return normalized;
+};
+
+const isMeaningfulPayload = (payload) => hasText(payload.title)
+    || hasText(payload.message)
+    || hasText(payload.redirectUrl)
+    || hasText(payload.primaryUrl)
+    || (payload.variant === 'confirm' && hasText(payload.primaryLabel));
+
+const hasBlockingActionPath = (payload) => hasText(payload.primaryUrl)
+    || hasText(payload.redirectUrl)
+    || hasText(payload.secondaryUrl);
+
+const isRenderablePayload = (payload) => {
+    if (!isMeaningfulPayload(payload)) {
+        return false;
+    }
+
+    if (payload.blocking && !hasBlockingActionPath(payload)) {
+        return false;
+    }
+
+    return true;
 };
 
 const setupOverlay = () => {
@@ -71,12 +92,41 @@ const setupOverlay = () => {
         state.interval = null;
     };
 
+    const resetVisuals = () => {
+        if (titleEl) titleEl.textContent = '';
+        if (messageEl) messageEl.textContent = '';
+        if (countdownEl) {
+            countdownEl.textContent = '';
+            countdownEl.hidden = true;
+        }
+
+        if (primaryButton) {
+            primaryButton.hidden = true;
+            primaryButton.onclick = null;
+            primaryButton.textContent = 'Continue';
+        }
+
+        if (secondaryButton) {
+            secondaryButton.hidden = true;
+            secondaryButton.onclick = null;
+            secondaryButton.textContent = 'Cancel';
+        }
+
+        if (dismissButton) {
+            dismissButton.hidden = false;
+            dismissButton.onclick = null;
+        }
+    };
+
     const close = (result = false) => {
         clearTimers();
         container.hidden = true;
         container.classList.remove('is-open');
+        delete container.dataset.variant;
+        delete container.dataset.blocking;
         document.body.classList.remove('overlay-open');
         state.open = false;
+        resetVisuals();
 
         if (typeof state.resolve === 'function') {
             state.resolve(result);
@@ -96,7 +146,7 @@ const setupOverlay = () => {
     const bindActionButton = (button, label, url, fallbackResult) => {
         if (!button) return;
 
-        if (!label) {
+        if (!hasText(label)) {
             button.hidden = true;
             button.onclick = null;
             return;
@@ -105,7 +155,7 @@ const setupOverlay = () => {
         button.hidden = false;
         button.textContent = label;
         button.onclick = () => {
-            if (url) {
+            if (hasText(url)) {
                 redirectNow(url);
                 return;
             }
@@ -116,12 +166,14 @@ const setupOverlay = () => {
 
     const show = (payload = {}) => {
         const data = normalizePayload(payload);
-        if (! isMeaningfulPayload(data)) {
+
+        if (!isRenderablePayload(data)) {
             close(false);
             return false;
         }
 
         clearTimers();
+        resetVisuals();
 
         container.dataset.variant = data.variant;
         container.dataset.blocking = data.blocking ? '1' : '0';
@@ -134,8 +186,7 @@ const setupOverlay = () => {
         if (messageEl) messageEl.textContent = data.message;
 
         const primaryActionUrl = data.primaryUrl || data.redirectUrl;
-        const resolvedPrimaryLabel = data.primaryLabel || (hasText(data.title) || hasText(data.message) || hasActionTarget(primaryActionUrl) ? 'Okay' : null);
-        bindActionButton(primaryButton, resolvedPrimaryLabel, primaryActionUrl, true);
+        bindActionButton(primaryButton, data.primaryLabel, primaryActionUrl, true);
         bindActionButton(secondaryButton, data.secondaryLabel, data.secondaryUrl, false);
 
         if (dismissButton) {
@@ -146,12 +197,9 @@ const setupOverlay = () => {
             };
         }
 
-        if (countdownEl) {
-            countdownEl.hidden = !data.redirectUrl;
-            countdownEl.textContent = '';
-        }
+        if (countdownEl && data.redirectUrl) {
+            countdownEl.hidden = false;
 
-        if (data.redirectUrl && countdownEl) {
             const start = Date.now();
             const tick = () => {
                 const elapsed = Date.now() - start;
@@ -189,7 +237,7 @@ const setupOverlay = () => {
         close(false);
     });
 
-    return { show, close, confirm };
+    return { show, close, confirm, normalizePayload, isRenderablePayload };
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -202,9 +250,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialPayload = root?.dataset.initialOverlay;
     if (initialPayload) {
         try {
-            api.show(JSON.parse(initialPayload));
+            const parsed = JSON.parse(initialPayload);
+            if (parsed && typeof parsed === 'object') {
+                api.show(parsed);
+            }
         } catch {
-            // noop
+            api.close(false);
         }
     }
 
