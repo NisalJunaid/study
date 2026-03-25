@@ -7,7 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const csrfToken = root.dataset.csrf;
     const quizLocked = root.dataset.locked === '1';
 
-    const state = { currentIndex: 0, busy: false, timerInterval: null };
+    const state = {
+        currentIndex: 0,
+        busy: false,
+        timerInterval: null,
+        lastTimer: { width: null, elapsed: null, ideal: null, tone: null },
+    };
     const overlay = window.FocusOverlay;
 
     const els = {
@@ -66,23 +71,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const pct = Math.min(100, Math.round((elapsed / ideal) * 100));
-        els.timerFill.style.width = `${pct}%`;
-        els.timerFill.classList.remove('timer-warning', 'timer-late');
+        let tone = 'normal';
 
         if (elapsed > ideal) {
-            els.timerFill.classList.add('timer-late');
+            tone = 'late';
         } else if (elapsed >= ideal * 0.75) {
-            els.timerFill.classList.add('timer-warning');
+            tone = 'warning';
         }
 
-        els.elapsedText.textContent = `Elapsed: ${elapsed}s`;
-        els.idealText.textContent = `Ideal: ${ideal}s`;
+        if (state.lastTimer.width !== pct) {
+            els.timerFill.style.width = `${pct}%`;
+            state.lastTimer.width = pct;
+        }
+
+        if (state.lastTimer.tone !== tone) {
+            els.timerFill.classList.remove('timer-warning', 'timer-late');
+            if (tone === 'late') els.timerFill.classList.add('timer-late');
+            if (tone === 'warning') els.timerFill.classList.add('timer-warning');
+            state.lastTimer.tone = tone;
+        }
+
+        if (state.lastTimer.elapsed !== elapsed) {
+            els.elapsedText.textContent = `Elapsed: ${elapsed}s`;
+            state.lastTimer.elapsed = elapsed;
+        }
+
+        if (state.lastTimer.ideal !== ideal) {
+            els.idealText.textContent = `Ideal: ${ideal}s`;
+            state.lastTimer.ideal = ideal;
+        }
     };
 
     const startTimer = () => {
         if (state.timerInterval) clearInterval(state.timerInterval);
+        state.lastTimer = { width: null, elapsed: null, ideal: null, tone: null };
         updateTimerUi();
-        state.timerInterval = window.setInterval(updateTimerUi, 250);
+        state.timerInterval = window.setInterval(updateTimerUi, 1000);
+    };
+
+    const stopTimer = () => {
+        if (!state.timerInterval) return;
+        window.clearInterval(state.timerInterval);
+        state.timerInterval = null;
     };
 
     const persistAndLock = async (question, payload) => {
@@ -279,6 +309,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const firstUnansweredIndex = questions.findIndex((q) => !isAnswered(q));
     state.currentIndex = firstUnansweredIndex === -1 ? Math.max(0, questions.length - 1) : firstUnansweredIndex;
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            stopTimer();
+            return;
+        }
+
+        startTimer();
+    });
+    window.addEventListener('beforeunload', stopTimer);
 
     updateSummary();
     renderQuestion();

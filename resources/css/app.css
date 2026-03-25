@@ -1050,27 +1050,6 @@ label > textarea { resize: vertical; min-height: 120px; }
     isolation: isolate;
 }
 
-.smoky-cursor-layer {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    overflow: hidden;
-    opacity: 1;
-    transition: opacity .3s ease;
-}
-
-.smoky-cursor-canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-    pointer-events: none;
-}
-
-.smoky-cursor-layer.is-inactive {
-    opacity: 0;
-}
-
 .shell-topbar {
     position: sticky;
     top: 0;
@@ -1411,22 +1390,12 @@ label > textarea {
 }
 
 @media (max-width: 900px) {
-    .smoky-cursor-layer {
-        opacity: 0.78;
-    }
-
     .shell-topbar { margin: .6rem .6rem 0; }
     .main { padding-left: .7rem; padding-right: .7rem; }
     .guided-form { padding: .9rem; }
     .level-card-grid { grid-template-columns: 1fr; }
     .user-name { display: none; }
     .account-meta-grid { grid-template-columns: 1fr; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .smoky-cursor-layer {
-        display: none;
-    }
 }
 
 .plan-toggle {
