@@ -264,6 +264,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 .field { display:grid; gap:0.35rem; }
+.input-field { display:grid; gap:0.35rem; }
 .field > span,
 label > span { font-weight: 650; font-size: 0.9rem; color: #1e293b; }
 .field small {
@@ -273,6 +274,7 @@ label > span { font-weight: 650; font-size: 0.9rem; color: #1e293b; }
 .field input,
 .field textarea,
 .field select,
+.input-control,
 .filter-row input,
 .filter-row select,
 .filter-grid input,
@@ -283,8 +285,11 @@ label > select {
     width: 100%;
     border: 1px solid #cbd5e1;
     border-radius: 0.72rem;
+    min-height: 2.5rem;
     padding: 0.62rem 0.72rem;
     font: inherit;
+    font-size: 0.95rem;
+    line-height: 1.35;
     background: #fff;
     color: #0f172a;
 }
@@ -590,6 +595,11 @@ label > textarea { resize: vertical; min-height: 120px; }
 
 .section-surface-tertiary {
     background: linear-gradient(160deg, #ffffff, #f8f7ff);
+}
+
+.section-card {
+    padding: clamp(0.95rem, 1.6vw, 1.2rem);
+    border-radius: var(--radius-lg);
 }
 .question-image-preview {
     margin-top: 0.6rem;
@@ -1217,8 +1227,10 @@ label > textarea { resize: vertical; min-height: 120px; }
 
 .topic-group { padding: 1rem; gap: .8rem; }
 
-.field { display:grid; gap:0.42rem; }
+.field,
+.input-field { display:grid; gap:0.42rem; }
 .field-control,
+.input-control,
 .field input,
 .field textarea,
 .field select,

@@ -2,11 +2,6 @@
 
 @section('content')
 <div class="stack-lg">
-    <section class="card section-surface-secondary">
-        <h2 class="section-heading">Recent quiz attempts</h2>
-        <p class="section-intro">Track your latest submissions and reopen result details any time.</p>
-    </section>
-
     @if($quizzes->isEmpty())
         <section class="empty-state card">
             <h4>No quiz attempts yet</h4>

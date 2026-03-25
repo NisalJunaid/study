@@ -49,7 +49,7 @@
     };
 @endphp
 
-<div class="results-shell stack-lg">
+<div class="results-shell stack-lg" id="quiz-results-shell" data-results-poll-url="{{ route('student.quiz.results', $quiz) }}" data-results-poll-enabled="{{ $quiz->status === \App\Models\Quiz::STATUS_GRADING ? '1' : '0' }}">
     <x-student.result-summary-card
         :subject-name="$quiz->subject?->name ?? 'General quiz'"
         :mode-label="strtoupper($quiz->mode)"
@@ -248,14 +248,61 @@
                 }
             };
 
+            const resultsShell = document.getElementById('quiz-results-shell');
+            const pollEnabled = resultsShell?.dataset.resultsPollEnabled === '1';
+            const pollUrl = resultsShell?.dataset.resultsPollUrl;
+            let pollInterval = null;
+
+            const fetchLatestResults = async () => {
+                if (!pollUrl) {
+                    return;
+                }
+
+                const response = await fetch(`${pollUrl}?format=json`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Unable to poll quiz results.');
+                }
+
+                const payload = await response.json();
+
+                if (payload.quiz) {
+                    updateQuizSummary(payload.quiz);
+                }
+
+                if (Array.isArray(payload.answers)) {
+                    payload.answers.forEach((answer) => updateTheoryAnswerCard(answer));
+                }
+
+                if (payload.quiz?.status === 'graded' && pollInterval) {
+                    window.clearInterval(pollInterval);
+                    pollInterval = null;
+                }
+            };
+
             const teardown = window.createRealtimeChannel?.('quiz.{{ $quiz->id }}', {
                 'quiz.grading.progress.updated': ({ quiz }) => updateQuizSummary(quiz),
                 'theory.answer.graded': ({ answer }) => updateTheoryAnswerCard(answer),
             });
 
+            if (pollEnabled) {
+                pollInterval = window.setInterval(() => {
+                    fetchLatestResults().catch(() => {});
+                }, 6000);
+            }
+
             window.addEventListener('beforeunload', () => {
                 if (typeof teardown === 'function') {
                     teardown();
+                }
+
+                if (pollInterval) {
+                    window.clearInterval(pollInterval);
                 }
             });
         })();

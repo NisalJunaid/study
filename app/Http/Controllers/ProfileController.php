@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 
@@ -37,36 +36,5 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit');
-    }
-
-    public function settings(Request $request): View
-    {
-        return view('pages.account.settings', [
-            'layout' => $request->user()?->isAdmin() ? 'layouts.admin' : 'layouts.student',
-            'heading' => 'Settings',
-            'subheading' => 'Update your password and account security settings.',
-            'status' => session('status'),
-        ]);
-    }
-
-    /**
-     * Delete the user's account.
-     */
-    public function destroy(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'password' => ['required', 'current_password'],
-        ]);
-
-        $user = $request->user();
-
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
     }
 }

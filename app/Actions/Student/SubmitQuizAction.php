@@ -6,6 +6,7 @@ use App\Events\QuizGradingProgressUpdated;
 use App\Models\Quiz;
 use App\Models\StudentAnswer;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class SubmitQuizAction
@@ -78,7 +79,13 @@ class SubmitQuizAction
                 ? $this->queueTheoryGradingAction->execute($quiz)
                 : 0;
 
-            QuizGradingProgressUpdated::dispatch($quiz->id);
+            try {
+                QuizGradingProgressUpdated::dispatch($quiz->id);
+            } catch (\Throwable $e) {
+                Log::warning('Broadcast failed but quiz submission continues', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             return [
                 'quiz' => $quiz,

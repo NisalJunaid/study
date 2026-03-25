@@ -12,6 +12,7 @@ use App\Models\Quiz;
 use App\Models\QuizQuestion;
 use App\Models\Subject;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use RuntimeException;
@@ -163,7 +164,7 @@ class QuizController extends Controller
             ->with('success', $result['message']);
     }
 
-    public function results(Quiz $quiz): View
+    public function results(Request $request, Quiz $quiz): View|JsonResponse
     {
         $this->authorize('view', $quiz);
 
@@ -184,16 +185,41 @@ class QuizController extends Controller
         $answeredOnTimeCount = $timedAnswers->where('answered_on_time', true)->count();
         $answeredLateCount = max(0, $timedAnswers->count() - $answeredOnTimeCount);
 
+        $timingSummary = [
+            'timed_answers' => $timedAnswers->count(),
+            'on_time' => $answeredOnTimeCount,
+            'late' => $answeredLateCount,
+            'on_time_rate' => $timedAnswers->count() > 0
+                ? round(($answeredOnTimeCount / $timedAnswers->count()) * 100, 1)
+                : null,
+        ];
+
+        if ($request->expectsJson() || $request->query('format') === 'json') {
+            return response()->json([
+                'quiz' => [
+                    'id' => $quiz->id,
+                    'status' => $quiz->status,
+                    'total_awarded_score' => $quiz->total_awarded_score,
+                    'total_possible_score' => $quiz->total_possible_score,
+                ],
+                'answers' => $quiz->quizQuestions
+                    ->filter(fn ($quizQuestion) => $quizQuestion->studentAnswer !== null)
+                    ->map(fn ($quizQuestion) => [
+                        'id' => $quizQuestion->studentAnswer->id,
+                        'grading_status' => $quizQuestion->studentAnswer->grading_status,
+                        'is_correct' => $quizQuestion->studentAnswer->is_correct,
+                        'score' => $quizQuestion->studentAnswer->score,
+                        'max_score' => $quizQuestion->max_score,
+                        'feedback' => $quizQuestion->studentAnswer->feedback,
+                    ])
+                    ->values()
+                    ->all(),
+            ]);
+        }
+
         return view('pages.student.quiz.results', [
             'quiz' => $quiz,
-            'timingSummary' => [
-                'timed_answers' => $timedAnswers->count(),
-                'on_time' => $answeredOnTimeCount,
-                'late' => $answeredLateCount,
-                'on_time_rate' => $timedAnswers->count() > 0
-                    ? round(($answeredOnTimeCount / $timedAnswers->count()) * 100, 1)
-                    : null,
-            ],
+            'timingSummary' => $timingSummary,
         ]);
     }
 }
