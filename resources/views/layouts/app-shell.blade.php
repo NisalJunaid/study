@@ -8,17 +8,11 @@
 </head>
 <body>
     @php
-        $activeSubscription = auth()->check() && ! auth()->user()->isAdmin()
-            ? auth()->user()->subscriptions()->latest()->first()
-            : null;
-        $showSuspensionOverlay = $activeSubscription?->isSuspended()
+        $activeSubscription = $activeSubscription ?? null;
+        $showSuspensionOverlay = ($showSuspensionOverlay ?? false)
             && ! request()->routeIs('student.billing.*');
     @endphp
 <div class="shell" data-shell>
-    <div class="smoky-cursor-layer" data-smoky-cursor-layer aria-hidden="true">
-        <canvas class="smoky-cursor-canvas" data-smoky-cursor-canvas></canvas>
-    </div>
-
     <header class="shell-topbar">
         <button class="menu-trigger" type="button" aria-controls="app-sidebar" aria-expanded="false" data-nav-toggle aria-label="Open sidebar">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
