@@ -87,6 +87,8 @@ class BuildQuizAction
                 'subject_id' => $singleSubjectId,
                 'mode' => $mode,
                 'status' => Quiz::STATUS_IN_PROGRESS,
+                'billing_access_type' => $payload['billing_access_type'] ?? null,
+                'subscription_payment_id' => $payload['subscription_payment_id'] ?? null,
                 'total_questions' => $selectedQuestions->count(),
                 'total_possible_score' => $selectedQuestions->sum(fn (Question $question) => (float) $question->marks),
                 'started_at' => now(),

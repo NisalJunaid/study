@@ -11,6 +11,7 @@ use App\Http\Requests\Student\StoreQuizRequest;
 use App\Models\Quiz;
 use App\Models\QuizQuestion;
 use App\Models\Subject;
+use App\Services\Billing\QuizAccessService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,7 @@ use RuntimeException;
 
 class QuizController extends Controller
 {
-    public function create(): View
+    public function create(QuizAccessService $quizAccessService): View
     {
         $selectedLevels = collect(request()->input('levels', old('levels', [])))
             ->map(fn ($value) => (string) $value)
@@ -85,13 +86,28 @@ class QuizController extends Controller
             ],
             'defaultQuestionCount' => 50,
             'multiSubjectMode' => $oldMulti,
+            'billingAccess' => $quizAccessService->evaluate((request()->user()), (int) old('question_count', 50)),
         ]);
     }
 
-    public function store(StoreQuizRequest $request, BuildQuizAction $buildQuizAction): RedirectResponse
+    public function store(
+        StoreQuizRequest $request,
+        BuildQuizAction $buildQuizAction,
+        QuizAccessService $quizAccessService
+    ): RedirectResponse
     {
+        $access = $request->attributes->get('quiz_access_context', $quizAccessService->evaluate($request->user(), (int) $request->input('question_count', 1)));
+
+        if (! ($access['allowed'] ?? false)) {
+            return redirect()->route('student.billing.index')->with('error', $access['message'] ?? 'Billing access required before starting a quiz.');
+        }
+
         try {
-            $quiz = $buildQuizAction->execute($request->user(), $request->validated());
+            $payload = $request->validated();
+            $payload['billing_access_type'] = $access['access_type'] ?? null;
+            $payload['subscription_payment_id'] = $access['payment']->id ?? null;
+
+            $quiz = $buildQuizAction->execute($request->user(), $payload);
         } catch (RuntimeException $exception) {
             return back()
                 ->withInput()
@@ -100,9 +116,11 @@ class QuizController extends Controller
                 ]);
         }
 
+        $quizAccessService->registerQuizUsage($request->user(), $access);
+
         return redirect()
             ->route('student.quiz.take', $quiz)
-            ->with('success', 'Quiz created. Start with question 1.');
+            ->with('success', $access['message'] ?? 'Quiz created. Start with question 1.');
     }
 
     public function show(Quiz $quiz): View

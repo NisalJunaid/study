@@ -27,6 +27,8 @@ class Quiz extends Model
         'subject_id',
         'mode',
         'status',
+        'billing_access_type',
+        'subscription_payment_id',
         'total_questions',
         'total_possible_score',
         'total_awarded_score',
@@ -51,6 +53,11 @@ class Quiz extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
+    }
+
+    public function subscriptionPayment(): BelongsTo
+    {
+        return $this->belongsTo(SubscriptionPayment::class);
     }
 
     public function quizQuestions(): HasMany
