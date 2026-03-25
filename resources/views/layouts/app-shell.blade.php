@@ -81,16 +81,19 @@
         @endif
 
         @php
+            $suppressFlashOverlay = (bool) ($suppressFlash ?? false);
             $rawOverlay = session('overlay');
             $candidateOverlay = is_array($rawOverlay)
                 ? OverlayMessage::renderableOrNull($rawOverlay)
                 : null;
 
-            $overlayPayload = OverlayMessage::fromFlash(
-                $candidateOverlay,
-                session('success'),
-                session('error'),
-            );
+            $overlayPayload = $suppressFlashOverlay
+                ? null
+                : OverlayMessage::fromFlash(
+                    $candidateOverlay,
+                    session('success'),
+                    session('error'),
+                );
         @endphp
 
         <section class="page-content {{ $contentWidthClass ?? '' }}">

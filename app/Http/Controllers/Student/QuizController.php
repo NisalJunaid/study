@@ -119,9 +119,7 @@ class QuizController extends Controller
 
         $quizAccessService->registerQuizUsage($request->user(), $access);
 
-        return redirect()
-            ->route('student.quiz.take', $quiz)
-            ->with('overlay', OverlayMessage::make('Quiz ready', $access['message'] ?? 'Quiz created. Start with question 1.', 'success', ['primary_label' => 'Begin']));
+        return redirect()->route('student.quiz.take', $quiz);
     }
 
     public function show(Quiz $quiz): View
