@@ -51,16 +51,18 @@ const isMeaningfulPayload = (payload) => hasText(payload.title)
     || hasText(payload.primaryUrl)
     || (payload.variant === 'confirm' && hasText(payload.primaryLabel));
 
+const hasHeadline = (payload) => hasText(payload.title) || hasText(payload.message);
+
 const hasBlockingActionPath = (payload) => hasText(payload.primaryUrl)
     || hasText(payload.redirectUrl)
     || hasText(payload.secondaryUrl);
 
 const isRenderablePayload = (payload) => {
-    if (!isMeaningfulPayload(payload)) {
+    if (payload.blocking && (!hasHeadline(payload) || !hasBlockingActionPath(payload))) {
         return false;
     }
 
-    if (payload.blocking && !hasBlockingActionPath(payload)) {
+    if (!isMeaningfulPayload(payload)) {
         return false;
     }
 
@@ -252,7 +254,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const parsed = JSON.parse(initialPayload);
             if (parsed && typeof parsed === 'object') {
-                api.show(parsed);
+                const normalized = api.normalizePayload(parsed);
+                if (api.isRenderablePayload(normalized)) {
+                    api.show(normalized);
+                }
             }
         } catch {
             api.close(false);

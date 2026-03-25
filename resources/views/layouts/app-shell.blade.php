@@ -81,8 +81,13 @@
         @endif
 
         @php
+            $rawOverlay = session('overlay');
+            $candidateOverlay = is_array($rawOverlay)
+                ? OverlayMessage::renderableOrNull($rawOverlay)
+                : null;
+
             $overlayPayload = OverlayMessage::fromFlash(
-                is_array(session('overlay')) ? session('overlay') : null,
+                $candidateOverlay,
                 session('success'),
                 session('error'),
             );
@@ -105,9 +110,11 @@
 @endif
 
 @php
-    $initialOverlay = ! $showSuspensionOverlay ? OverlayMessage::renderableOrNull($overlayPayload) : null;
+    $initialOverlay = ! $showSuspensionOverlay
+        ? OverlayMessage::renderableOrNull($overlayPayload)
+        : null;
 @endphp
-<div class="global-overlay" data-global-overlay @if($initialOverlay) data-initial-overlay='@json($initialOverlay)' @endif hidden>
+<div class="global-overlay" data-global-overlay @if(!is_null($initialOverlay)) data-initial-overlay='@json($initialOverlay)' @endif hidden>
     <div class="global-overlay-card card" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Important message">
         <button type="button" class="global-overlay-dismiss" data-overlay-dismiss aria-label="Close message">✕</button>
         <h2 class="h2 mb-0" data-overlay-title></h2>
