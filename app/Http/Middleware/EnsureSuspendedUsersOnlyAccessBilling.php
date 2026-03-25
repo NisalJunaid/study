@@ -32,14 +32,8 @@ class EnsureSuspendedUsersOnlyAccessBilling
 
         return redirect()
             ->route('student.billing.subscription')
-            ->with('overlay', OverlayMessage::redirect(
-                title: 'Account access paused',
-                message: 'Your account is suspended. Please complete payment recovery to continue.',
-                redirectUrl: route('student.billing.subscription'),
-                variant: 'danger',
-                overrides: [
-                    'primary_label' => 'Go to Payment',
-                ],
+            ->with('overlay', OverlayMessage::suspendedAccount(
+                $subscription->suspended_reason ?: 'Your account is suspended. Please complete payment recovery to continue.',
             ));
     }
 }
