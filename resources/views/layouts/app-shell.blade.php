@@ -8,6 +8,10 @@
 </head>
 <body>
 <div class="shell" data-shell>
+    <div class="smoky-cursor-layer" data-smoky-cursor-layer aria-hidden="true">
+        <div class="smoky-cursor-glow" data-smoky-cursor-glow></div>
+    </div>
+
     <header class="shell-topbar">
         <button class="menu-trigger" type="button" aria-controls="app-sidebar" aria-expanded="false" data-nav-toggle aria-label="Open sidebar">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
