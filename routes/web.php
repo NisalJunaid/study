@@ -1,15 +1,18 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\TheoryReviewController;
 use App\Http\Controllers\Admin\TopicController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Student\HistoryController as StudentHistoryController;
 use App\Http\Controllers\Student\LevelController as StudentLevelController;
 use App\Http\Controllers\Student\ProgressController as StudentProgressController;
 use App\Http\Controllers\Student\QuizController as StudentQuizController;
+use App\Http\Controllers\Student\ResultController as StudentResultController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,8 +29,8 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::get('/settings', [ProfileController::class, 'settings'])->name('profile.settings');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/settings', [SettingsController::class, 'index'])->name('profile.settings');
+    Route::delete('/profile', [AccountController::class, 'destroy'])->name('profile.destroy');
 });
 
 Route::middleware(['auth', 'role:student'])->group(function () {
@@ -43,20 +46,7 @@ Route::middleware(['auth', 'role:student'])->group(function () {
     Route::put('/quiz/{quiz}/questions/{quizQuestion}/answer', [StudentQuizController::class, 'saveAnswer'])->name('student.quiz.answer.save');
     Route::post('/quiz/{quiz}/submit', [StudentQuizController::class, 'submit'])->name('student.quiz.submit');
     Route::get('/quiz/{quiz}/results', [StudentQuizController::class, 'results'])->name('student.quiz.results');
-    Route::get('/results', function () {
-        $latest = \App\Models\Quiz::query()
-            ->forUser((int) request()->user()->id)
-            ->whereIn('status', [\App\Models\Quiz::STATUS_SUBMITTED, \App\Models\Quiz::STATUS_GRADING, \App\Models\Quiz::STATUS_GRADED])
-            ->latest('submitted_at')
-            ->latest('id')
-            ->first();
-
-        if (! $latest) {
-            return redirect()->route('student.history.index');
-        }
-
-        return redirect()->route('student.quiz.results', $latest);
-    })->name('student.results.index');
+    Route::get('/results', [StudentResultController::class, 'index'])->name('student.results.index');
 
     Route::get('/history', [StudentHistoryController::class, 'index'])->name('student.history.index');
     Route::get('/progress', StudentProgressController::class)->name('student.progress.index');

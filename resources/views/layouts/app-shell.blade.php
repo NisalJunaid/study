@@ -55,11 +55,21 @@
     </aside>
 
     <main class="main">
-        @if(!($minimalHeader ?? false))
+        @php
+            $showHeader = $showHeader ?? !($minimalHeader ?? false);
+            $resolvedHeading = $heading ?? null;
+            $resolvedSubheading = $subheading ?? null;
+        @endphp
+
+        @if($showHeader && ($resolvedHeading || $resolvedSubheading))
             <header class="topbar card {{ $contentWidthClass ?? '' }}">
                 <div class="section-title">
-                    <h1 class="h0">{{ $heading ?? 'Dashboard' }}</h1>
-                    <p class="muted">{{ $subheading ?? 'Build momentum with focused practice.' }}</p>
+                    @if($resolvedHeading)
+                        <h1 class="h0">{{ $resolvedHeading }}</h1>
+                    @endif
+                    @if($resolvedSubheading)
+                        <p class="muted">{{ $resolvedSubheading }}</p>
+                    @endif
                 </div>
             </header>
         @endif

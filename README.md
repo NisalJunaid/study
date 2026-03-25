@@ -11,6 +11,10 @@ A Laravel 10 study platform for O'Level students with separate student/admin exp
 - Broadcasting over Pusher protocol (compatible with Laravel Reverb)
 - OpenAI Responses API for theory answer grading
 
+## Student Flow
+
+Levels → Subjects → Topics (optional) → Quiz Builder → Quiz Taking → Results
+
 ## Implemented Features
 
 ### Student
@@ -133,6 +137,9 @@ IMPORT_PROCESSING_QUEUE=default
 - `ProcessQuestionImportJob` handles row-by-row CSV import asynchronously.
 - Both jobs emit broadcast events used by admin/student realtime UI.
 - If workers are down, theory grading/import progress will stall and remain user-visible as pending/manual-review statuses.
+
+> ⚠️ Queue workers are mandatory in production for theory grading and CSV imports.
+> ℹ️ Broadcasting is optional for correctness. If realtime delivery is unavailable, quiz submission still succeeds and results can refresh via HTTP polling fallback.
 
 ## Demo Accounts (Seeded)
 
