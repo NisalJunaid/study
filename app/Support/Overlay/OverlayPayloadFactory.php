@@ -116,11 +116,19 @@ class OverlayPayloadFactory
             return false;
         }
 
+        if (($payload['blocking'] ?? false) === true && ! self::hasHeadline($payload)) {
+            return false;
+        }
+
         return true;
     }
 
     public static function hasMeaningfulPurpose(array $payload): bool
     {
+        if (($payload['blocking'] ?? false) === true) {
+            return self::hasHeadline($payload) && self::hasBlockingActionPath($payload);
+        }
+
         return filled($payload['title'] ?? null)
             || filled($payload['message'] ?? null)
             || filled($payload['redirect_url'] ?? null)
@@ -133,6 +141,12 @@ class OverlayPayloadFactory
         return filled($payload['primary_url'] ?? null)
             || filled($payload['redirect_url'] ?? null)
             || filled($payload['secondary_url'] ?? null);
+    }
+
+    public static function hasHeadline(array $payload): bool
+    {
+        return filled($payload['title'] ?? null)
+            || filled($payload['message'] ?? null);
     }
 
     private static function build(string $title, string $message, string $variant, array $overrides): array
