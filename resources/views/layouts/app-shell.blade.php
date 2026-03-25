@@ -7,6 +7,13 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
+    @php
+        $activeSubscription = auth()->check() && ! auth()->user()->isAdmin()
+            ? auth()->user()->subscriptions()->latest()->first()
+            : null;
+        $showSuspensionOverlay = $activeSubscription?->isSuspended()
+            && ! request()->routeIs('student.billing.*');
+    @endphp
 <div class="shell" data-shell>
     <div class="smoky-cursor-layer" data-smoky-cursor-layer aria-hidden="true">
         <canvas class="smoky-cursor-canvas" data-smoky-cursor-canvas></canvas>
@@ -87,6 +94,16 @@
         </section>
     </main>
 </div>
+
+@if($showSuspensionOverlay)
+    <div class="suspension-overlay" role="dialog" aria-modal="true" aria-label="Account suspended">
+        <div class="suspension-overlay-card">
+            <h2 class="h2">Account suspended</h2>
+            <p class="mb-0">{{ $activeSubscription->suspended_reason ?: 'Your account is suspended until payment is verified.' }}</p>
+            <a class="btn btn-primary" href="{{ route('student.billing.subscription') }}">Go to subscription and payment</a>
+        </div>
+    </div>
+@endif
 
 <script>
     (() => {

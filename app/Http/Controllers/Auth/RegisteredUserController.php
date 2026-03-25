@@ -36,6 +36,7 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'account_path' => ['required', 'in:'.User::ONBOARDING_FREE_TRIAL.','.User::ONBOARDING_SUBSCRIBE],
         ]);
 
         try {
@@ -44,6 +45,7 @@ class RegisteredUserController extends Controller
                 'email' => $request->string('email')->lower()->value(),
                 'password' => Hash::make($request->password),
                 'role' => User::ROLE_STUDENT,
+                'onboarding_intent' => $request->string('account_path')->toString(),
             ]);
         } catch (QueryException $exception) {
             report($exception);
@@ -56,6 +58,10 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         Auth::login($user);
+
+        if ($user->onboarding_intent === User::ONBOARDING_SUBSCRIBE) {
+            return redirect()->route('student.billing.subscription');
+        }
 
         return redirect()->route('student.dashboard');
     }

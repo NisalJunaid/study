@@ -2,6 +2,11 @@
 
 @section('content')
 <x-admin.flash />
+<div class="row-wrap" style="margin-bottom:.75rem">
+    <a class="btn" href="{{ route('admin.billing.plans.index') }}">Manage plans</a>
+    <a class="btn" href="{{ route('admin.billing.discounts.index') }}">Manage discounts</a>
+    <a class="btn" href="{{ route('admin.billing.settings.edit') }}">Payment account settings</a>
+</div>
 <div class="card table-wrap">
     <table class="table">
         <thead><tr><th>Student</th><th>Plan</th><th>Submitted</th><th>Amount</th><th>Status</th><th>Slip</th><th>Actions</th></tr></thead>

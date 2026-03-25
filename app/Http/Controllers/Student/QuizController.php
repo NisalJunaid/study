@@ -99,7 +99,7 @@ class QuizController extends Controller
         $access = $request->attributes->get('quiz_access_context', $quizAccessService->evaluate($request->user(), (int) $request->input('question_count', 1)));
 
         if (! ($access['allowed'] ?? false)) {
-            return redirect()->route('student.billing.index')->with('error', $access['message'] ?? 'Billing access required before starting a quiz.');
+            return redirect()->route('student.billing.subscription')->with('error', $access['message'] ?? 'Billing access required before starting a quiz.');
         }
 
         try {

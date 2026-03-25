@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Providers\RouteServiceProvider;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -24,9 +24,24 @@ class RegistrationTest extends TestCase
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'account_path' => User::ONBOARDING_FREE_TRIAL,
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(RouteServiceProvider::HOME);
+        $response->assertRedirect('/dashboard');
+    }
+
+    public function test_subscribe_path_redirects_to_subscription_page_after_registration(): void
+    {
+        $response = $this->post('/register', [
+            'name' => 'Subscriber',
+            'email' => 'sub@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'account_path' => User::ONBOARDING_SUBSCRIBE,
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('student.billing.subscription'));
     }
 }
