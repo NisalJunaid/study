@@ -87,6 +87,14 @@ const setupOverlay = () => {
         resolve: null,
     };
 
+    const enforceHiddenState = () => {
+        if (state.open) return;
+        container.hidden = true;
+        container.classList.remove('is-open');
+        container.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('overlay-open');
+    };
+
     const clearTimers = () => {
         window.clearTimeout(state.redirectTimer);
         window.clearInterval(state.interval);
@@ -122,11 +130,9 @@ const setupOverlay = () => {
 
     const close = (result = false) => {
         clearTimers();
-        container.hidden = true;
-        container.classList.remove('is-open');
+        enforceHiddenState();
         delete container.dataset.variant;
         delete container.dataset.blocking;
-        document.body.classList.remove('overlay-open');
         state.open = false;
         resetVisuals();
 
@@ -181,6 +187,7 @@ const setupOverlay = () => {
         container.dataset.blocking = data.blocking ? '1' : '0';
         container.hidden = false;
         container.classList.add('is-open');
+        container.setAttribute('aria-hidden', 'false');
         document.body.classList.add('overlay-open');
         state.open = true;
 
@@ -238,6 +245,8 @@ const setupOverlay = () => {
         if (event.key !== 'Escape' || !state.open || container.dataset.blocking === '1') return;
         close(false);
     });
+
+    enforceHiddenState();
 
     return { show, close, confirm, normalizePayload, isRenderablePayload };
 };
