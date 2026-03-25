@@ -9,7 +9,7 @@
 <body>
 <div class="shell" data-shell>
     <div class="smoky-cursor-layer" data-smoky-cursor-layer aria-hidden="true">
-        <div class="smoky-cursor-glow" data-smoky-cursor-glow></div>
+        <canvas class="smoky-cursor-canvas" data-smoky-cursor-canvas></canvas>
     </div>
 
     <header class="shell-topbar">
