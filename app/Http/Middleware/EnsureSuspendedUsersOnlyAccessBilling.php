@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\OverlayMessage;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,6 +32,14 @@ class EnsureSuspendedUsersOnlyAccessBilling
 
         return redirect()
             ->route('student.billing.subscription')
-            ->with('error', 'Your account is suspended. Please complete payment recovery to continue.');
+            ->with('overlay', OverlayMessage::redirect(
+                title: 'Account access paused',
+                message: 'Your account is suspended. Please complete payment recovery to continue.',
+                redirectUrl: route('student.billing.subscription'),
+                variant: 'danger',
+                overrides: [
+                    'primary_label' => 'Go to Payment',
+                ],
+            ));
     }
 }

@@ -39,7 +39,8 @@ class BillingSubscriptionFlowTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.quiz.store'), $this->quizPayload($subject, 11))
-            ->assertRedirect(route('student.billing.subscription'));
+            ->assertRedirect(route('student.billing.subscription'))
+            ->assertSessionHas('overlay', fn (array $overlay) => ($overlay['primary_label'] ?? null) === 'Choose a Plan');
     }
 
     public function test_trial_exhaustion_triggers_paywall_redirect(): void
@@ -60,7 +61,8 @@ class BillingSubscriptionFlowTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.quiz.store'), $this->quizPayload($subject, 5))
-            ->assertRedirect(route('student.billing.subscription'));
+            ->assertRedirect(route('student.billing.subscription'))
+            ->assertSessionHas('overlay', fn (array $overlay) => ($overlay['variant'] ?? null) === 'warning');
     }
 
     public function test_payment_slip_upload_grants_temporary_access(): void
@@ -75,7 +77,8 @@ class BillingSubscriptionFlowTest extends TestCase
                 'subscription_plan_id' => $plan->id,
                 'slip' => UploadedFile::fake()->image('slip.jpg'),
             ])
-            ->assertRedirect(route('student.billing.subscription'));
+            ->assertRedirect(route('student.billing.subscription'))
+            ->assertSessionHas('overlay', fn (array $overlay) => ($overlay['redirect_url'] ?? null) === route('student.quiz.setup'));
 
         $payment = SubscriptionPayment::query()->first();
 
@@ -123,7 +126,8 @@ class BillingSubscriptionFlowTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('student.quiz.store'), $this->quizPayload($subject, 5))
-            ->assertRedirect(route('student.billing.subscription'));
+            ->assertRedirect(route('student.billing.subscription'))
+            ->assertSessionHas('overlay');
     }
 
     public function test_temporary_access_expires_after_twenty_four_hours_if_unverified(): void
@@ -319,7 +323,8 @@ class BillingSubscriptionFlowTest extends TestCase
 
         $this->actingAs($student)
             ->get(route('student.history.index'))
-            ->assertRedirect(route('student.billing.subscription'));
+            ->assertRedirect(route('student.billing.subscription'))
+            ->assertSessionHas('overlay', fn (array $overlay) => ($overlay['primary_label'] ?? null) === 'Go to Payment');
 
         $this->actingAs($student)
             ->get(route('student.billing.subscription'))

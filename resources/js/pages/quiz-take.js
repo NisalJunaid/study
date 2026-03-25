@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const quizLocked = root.dataset.locked === '1';
 
     const state = { currentIndex: 0, busy: false, timerInterval: null };
+    const overlay = window.FocusOverlay;
 
     const els = {
         panel: document.getElementById('active-question-panel'),
@@ -211,14 +212,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeQuestion.type === 'mcq') {
                 const optionId = selectedOption(activeQuestion);
                 if (!optionId) {
-                    window.alert('Select an option before continuing.');
+                    overlay?.show({
+                        title: 'Answer needed',
+                        message: 'Select an option before continuing.',
+                        variant: 'warning',
+                        primary_label: 'Okay',
+                    });
                     return;
                 }
                 payload.selected_option_id = optionId;
             } else {
                 const answerText = typedAnswer(activeQuestion);
                 if (!answerText) {
-                    window.alert('Write your answer before continuing.');
+                    overlay?.show({
+                        title: 'Answer needed',
+                        message: 'Write your answer before continuing.',
+                        variant: 'warning',
+                        primary_label: 'Okay',
+                    });
                     return;
                 }
                 payload.answer_text = answerText;
@@ -239,7 +250,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     els.submitForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             } catch (error) {
-                window.alert(error.message || 'Unable to save answer.');
+                overlay?.show({
+                    title: 'Save failed',
+                    message: error.message || 'Unable to save answer.',
+                    variant: 'danger',
+                    primary_label: 'Try again',
+                });
                 nextButton.disabled = false;
                 nextButton.textContent = state.currentIndex === questions.length - 1 ? 'Finish Quiz' : 'Next Question';
             }
@@ -248,9 +264,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    els.submitForm?.addEventListener('submit', (event) => {
+    els.submitForm?.addEventListener('submit', async (event) => {
         const answeredCount = questions.filter(isAnswered).length;
-        const confirmed = window.confirm(`Submit quiz now? You finalized ${answeredCount} of ${questions.length} questions.`);
+        const confirmed = await (overlay?.confirm({
+            title: 'Submit quiz now?',
+            message: `You finalized ${answeredCount} of ${questions.length} questions.`,
+            variant: 'confirm',
+            primary_label: 'Submit quiz',
+            secondary_label: 'Keep reviewing',
+        }) ?? Promise.resolve(true));
+
         if (!confirmed) event.preventDefault();
     });
 
