@@ -6,6 +6,7 @@ use App\Support\DTOs\TheoryGradeResult;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -13,6 +14,7 @@ class TheoryGraderService
 {
     public function __construct(
         private readonly HttpFactory $http,
+        private readonly ModelRoutingService $modelRoutingService,
     ) {
     }
 
@@ -26,11 +28,23 @@ class TheoryGraderService
             return [];
         }
 
+        $apiKey = (string) config('openai.api_key');
+
+        if ($apiKey === '') {
+            throw new RuntimeException('OpenAI API key is not configured.');
+        }
+
         $resolved = [];
         $uncached = [];
 
         foreach ($items as $itemKey => $item) {
-            $cacheKey = $this->cacheKey($item);
+            $route = $this->modelRoutingService->resolve($item);
+
+            if (! ($route['use_ai'] ?? true)) {
+                continue;
+            }
+
+            $cacheKey = $this->cacheKey($item, $route);
 
             if ($this->cacheEnabled()) {
                 $cached = Cache::get($cacheKey);
@@ -39,7 +53,11 @@ class TheoryGraderService
                     $resolved[$itemKey] = $this->normalize(
                         decoded: $cached,
                         maxScore: (float) ($item['max_score'] ?? 0),
-                        raw: ['cached' => true, 'parsed' => $cached]
+                        raw: [
+                            'cached' => true,
+                            'parsed' => $cached,
+                            'routing' => $route,
+                        ],
                     );
 
                     continue;
@@ -50,6 +68,7 @@ class TheoryGraderService
                 'item_key' => (string) $itemKey,
                 'payload' => $item,
                 'cache_key' => $cacheKey,
+                'route' => $route,
             ];
         }
 
@@ -57,33 +76,106 @@ class TheoryGraderService
             return $resolved;
         }
 
-        $apiKey = (string) config('openai.api_key');
+        $groupedByRoute = [];
 
-        if ($apiKey === '') {
-            throw new RuntimeException('OpenAI API key is not configured.');
+        foreach ($uncached as $itemKey => $meta) {
+            $route = $meta['route'];
+            $signature = $this->routeSignature($route);
+            $groupedByRoute[$signature]['route'] = $route;
+            $groupedByRoute[$signature]['items'][$itemKey] = $meta;
         }
 
+        $escalationCandidates = [];
+
+        foreach ($groupedByRoute as $group) {
+            $route = $group['route'];
+            $groupItems = $group['items'];
+
+            try {
+                $primaryResults = $this->requestBatch($groupItems, $route);
+
+                foreach ($groupItems as $itemKey => $meta) {
+                    $returned = $primaryResults[$itemKey] ?? null;
+
+                    if (! is_array($returned)) {
+                        if (($route['tier'] ?? null) === 'low_cost') {
+                            $escalationCandidates[$itemKey] = $meta;
+                            continue;
+                        }
+
+                        throw new RuntimeException("OpenAI grading response is missing item '{$itemKey}'.");
+                    }
+
+                    $normalized = $this->normalize(
+                        decoded: $returned,
+                        maxScore: (float) ($meta['payload']['max_score'] ?? 0),
+                        raw: [
+                            'parsed' => $returned,
+                            'routing' => $route,
+                            'escalated' => false,
+                        ],
+                    );
+
+                    if (($route['tier'] ?? null) === 'low_cost' && $this->modelRoutingService->shouldEscalate($normalized->confidence, $normalized->shouldFlagForReview)) {
+                        $escalationCandidates[$itemKey] = $meta;
+                        continue;
+                    }
+
+                    $resolved[$itemKey] = $normalized;
+
+                    if ($this->cacheEnabled()) {
+                        Cache::put(
+                            $meta['cache_key'],
+                            $normalized->toArray(),
+                            now()->addSeconds((int) config('openai.cache_ttl_seconds', 60 * 60 * 24 * 30))
+                        );
+                    }
+                }
+            } catch (RuntimeException $exception) {
+                if (($route['tier'] ?? null) !== 'low_cost') {
+                    throw $exception;
+                }
+
+                foreach ($groupItems as $itemKey => $meta) {
+                    $escalationCandidates[$itemKey] = $meta;
+                }
+            }
+        }
+
+        if ($escalationCandidates !== []) {
+            $this->resolveEscalations($escalationCandidates, $resolved);
+        }
+
+        return $resolved;
+    }
+
+    /**
+     * @param  array<string, array{item_key:string,payload:array<string,mixed>,cache_key:string,route:array<string,mixed>}>  $items
+     * @return array<string, array<string, mixed>>
+     */
+    private function requestBatch(array $items, array $route): array
+    {
         $response = $this->http
             ->baseUrl((string) config('openai.base_url'))
             ->timeout((int) config('openai.timeout'))
-            ->withToken($apiKey)
+            ->withToken((string) config('openai.api_key'))
             ->acceptJson()
             ->asJson()
             ->post('/responses', [
-                'model' => config('openai.model'),
+                'model' => (string) ($route['model'] ?? config('openai.model')),
                 'input' => [
                     [
                         'role' => 'system',
                         'content' => [[
                             'type' => 'input_text',
-                            'text' => $this->systemPrompt(),
+                            'text' => $this->systemPrompt((string) ($route['profile'] ?? 'short_answer')),
                         ]],
                     ],
                     [
                         'role' => 'user',
                         'content' => [[
                             'type' => 'input_text',
-                            'text' => $this->userPrompt($uncached),
+                            'text' => $this->userPrompt($items, (string) ($route['profile'] ?? 'short_answer')),
                         ]],
                     ],
                 ],
@@ -95,8 +187,8 @@ class TheoryGraderService
                         'schema' => $this->schema(),
                     ],
                 ],
-                'max_output_tokens' => (int) config('openai.max_output_tokens', 1200),
-                'temperature' => 0,
+                'max_output_tokens' => (int) ($route['max_output_tokens'] ?? config('openai.max_output_tokens', 1200)),
+                'temperature' => (float) ($route['temperature'] ?? 0),
             ]);
 
         if ($response->failed()) {
@@ -122,6 +214,13 @@ class TheoryGraderService
             throw new RuntimeException('OpenAI grading response is missing results.');
         }
 
+        Log::info('Theory grading batch completed', [
+            'count' => count($items),
+            'model' => $route['model'] ?? null,
+            'tier' => $route['tier'] ?? null,
+            'profile' => $route['profile'] ?? null,
+        ]);
+
         $resultsByItemKey = [];
 
         foreach ($results as $result) {
@@ -132,35 +231,59 @@ class TheoryGraderService
             $resultsByItemKey[(string) $result['item_key']] = $result;
         }
 
-        foreach ($uncached as $itemKey => $meta) {
-            $returned = $resultsByItemKey[$itemKey] ?? null;
+        return $resultsByItemKey;
+    }
 
-            if (! is_array($returned)) {
-                throw new RuntimeException("OpenAI grading response is missing item '{$itemKey}'.");
-            }
+    /**
+     * @param  array<string, array{item_key:string,payload:array<string,mixed>,cache_key:string,route:array<string,mixed>}>  $candidates
+     * @param  array<string, TheoryGradeResult>  $resolved
+     */
+    private function resolveEscalations(array $candidates, array &$resolved): void
+    {
+        $grouped = [];
 
-            $normalized = $this->normalize(
-                decoded: $returned,
-                maxScore: (float) ($meta['payload']['max_score'] ?? 0),
-                raw: [
-                    'response' => $json,
-                    'parsed' => $returned,
-                    'batch_item_key' => $itemKey,
-                ],
-            );
-
-            $resolved[$itemKey] = $normalized;
-
-            if ($this->cacheEnabled()) {
-                Cache::put(
-                    $meta['cache_key'],
-                    $normalized->toArray(),
-                    now()->addSeconds((int) config('openai.cache_ttl_seconds', 60 * 60 * 24 * 30))
-                );
-            }
+        foreach ($candidates as $itemKey => $meta) {
+            $route = $this->modelRoutingService->resolve($meta['payload'], true);
+            $meta['route'] = $route;
+            $signature = $this->routeSignature($route);
+            $grouped[$signature]['route'] = $route;
+            $grouped[$signature]['items'][$itemKey] = $meta;
         }
 
-        return $resolved;
+        foreach ($grouped as $group) {
+            $route = $group['route'];
+            $groupItems = $group['items'];
+
+            $results = $this->requestBatch($groupItems, $route);
+
+            foreach ($groupItems as $itemKey => $meta) {
+                $returned = $results[$itemKey] ?? null;
+
+                if (! is_array($returned)) {
+                    throw new RuntimeException("OpenAI escalation response is missing item '{$itemKey}'.");
+                }
+
+                $normalized = $this->normalize(
+                    decoded: $returned,
+                    maxScore: (float) ($meta['payload']['max_score'] ?? 0),
+                    raw: [
+                        'parsed' => $returned,
+                        'routing' => $route,
+                        'escalated' => true,
+                    ],
+                );
+
+                $resolved[$itemKey] = $normalized;
+
+                if ($this->cacheEnabled()) {
+                    Cache::put(
+                        $meta['cache_key'],
+                        $normalized->toArray(),
+                        now()->addSeconds((int) config('openai.cache_ttl_seconds', 60 * 60 * 24 * 30))
+                    );
+                }
+            }
+        }
     }
 
     private function normalize(array $decoded, float $maxScore, array $raw): TheoryGradeResult
@@ -216,32 +339,42 @@ class TheoryGraderService
         }, $value)));
     }
 
-    private function systemPrompt(): string
+    private function systemPrompt(string $profile): string
     {
-        return 'Grade O\'Level theory answers. Return strict JSON only. Score 0..max_score with conservative partial credit. Keep feedback brief. Never include hidden rubric text.';
+        return match ($profile) {
+            'structured_part_compact' => 'Grade each structured part briefly. Return strict JSON only. Score 0..max_score. Be conservative and concise.',
+            'structured_part_extended' => 'Grade each structured part carefully with strict rubric matching. Return strict JSON only. Score 0..max_score and flag uncertainty.',
+            'extended_response' => 'Grade O\'Level extended theory answers with nuance and conservative scoring. Return strict JSON only and never expose hidden rubric text.',
+            default => 'Grade O\'Level short theory answers. Return strict JSON only. Score 0..max_score with concise feedback.',
+        };
     }
 
     /**
-     * @param  array<string, array{item_key:string,payload:array<string,mixed>,cache_key:string}>  $items
+     * @param  array<string, array{item_key:string,payload:array<string,mixed>,cache_key:string,route:array<string,mixed>}>  $items
      */
-    private function userPrompt(array $items): string
+    private function userPrompt(array $items, string $profile): string
     {
-        $inputItems = array_map(function (array $item): array {
+        $inputItems = array_map(function (array $item) use ($profile): array {
             $payload = $item['payload'];
 
-            return [
+            $base = [
                 'item_key' => $item['item_key'],
                 'question' => (string) ($payload['question'] ?? ''),
                 'student_answer' => (string) ($payload['student_answer'] ?? ''),
                 'sample_answer' => (string) ($payload['sample_answer'] ?? ''),
-                'grading_notes' => (string) ($payload['grading_notes'] ?? ''),
-                'keywords' => array_values(array_filter((array) ($payload['keywords'] ?? []), fn ($value) => is_string($value) && trim($value) !== '')),
-                'acceptable_phrases' => array_values(array_filter((array) ($payload['acceptable_phrases'] ?? []), fn ($value) => is_string($value) && trim($value) !== '')),
                 'max_score' => (float) ($payload['max_score'] ?? 0),
             ];
+
+            if (in_array($profile, ['extended_response', 'structured_part_extended'], true)) {
+                $base['grading_notes'] = (string) ($payload['grading_notes'] ?? '');
+                $base['keywords'] = array_values(array_filter((array) ($payload['keywords'] ?? []), fn ($value) => is_string($value) && trim($value) !== ''));
+                $base['acceptable_phrases'] = array_values(array_filter((array) ($payload['acceptable_phrases'] ?? []), fn ($value) => is_string($value) && trim($value) !== ''));
+            }
+
+            return $base;
         }, array_values($items));
 
-        return 'Return {"results": [...]} with one result per item_key. Each result must contain: item_key, verdict(correct|partially_correct|incorrect), score, confidence(0..1), matched_points(max 3), missing_points(max 3), feedback(max 220 chars), should_flag_for_review. Input items: '.json_encode($inputItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        return 'Return {"results":[...]} with one entry per item_key and fields item_key, verdict(correct|partially_correct|incorrect), score, confidence(0..1), matched_points(max3), missing_points(max3), feedback(max220 chars), should_flag_for_review. Items: '.json_encode($inputItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
     }
 
     private function schema(): array
@@ -293,8 +426,9 @@ class TheoryGraderService
 
     /**
      * @param  array<string, mixed>  $item
+     * @param  array<string, mixed>  $route
      */
-    private function cacheKey(array $item): string
+    private function cacheKey(array $item, array $route): string
     {
         $normalize = function (mixed $value): string {
             if (is_array($value)) {
@@ -309,7 +443,8 @@ class TheoryGraderService
 
         $signature = [
             'v' => (string) config('openai.cache_version', 'theory-v2'),
-            'model' => (string) config('openai.model'),
+            'model' => (string) ($route['model'] ?? config('openai.model')),
+            'profile' => (string) ($route['profile'] ?? 'short_answer'),
             'question' => $normalize($item['question'] ?? ''),
             'student_answer' => $normalize($item['student_answer'] ?? ''),
             'sample_answer' => $normalize($item['sample_answer'] ?? ''),
@@ -320,6 +455,19 @@ class TheoryGraderService
         ];
 
         return 'openai:theory:'.sha1(json_encode($signature, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @param  array<string, mixed>  $route
+     */
+    private function routeSignature(array $route): string
+    {
+        return implode('|', [
+            (string) ($route['model'] ?? ''),
+            (string) ($route['profile'] ?? ''),
+            (string) ($route['temperature'] ?? ''),
+            (string) ($route['max_output_tokens'] ?? ''),
+        ]);
     }
 
     private function cacheEnabled(): bool

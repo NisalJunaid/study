@@ -70,6 +70,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
             if ($type === Question::TYPE_THEORY) {
                 $theoryMeta = $snapshot['theory_meta'] ?? [];
                 $gradeItems[(string) $answer->id] = [
+                    'question_type' => (string) $type,
                     'question' => (string) ($snapshot['question_text'] ?? ''),
                     'student_answer' => (string) ($answer->answer_text ?? ''),
                     'sample_answer' => (string) ($theoryMeta['sample_answer'] ?? ''),
@@ -77,6 +78,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
                     'keywords' => is_array($theoryMeta['keywords'] ?? null) ? $theoryMeta['keywords'] : [],
                     'acceptable_phrases' => is_array($theoryMeta['acceptable_phrases'] ?? null) ? $theoryMeta['acceptable_phrases'] : [],
                     'max_score' => (float) ($theoryMeta['max_score'] ?? $answer->quizQuestion->max_score),
+                    'strict_semantic' => false,
                 ];
                 continue;
             }
@@ -90,6 +92,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
                 $studentPartAnswer = (string) data_get($answer->answer_json ?? [], $partId, '');
                 $itemKey = $answer->id.'::'.$partId;
                 $gradeItems[$itemKey] = [
+                    'question_type' => Question::TYPE_STRUCTURED_RESPONSE,
                     'question' => (string) ($snapshot['question_text'] ?? '')."\nPart ".($part['part_label'] ?? '').": ".($part['prompt_text'] ?? ''),
                     'student_answer' => $studentPartAnswer,
                     'sample_answer' => (string) ($part['sample_answer'] ?? ''),
@@ -97,6 +100,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
                     'keywords' => [],
                     'acceptable_phrases' => [],
                     'max_score' => (float) ($part['max_score'] ?? 0),
+                    'strict_semantic' => true,
                 ];
             }
         }
@@ -183,6 +187,12 @@ class GradeTheoryAnswerJob implements ShouldQueue
                 'feedback' => $result->feedback,
                 'verdict' => $result->verdict,
                 'confidence' => $result->confidence,
+                'routing' => [
+                    'model' => data_get($result->raw, 'routing.model'),
+                    'tier' => data_get($result->raw, 'routing.tier'),
+                    'profile' => data_get($result->raw, 'routing.profile'),
+                    'escalated' => (bool) data_get($result->raw, 'escalated', false),
+                ],
             ];
         }
 
