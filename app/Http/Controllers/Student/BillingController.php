@@ -7,6 +7,7 @@ use App\Http\Requests\Student\StoreSubscriptionPaymentRequest;
 use App\Models\PaymentSetting;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
+use App\Models\UserSubscription;
 use App\Services\Billing\BillingEligibilityService;
 use App\Services\Billing\QuizAccessService;
 use App\Services\Billing\SubscriptionPaymentService;
@@ -40,15 +41,28 @@ class BillingController extends Controller
             $planStates[$plan->id] = $billingEligibilityService->describePlanState($user, $plan);
         }
 
+        $subscription = $user->subscriptions()->with('plan')->latest()->first();
+        $latestPayment = $user->payments()->with('plan')->latest('submitted_at')->first();
+        $showPlanFlow = $request->boolean('start_payment');
+        if (
+            $subscription
+            && $subscription->status === UserSubscription::STATUS_ACTIVE
+            && ! $request->boolean('change_plan')
+        ) {
+            $showPlanFlow = false;
+        }
+
         return view('pages.student.billing.subscription', [
             'plans' => $plans,
-            'subscription' => $user->subscriptions()->with('plan')->latest()->first(),
+            'subscription' => $subscription,
             'payments' => $user->payments()->with('plan')->latest('submitted_at')->limit(10)->get(),
             'access' => $quizAccessService->evaluate($user, 1),
             'trialRemaining' => $user->hasTrialRemaining(),
             'temporaryQuotaRemaining' => $user->temporaryQuizQuotaRemaining(),
             'selectedType' => $selectedType,
             'planStates' => $planStates,
+            'latestPayment' => $latestPayment,
+            'showPlanFlow' => $showPlanFlow,
         ]);
     }
 

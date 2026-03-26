@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!form) return;
 
     const multiModeInput = root.querySelector('#multi-subject-mode');
+    const multiLevelModeInput = root.querySelector('#multi-level-mode');
     const subjectCards = Array.from(root.querySelectorAll('.subject-option'));
     const levelCards = Array.from(root.querySelectorAll('[data-level-option]'));
     const levelInputs = Array.from(root.querySelectorAll('input[name="levels[]"]'));
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const difficultyField = form.querySelector('select[name="difficulty"]');
 
     const isMulti = () => !!multiModeInput?.checked;
+    const isMultiLevel = () => !!multiLevelModeInput?.checked;
 
     const selectedLevels = () => levelCards
         .filter((card) => card.classList.contains('active'))
@@ -38,8 +40,23 @@ document.addEventListener('DOMContentLoaded', () => {
         .filter(Boolean);
 
     const syncLevelCards = () => {
-        const levels = selectedLevels();
-        const levelSet = new Set(levels);
+        if (!isMultiLevel() && selectedLevels().length > 1) {
+            let foundFirst = false;
+            levelCards.forEach((card) => {
+                if (!card.classList.contains('active')) return;
+                if (!foundFirst) {
+                    foundFirst = true;
+                    return;
+                }
+                card.classList.remove('active');
+            });
+        }
+
+        if (!isMultiLevel() && selectedLevels().length === 0 && levelCards.length > 0) {
+            levelCards[0].classList.add('active');
+        }
+
+        const levelSet = new Set(selectedLevels());
 
         levelInputs.forEach((input) => {
             input.checked = levelSet.has(input.value);
@@ -51,9 +68,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const allowed = levelSet.has(cardLevel);
             card.style.display = allowed ? 'grid' : 'none';
             const picker = card.querySelector('.subject-picker');
+            const singleInput = card.querySelector('.subject-single-input');
+            const multiInput = card.querySelector('.subject-multi-input');
             if (!allowed && picker) {
                 picker.checked = false;
                 card.classList.remove('active');
+            }
+            if (singleInput) {
+                singleInput.checked = false;
+                singleInput.disabled = !allowed;
+            }
+            if (multiInput) {
+                multiInput.checked = false;
+                multiInput.disabled = !allowed;
             }
         });
     };
@@ -194,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     levelCards.forEach((card) => {
         card.addEventListener('click', () => {
             const current = card.classList.contains('active');
-            if (isMulti()) {
+            if (isMultiLevel()) {
                 card.classList.toggle('active', !current);
             } else {
                 levelCards.forEach((node) => node.classList.remove('active'));
@@ -203,6 +230,11 @@ document.addEventListener('DOMContentLoaded', () => {
             syncLevelCards();
             refreshSubjects();
         });
+    });
+
+    multiLevelModeInput?.addEventListener('change', () => {
+        syncLevelCards();
+        refreshSubjects();
     });
 
     subjectCards.forEach((card) => {

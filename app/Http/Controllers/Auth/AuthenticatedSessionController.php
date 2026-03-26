@@ -35,7 +35,7 @@ class AuthenticatedSessionController extends Controller
 
         return redirect()->intended($request->user()->isAdmin()
             ? route('admin.dashboard')
-            : route('student.dashboard'));
+            : route('student.quiz.setup'));
     }
 
     /**

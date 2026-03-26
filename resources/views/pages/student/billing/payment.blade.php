@@ -87,7 +87,7 @@
             <div class="row-wrap">
                 <button type="button" class="btn" data-guided-prev>Back step</button>
                 <button type="button" class="btn btn-primary" data-guided-next>Next</button>
-                <button type="submit" class="btn btn-primary">Submit payment proof</button>
+                <button type="submit" class="btn btn-primary" data-guided-submit>Submit payment proof</button>
             </div>
         </div>
     </form>

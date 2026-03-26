@@ -63,6 +63,6 @@ class RegisteredUserController extends Controller
             return redirect()->route('student.billing.subscription');
         }
 
-        return redirect()->route('student.dashboard');
+        return redirect()->route('student.quiz.setup');
     }
 }
