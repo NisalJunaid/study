@@ -5,17 +5,37 @@
     <div class="card quiz-panel">
         <div class="row-between" style="margin-bottom: 1rem;">
             <div>
-                <h3 class="h2">Upload CSV</h3>
+                <h3 class="h2">Upload Question Import File</h3>
             </div>
         </div>
 
 
         <div class="card card-soft stack-sm" style="margin-bottom: 1rem;">
-            <p class="muted mb-0">Download template CSV files before preparing bulk uploads.</p>
+            <p class="muted mb-0">Import supports CSV and JSON. Use the templates below to match the expected schema.</p>
             <div class="actions-inline">
                 <a class="btn" href="{{ route('admin.imports.sample', ['template' => 'general']) }}">Download General Sample CSV</a>
                 <a class="btn" href="{{ route('admin.imports.sample', ['template' => 'structured_response']) }}">Download Structured Response Sample CSV</a>
+                <a class="btn" href="{{ route('admin.imports.sample', ['format' => 'json', 'template' => 'mcq']) }}">Download Sample MCQ JSON</a>
+                <a class="btn" href="{{ route('admin.imports.sample', ['format' => 'json', 'template' => 'theory']) }}">Download Sample Theory JSON</a>
+                <a class="btn" href="{{ route('admin.imports.sample', ['format' => 'json', 'template' => 'structured_response']) }}">Download Sample Structured Response JSON</a>
+                <a class="btn" href="{{ route('admin.imports.sample', ['format' => 'json', 'template' => 'all']) }}">Download Combined Sample JSON</a>
             </div>
+        </div>
+
+        <div class="card card-soft stack-sm" style="margin-bottom: 1rem;">
+            <p class="muted mb-0"><strong>Canonical JSON format:</strong> root object with a <code>questions</code> array.</p>
+            <details>
+                <summary class="text-strong">View Sample MCQ JSON</summary>
+                <pre style="margin-top:.5rem; overflow:auto;">{{ $jsonSamples['mcq'] }}</pre>
+            </details>
+            <details>
+                <summary class="text-strong">View Sample Theory JSON</summary>
+                <pre style="margin-top:.5rem; overflow:auto;">{{ $jsonSamples['theory'] }}</pre>
+            </details>
+            <details>
+                <summary class="text-strong">View Sample Structured Response JSON</summary>
+                <pre style="margin-top:.5rem; overflow:auto;">{{ $jsonSamples['structured_response'] }}</pre>
+            </details>
         </div>
 
         <form method="POST" action="{{ route('admin.imports.store') }}" enctype="multipart/form-data" class="stack-md">
@@ -23,7 +43,9 @@
 
             <div class="field">
                 <span>File</span>
-                <input type="file" name="csv_file" accept=".csv,text/csv" required>
+                <input type="file" name="import_file" accept=".csv,.json,text/csv,application/json" required>
+                <small class="muted">Accepted formats: .csv, .json (max 5MB)</small>
+                @error('import_file') <span class="field-error">{{ $message }}</span> @enderror
                 @error('csv_file') <span class="field-error">{{ $message }}</span> @enderror
             </div>
 
