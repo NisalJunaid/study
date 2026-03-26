@@ -5,3 +5,5 @@ import './pages/quiz-take';
 
 import './pages/billing-guided';
 import './pages/register-guided';
+
+import './pages/student-progress';
