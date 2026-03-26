@@ -295,9 +295,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!wizard) return;
 
     form.addEventListener('submit', (event) => {
-        if (wizard.getStep() < 5) {
+        const currentStep = wizard.getStep();
+
+        if (currentStep < 5) {
             event.preventDefault();
-            wizard.setStep(5);
+            if (validateStep(currentStep)) {
+                wizard.setStep(currentStep + 1);
+            }
             return;
         }
 

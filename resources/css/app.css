@@ -1407,6 +1407,29 @@ label > textarea {
     border: 1px solid #c7d2fe;
 }
 
+.plan-card-selectable:hover {
+    border-color: #818cf8;
+    box-shadow: 0 12px 26px rgba(79, 70, 229, 0.14);
+}
+
+.plan-card-disabled {
+    opacity: 0.72;
+}
+
+.plan-card-current {
+    border-color: #4f46e5;
+    background: #eef2ff;
+}
+
+.plan-card.active {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.16);
+}
+
+.text-success {
+    color: #15803d;
+}
+
 .plan-price {
     font-size: 1.5rem;
     font-weight: 800;
