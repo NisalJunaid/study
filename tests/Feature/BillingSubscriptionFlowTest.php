@@ -28,6 +28,38 @@ class BillingSubscriptionFlowTest extends TestCase
         $this->withoutVite();
     }
 
+
+    public function test_subscription_and_payment_pages_render_guided_step_copy(): void
+    {
+        $this->travelTo(Carbon::parse('2026-03-10 10:00:00'));
+        $student = User::factory()->student()->create();
+        $plan = SubscriptionPlan::query()->create($this->monthlyPlanData());
+
+        PaymentSetting::query()->create([
+            'bank_account_name' => 'Focus Lab',
+            'bank_account_number' => '1234567890',
+            'currency' => 'USD',
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.billing.subscription'))
+            ->assertOk()
+            ->assertSee('Subscription setup progress')
+            ->assertSee('Step 4: Review and continue');
+
+        $this->actingAs($student)
+            ->post(route('student.billing.subscription.select-plan'), [
+                'subscription_plan_id' => $plan->id,
+            ])
+            ->assertRedirect(route('student.billing.payment'));
+
+        $this->actingAs($student)
+            ->get(route('student.billing.payment'))
+            ->assertOk()
+            ->assertSee('Payment progress')
+            ->assertSee('Step 4: Confirm submission');
+    }
+
     public function test_new_user_gets_single_free_quiz_limited_to_ten_questions(): void
     {
         $student = User::factory()->student()->create();

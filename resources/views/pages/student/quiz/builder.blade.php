@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Build Your Quiz', 'subheading' => 'Choose subjects, optional topics, and settings for your next practice session.'])
+@extends('layouts.student', ['heading' => 'Build Your Quiz', 'subheading' => 'Follow the guided steps to create a quiz without guesswork.'])
 
 @section('content')
 @php
@@ -8,9 +8,10 @@
     $selectedTopicIds = collect(old('topic_ids', []))->map(fn ($id) => (string) $id)->all();
     $selectedDifficulty = old('difficulty', '');
     $isMultiMode = (bool) old('multi_subject_mode', $multiSubjectMode ?? false);
+    $initialStep = $errors->any() ? 1 : 1;
 @endphp
 
-<div class="stack-lg" id="guided-quiz-setup" data-multi-mode-initial="{{ $isMultiMode ? '1' : '0' }}">
+<div class="stack-lg" id="guided-quiz-setup" data-multi-mode-initial="{{ $isMultiMode ? '1' : '0' }}" data-initial-step="{{ $initialStep }}">
     @if(($billingAccess['allowed'] ?? false) === false)
         <section class="card stack-sm section-surface-secondary">
             <strong>Quiz access is currently limited.</strong>
@@ -28,35 +29,60 @@
         </section>
     @endif
 
-    <section class="card section-card section-surface-secondary">
-        <div class="row-wrap">
-            @foreach($levels as $level)
-                @if(in_array((string) $level['value'], $selectedLevelValues, true))
-                    <span class="pill">{{ $level['label'] }}</span>
-                @endif
-            @endforeach
-            <a class="btn btn-ghost" href="{{ route('student.levels.index') }}">Change levels</a>
-        </div>
-    </section>
+    <x-guided.stepper
+        :steps="['Select level(s)', 'Select subject(s)', 'Choose topics', 'Configure settings', 'Review & start']"
+        :current="$initialStep"
+        label="Quiz setup progress"
+    />
 
     @if($subjects->isEmpty())
         <section class="empty-state card">
-            <h4>No subjects available for your selected level(s)</h4>
+            <h4>No subjects available right now</h4>
             <p class="muted">Try another level selection or ask an admin to activate content.</p>
             <a class="btn" href="{{ route('student.levels.index') }}">Back to levels</a>
         </section>
     @else
         <form class="card stack-lg quiz-panel guided-form" method="POST" action="{{ route('student.quiz.store') }}" id="guided-quiz-form">
             @csrf
+            <input type="hidden" name="guided_step" value="{{ $initialStep }}" data-guided-current-step-input>
 
-            @foreach($selectedLevelValues as $levelValue)
-                <input type="hidden" name="levels[]" value="{{ $levelValue }}">
-            @endforeach
+            <section class="stack-sm section-block guided-step-pane" data-guided-step="1">
+                <h2 class="section-heading">Step 1: Select level(s)</h2>
+                <p class="section-intro">Pick one level, or enable multi-level mode for mixed practice.</p>
 
-            <section class="stack-sm section-block">
+                <label class="toggle-row" style="gap:.55rem; max-width:fit-content;">
+                    <span class="text-sm text-strong">Multi-level mode</span>
+                    <span class="switch">
+                        <input type="checkbox" id="multi-level-mode" @checked(count($selectedLevelValues) > 1)>
+                        <span class="switch-track"></span>
+                    </span>
+                </label>
+
+                <div class="card-grid">
+                    @foreach($levels as $level)
+                        @php $isLevelSelected = in_array((string) $level['value'], $selectedLevelValues, true); @endphp
+                        <button
+                            type="button"
+                            class="select-card level-option {{ $isLevelSelected ? 'active' : '' }}"
+                            data-level-option
+                            data-level-value="{{ $level['value'] }}"
+                        >
+                            <span class="select-title">{{ $level['label'] }}</span>
+                        </button>
+                    @endforeach
+                </div>
+                @foreach($levels as $level)
+                    @php $isLevelSelected = in_array((string) $level['value'], $selectedLevelValues, true); @endphp
+                    <input type="checkbox" name="levels[]" value="{{ $level['value'] }}" @checked($isLevelSelected) @disabled(! $isLevelSelected) hidden>
+                @endforeach
+                @error('levels') <small class="field-error">{{ $message }}</small> @enderror
+                <small class="field-error" data-step-error="1" hidden></small>
+            </section>
+
+            <section class="stack-sm section-block guided-step-pane" data-guided-step="2" hidden>
                 <div class="row-between">
                     <div>
-                        <h2 class="section-heading step-heading"><span class="step-index">1</span><span>Select subject(s)</span></h2>
+                        <h2 class="section-heading">Step 2: Select subject(s)</h2>
                         <p class="section-intro">Choose one subject or enable multi-subject mode.</p>
                     </div>
                     <label class="toggle-row" style="gap:.55rem">
@@ -74,11 +100,9 @@
                             $isChecked = $isMultiMode
                                 ? in_array((string) $subject->id, $selectedSubjectValues, true)
                                 : $selectedSubjectValue === (string) $subject->id;
-                        @endphp
-                        @php
                             $subjectColor = \App\Models\Subject::normalizeColor($subject->color);
                         @endphp
-                        <label class="select-card subject-option {{ $isChecked ? 'active' : '' }}" style="--subject-accent: {{ $subjectColor }}; --subject-tint: {{ \App\Models\Subject::colorToRgba($subjectColor, 0.16) }};">
+                        <label class="select-card subject-option {{ $isChecked ? 'active' : '' }}" data-subject-level="{{ $subject->level }}" style="--subject-accent: {{ $subjectColor }}; --subject-tint: {{ \App\Models\Subject::colorToRgba($subjectColor, 0.16) }};">
                             <input
                                 type="checkbox"
                                 class="subject-picker"
@@ -99,13 +123,12 @@
                 </div>
                 @error('subject_id') <small class="field-error">{{ $message }}</small> @enderror
                 @error('subject_ids') <small class="field-error">{{ $message }}</small> @enderror
+                <small class="field-error" data-step-error="2" hidden></small>
             </section>
 
-            <hr class="section-divider">
-
-            <section class="stack-sm section-block">
-                <h2 class="section-heading step-heading"><span class="step-index">2</span><span>Select topics <span class="muted text-sm">(Optional)</span></span></h2>
-                <p class="section-intro">Topics are grouped by selected subject.</p>
+            <section class="stack-sm section-block guided-step-pane" data-guided-step="3" hidden>
+                <h2 class="section-heading">Step 3: Select topics (optional)</h2>
+                <p class="section-intro">Narrow your quiz by topic, or skip for broader practice.</p>
                 <label class="field input-field">
                     <span>Search topics across selected subjects</span>
                     <input type="search" class="field-control input-control" id="shared-topic-search" placeholder="Search topics..." autocomplete="off">
@@ -113,9 +136,7 @@
 
                 <div class="stack-md" id="topic-groups">
                     @foreach($subjects as $subject)
-                        @php
-                            $topicSubjectColor = \App\Models\Subject::normalizeColor($subject->color);
-                        @endphp
+                        @php $topicSubjectColor = \App\Models\Subject::normalizeColor($subject->color); @endphp
                         <article class="card card-soft subject-card topic-group" data-subject-id="{{ $subject->id }}" style="display:none; --subject-accent: {{ $topicSubjectColor }}; --subject-tint: {{ \App\Models\Subject::colorToRgba($topicSubjectColor, 0.12) }};">
                             <div class="row-between">
                                 <h3 class="h3 row-wrap"><span class="subject-color-dot" aria-hidden="true"></span>{{ $subject->name }}</h3>
@@ -143,10 +164,9 @@
                 @error('topic_ids') <small class="field-error">{{ $message }}</small> @enderror
             </section>
 
-            <hr class="section-divider">
-
-            <section class="stack-sm section-block">
-                <h2 class="section-heading step-heading"><span class="step-index">3</span><span>Quiz settings</span></h2>
+            <section class="stack-sm section-block guided-step-pane" data-guided-step="4" hidden>
+                <h2 class="section-heading">Step 4: Configure quiz settings</h2>
+                <p class="section-intro">Set quiz mode, size, and optional difficulty filter.</p>
                 <div class="grid-3">
                     <label class="field input-field">
                         <span>Mode</span>
@@ -176,14 +196,24 @@
                         @error('difficulty') <small class="field-error">{{ $message }}</small> @enderror
                     </label>
                 </div>
+                <small class="field-error" data-step-error="4" hidden></small>
             </section>
 
-            <div class="actions-row">
-                <button type="submit" class="btn btn-primary">Start Quiz</button>
+            <section class="stack-sm section-block guided-step-pane" data-guided-step="5" hidden>
+                <h2 class="section-heading">Step 5: Review and start</h2>
+                <p class="section-intro">Confirm your selections. When ready, start your quiz.</p>
+                <div class="guided-summary" data-quiz-summary></div>
+                <p class="muted text-sm mb-0">After you click start, your quiz is generated immediately using published questions that match your choices.</p>
+            </section>
+
+            <div class="actions-row row-between">
+                <button type="button" class="btn" data-guided-prev>Back</button>
+                <div class="row-wrap">
+                    <button type="button" class="btn btn-primary" data-guided-next>Next</button>
+                    <button type="submit" class="btn btn-primary">Start Quiz</button>
+                </div>
             </div>
         </form>
     @endif
 </div>
-
-
 @endsection
