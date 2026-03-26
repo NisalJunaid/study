@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Question Bank'])
+@extends('layouts.admin', ['heading' => 'Questions'])
 
 @section('content')
 <x-admin.flash />
@@ -9,11 +9,11 @@
             <h3 class="h2">Questions</h3>
             <p id="question-bank-live-badge" class="muted text-sm mb-0" style="display:none;"></p>
         </div>
-        <a href="{{ route('admin.questions.create') }}" class="btn btn-primary">+ New Question</a>
+        <a href="{{ route('admin.questions.create') }}" class="btn btn-primary">New question</a>
     </div>
 
     <form method="GET" class="filter-grid">
-        <input type="text" name="q" value="{{ $filters['q'] }}" placeholder="Search question text or explanation">
+        <input type="text" name="q" value="{{ $filters['q'] }}" placeholder="Search questions">
 
         <select name="subject_id">
             <option value="">All subjects</option>
@@ -45,19 +45,19 @@
         </select>
 
         <select name="published">
-            <option value="">Any publish status</option>
+            <option value="">Any status</option>
             <option value="published" @selected($filters['published'] === 'published')>Published</option>
             <option value="unpublished" @selected($filters['published'] === 'unpublished')>Draft</option>
         </select>
 
-        <button type="submit" class="btn">Filter</button>
+        <button type="submit" class="btn">Apply</button>
         <a href="{{ route('admin.questions.index') }}" class="btn">Reset</a>
     </form>
 
     @if($questions->count() === 0)
         <div class="empty-state">
             <h4>No questions found</h4>
-            <a href="{{ route('admin.questions.create') }}" class="btn btn-primary">Create Question</a>
+            <a href="{{ route('admin.questions.create') }}" class="btn btn-primary">New question</a>
         </div>
     @else
         <div class="table-wrap">
@@ -82,12 +82,12 @@
                                 <div class="muted text-sm">{{ $question->mcqOptions->count() }} options</div>
                             @endif
                             @if($question->type === 'theory')
-                                <div class="muted text-sm">Theory rubric configured</div>
+                                <div class="muted text-sm">Rubric set</div>
                             @endif
                         </td>
                         <td>
                             <div>{{ $question->subject?->name }}</div>
-                            <div class="muted text-sm">{{ $question->topic?->name ?? 'No topic' }}</div>
+                            <div class="muted text-sm">{{ $question->topic?->name ?? '—' }}</div>
                         </td>
                         <td>
                             <span class="pill">{{ strtoupper($question->type) }}</span>
@@ -141,7 +141,7 @@
 
                     const action = String(payload.action || 'updated').replaceAll('_', ' ');
                     badgeEl.style.display = 'block';
-                    badgeEl.textContent = `Question bank ${action} · ${payload.published_total ?? 0} published of ${payload.question_total ?? 0}. Refresh to load latest rows.`;
+                    badgeEl.textContent = `Question bank ${action} · ${payload.published_total ?? 0} published of ${payload.question_total ?? 0}. Refresh to update.`;
                 },
             });
 

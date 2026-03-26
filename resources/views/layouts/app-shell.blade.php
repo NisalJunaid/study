@@ -100,8 +100,8 @@
     <div class="suspension-overlay" role="dialog" aria-modal="true" aria-label="Account suspended">
         <div class="suspension-overlay-card">
             <h2 class="h2">Account suspended</h2>
-            <p class="mb-0">{{ $activeSubscription->suspended_reason ?: 'Your account is suspended until payment is verified.' }}</p>
-            <a class="btn btn-primary" href="{{ route('student.billing.subscription') }}">Go to subscription and payment</a>
+            <p class="mb-0">{{ $activeSubscription->suspended_reason ?: 'Account is suspended until payment is verified.' }}</p>
+            <a class="btn btn-primary" href="{{ route('student.billing.subscription') }}">Open billing</a>
         </div>
     </div>
 @endif
@@ -112,8 +112,8 @@
         : null;
 @endphp
 <div class="global-overlay" data-global-overlay @if(!is_null($initialOverlay)) data-initial-overlay='@json($initialOverlay)' @endif hidden aria-hidden="true">
-    <div class="global-overlay-card card" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Important message">
-        <button type="button" class="global-overlay-dismiss" data-overlay-dismiss aria-label="Close message">✕</button>
+    <div class="global-overlay-card card" role="dialog" aria-modal="true" aria-live="assertive" aria-label="Notice">
+        <button type="button" class="global-overlay-dismiss" data-overlay-dismiss aria-label="Close">✕</button>
         <div class="global-overlay-header">
             <span class="global-overlay-icon" data-overlay-icon aria-hidden="true">ℹ️</span>
             <h2 class="h2 mb-0 global-overlay-title" data-overlay-title></h2>
@@ -121,8 +121,8 @@
         <p class="muted mb-0 global-overlay-message" data-overlay-message></p>
         <p class="text-sm muted mb-0 global-overlay-countdown" data-overlay-countdown hidden></p>
         <div class="actions-row global-overlay-actions">
-            <button type="button" class="btn btn-ghost global-overlay-secondary" data-overlay-secondary hidden>Cancel</button>
-            <button type="button" class="btn btn-primary global-overlay-primary" data-overlay-primary>Okay</button>
+            <button type="button" class="btn btn-ghost global-overlay-secondary" data-overlay-secondary hidden>Back</button>
+            <button type="button" class="btn btn-primary global-overlay-primary" data-overlay-primary>OK</button>
         </div>
     </div>
 </div>

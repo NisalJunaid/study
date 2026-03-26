@@ -1,5 +1,5 @@
 @extends('layouts.student', [
-    'heading' => 'Quiz In Progress',
+    'heading' => 'Quiz',
         'minimalHeader' => true,
     'suppressFlash' => true,
 ])
@@ -47,7 +47,7 @@
         <div class="timer-panel">
             <div class="row-between">
                 <strong id="question-counter">Question 1 of {{ $quiz->quizQuestions->count() }}</strong>
-                <span class="pill" id="status-pill">In Progress</span>
+                <span class="pill" id="status-pill">Active</span>
             </div>
             <div class="timer-track progress-track">
                 <div class="timer-fill progress-fill" id="question-timer-fill" style="width:0%"></div>
@@ -62,7 +62,7 @@
 
     @if($quiz->quizQuestions->isEmpty())
         <section class="empty-state">
-            <h4>No quiz questions assigned</h4>
+            <h4>No questions assigned</h4>
         </section>
     @else
         <section class="card stack-lg quiz-panel quiz-minimal-main" id="active-question-panel"></section>
@@ -70,7 +70,7 @@
         @if(! $isLockedQuiz)
             <form method="POST" action="{{ route('student.quiz.submit', $quiz) }}" id="submit-quiz-form" class="actions-row" style="justify-content:flex-end;display:none;">
                 @csrf
-                <button type="submit" class="btn btn-primary">Submit Quiz</button>
+                <button type="submit" class="btn btn-primary">Submit</button>
             </form>
         @endif
     @endif

@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Quiz Results'])
+@extends('layouts.student', ['heading' => 'Results'])
 
 @section('content')
 @php
@@ -65,7 +65,7 @@
 
     <section class="stack-md">
         <div class="card section-surface-secondary">
-            <h2 class="section-heading">Question breakdown</h2>
+            <h2 class="section-heading">Breakdown</h2>
         </div>
 
         @foreach($quiz->quizQuestions as $quizQuestion)
@@ -77,9 +77,9 @@
                 $maxScore = (float) $quizQuestion->max_score;
                 $feedbackText = $answer?->feedback
                     ?? (($snapshot['type'] ?? null) === \App\Models\Question::TYPE_MCQ ? ($snapshot['explanation'] ?: null) : null)
-                    ?? 'Keep practicing — review this topic and try again.';
+                    ?? 'Review this topic and try again.';
 
-                $yourAnswerText = 'No answer submitted.';
+                $yourAnswerText = 'No answer.';
 
                 if (($snapshot['type'] ?? null) === \App\Models\Question::TYPE_MCQ) {
                     $selectedOption = collect($snapshot['options'] ?? [])->first(
@@ -88,7 +88,7 @@
 
                     $yourAnswerText = $selectedOption
                         ? (($selectedOption['option_key'] ?? '?').'. '.($selectedOption['option_text'] ?? ''))
-                        : 'No option selected.';
+                        : 'No option.';
                 } elseif (! empty($answer?->answer_text)) {
                     $yourAnswerText = $answer->answer_text;
                 }
@@ -158,10 +158,10 @@
 
                 if (quizStatusPill) {
                     quizStatusPill.textContent = quiz.status === 'grading'
-                        ? 'Still grading'
+                        ? 'Grading'
                         : quiz.status === 'graded'
-                            ? 'Final score'
-                            : 'In progress';
+                            ? 'Final'
+                            : 'Active';
                 }
 
                 if (quizScoreText) {
@@ -225,7 +225,7 @@
                         ? 'Correct'
                         : visualStatus === 'incorrect'
                             ? 'Not quite'
-                            : 'Partially graded';
+                            : 'Partial';
                 }
 
                 if (icon) {
@@ -239,7 +239,7 @@
                 }
 
                 if (feedbackText && !isPending) {
-                    feedbackText.textContent = answer.feedback || 'Keep practicing — review this topic and try again.';
+                    feedbackText.textContent = answer.feedback || 'Review this topic and try again.';
                 }
 
                 if (scoreText) {

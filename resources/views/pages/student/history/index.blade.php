@@ -1,11 +1,11 @@
-@extends('layouts.student', ['heading' => 'Quiz History'])
+@extends('layouts.student', ['heading' => 'History'])
 
 @section('content')
 <div class="stack-lg">
     @if($quizzes->isEmpty())
         <section class="empty-state card">
-            <h4>No quiz attempts yet</h4>
-            <a class="btn btn-primary" href="{{ route('student.quiz.setup') }}">Start a Quiz</a>
+            <h4>No attempts yet</h4>
+            <a class="btn btn-primary" href="{{ route('student.quiz.setup') }}">Start quiz</a>
         </section>
     @else
         <section class="card section-surface-primary">
@@ -39,7 +39,7 @@
                                 <td class="text-right">{{ $scoreLabel }}</td>
                                 <td>{{ optional($quiz->submitted_at ?? $quiz->updated_at)->format('M d, Y H:i') }}</td>
                                 <td>
-                                    <a class="btn" href="{{ route('student.quiz.results', $quiz) }}">View Results</a>
+                                    <a class="btn" href="{{ route('student.quiz.results', $quiz) }}">View</a>
                                 </td>
                             </tr>
                         @endforeach
