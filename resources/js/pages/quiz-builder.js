@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const topicGroups = Array.from(root.querySelectorAll('.topic-group'));
     const sharedTopicSearch = root.querySelector('#shared-topic-search');
     const summary = root.querySelector('[data-quiz-summary]');
+    const startQuizButton = root.querySelector('[data-guided-submit]');
 
     const modeField = form.querySelector('select[name="mode"]');
     const questionCountField = form.querySelector('input[name="question_count"]');
@@ -308,6 +309,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!validateStep(4)) {
             event.preventDefault();
             wizard.setStep(4);
+            return;
+        }
+
+        syncLevelCards();
+        refreshSubjects();
+    });
+
+    startQuizButton?.addEventListener('click', (event) => {
+        event.preventDefault();
+
+        if (wizard.getStep() !== 5) {
+            wizard.setStep(5);
+            return;
+        }
+
+        if (!validateStep(4)) {
+            wizard.setStep(4);
+            return;
+        }
+
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+        } else {
+            form.submit();
         }
     });
 });

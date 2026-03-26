@@ -15,11 +15,15 @@ class PaymentSetting extends Model
         'bank_name',
         'currency',
         'registration_fee',
+        'daily_ai_credits',
+        'mixed_quiz_ai_weight_percentage',
         'payment_instructions',
     ];
 
     protected $casts = [
         'registration_fee' => 'decimal:2',
+        'daily_ai_credits' => 'integer',
+        'mixed_quiz_ai_weight_percentage' => 'integer',
     ];
 
     public static function current(): self
@@ -30,6 +34,8 @@ class PaymentSetting extends Model
             'bank_name' => 'Your Bank',
             'currency' => 'USD',
             'registration_fee' => 0,
+            'daily_ai_credits' => 50,
+            'mixed_quiz_ai_weight_percentage' => 50,
             'payment_instructions' => 'Transfer the exact amount and upload a clear slip for verification.',
         ]);
     }
