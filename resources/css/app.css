@@ -2264,7 +2264,117 @@ body.overlay-open {
     gap: 1rem;
 }
 
+.focus-auth-page {
+    min-height: 100vh;
+    margin: 0;
+    position: relative;
+    padding: clamp(0.8rem, 2vw, 1.4rem);
+}
+
+.focus-auth-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(circle at 8% 2%, rgba(129, 140, 248, 0.2), transparent 35%),
+        radial-gradient(circle at 90% 18%, rgba(56, 189, 248, 0.12), transparent 36%),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg) 84%, white) 0%, var(--bg) 100%);
+}
+
+.focus-auth-shell {
+    width: min(1120px, 100%);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.15fr);
+    gap: clamp(0.8rem, 1.7vw, 1.25rem);
+    align-items: start;
+}
+
+.focus-auth-shell-wide {
+    width: min(1320px, 100%);
+    grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+}
+
+.focus-auth-aside {
+    position: sticky;
+    top: 0.8rem;
+    background: var(--surface-glass-strong);
+    display: grid;
+    gap: 1rem;
+}
+
+.focus-auth-aside-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
+
+.focus-auth-brand {
+    font-size: 1.05rem;
+}
+
+.focus-auth-aside-points {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.focus-auth-aside-points p {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.92rem;
+    color: var(--muted);
+}
+
+.focus-auth-aside-points span {
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    display: inline-grid;
+    place-items: center;
+    font-size: 0.72rem;
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.focus-auth-content {
+    background: var(--surface-glass-strong);
+}
+
+.focus-auth-form-shell {
+    width: min(540px, 100%);
+    margin: 0 auto;
+}
+
+.focus-auth-checkbox {
+    background: var(--surface-muted);
+}
+
+.focus-auth-actions {
+    margin-top: 0.4rem;
+}
+
+.focus-auth-onboarding-panel {
+    width: min(960px, 100%);
+    margin: 0 auto;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+}
+
 @media (max-width: 880px) {
+    .focus-auth-shell,
+    .focus-auth-shell-wide {
+        grid-template-columns: 1fr;
+    }
+
+    .focus-auth-aside {
+        position: relative;
+        top: 0;
+    }
+
     .onboarding-grid-2,
     .onboarding-plan-grid,
     .onboarding-step-indicators {
@@ -2660,6 +2770,17 @@ body.overlay-open {
     background: radial-gradient(circle at 15% 0%, rgba(79, 70, 229, 0.2), transparent 35%),
         radial-gradient(circle at 85% 20%, rgba(14, 165, 233, 0.16), transparent 38%),
         linear-gradient(180deg, #020617 0%, #020617 100%);
+}
+
+:root[data-theme="dark"] .focus-auth-bg {
+    background: radial-gradient(circle at 8% 2%, rgba(79, 70, 229, 0.28), transparent 35%),
+        radial-gradient(circle at 90% 18%, rgba(14, 165, 233, 0.16), transparent 36%),
+        linear-gradient(180deg, #020617 0%, #020617 100%);
+}
+
+:root[data-theme="dark"] .focus-auth-aside-points span {
+    background: rgba(99, 102, 241, 0.3);
+    color: #c7d2fe;
 }
 
 :root[data-theme="dark"] .focus-home-preview-cta {
