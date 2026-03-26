@@ -131,97 +131,115 @@
             </aside>
         </section>
 
-        <section class="focus-home-coverage" id="coverage">
-            <div class="focus-home-coverage-head">
-                <p class="focus-home-section-label">Coverage at a glance</p>
-                <h2>Supported levels, subjects, and practice style</h2>
-                <p class="focus-home-section-copy">Build smart revision routines with broad subject coverage, mixed question formats, and guided exam pacing.</p>
+        <section class="focus-home-subjects" id="coverage">
+            <div class="focus-home-subjects-head">
+                <p class="focus-home-section-label">Subjects</p>
+                <h2>Pick your level, then revise by subject</h2>
+                <p class="focus-home-section-copy">Switch between levels and browse supported subjects with quick, focused navigation.</p>
             </div>
 
-            <div class="focus-home-coverage-grid">
-                <article class="focus-home-scope-card">
-                    <header>
-                        <h3>Supported Levels & Subjects</h3>
-                        <p>Choose your exam level and revise across key subjects.</p>
-                    </header>
+            <div class="focus-home-level-tabs" role="tablist" aria-label="Select level">
+                @foreach($levelModules as $levelKey => $module)
+                    <button
+                        type="button"
+                        class="focus-home-level-tab {{ $loop->first ? 'is-active' : '' }}"
+                        role="tab"
+                        id="level-tab-{{ $levelKey }}"
+                        aria-selected="{{ $loop->first ? 'true' : 'false' }}"
+                        aria-controls="level-panel-{{ $levelKey }}"
+                        data-level-tab
+                        data-level="{{ $levelKey }}"
+                    >
+                        {{ $module['label'] }}
+                    </button>
+                @endforeach
+            </div>
 
-                    <div class="focus-home-level-grid">
-                        @foreach($levelModules as $levelKey => $module)
+            @foreach($levelModules as $levelKey => $module)
+                @php
+                    $entry = $subjectsByLevel[$levelKey] ?? ['count' => 0, 'subjects' => []];
+                    $accent = $module['accent'];
+                @endphp
+                <div
+                    class="focus-home-level-panel {{ $loop->first ? 'is-active' : '' }}"
+                    id="level-panel-{{ $levelKey }}"
+                    role="tabpanel"
+                    aria-labelledby="level-tab-{{ $levelKey }}"
+                    data-level-panel
+                    data-level="{{ $levelKey }}"
+                >
+                    <div class="focus-home-level-panel-head">
+                        <div>
+                            <h3>{{ $module['headline'] }}</h3>
+                            <p>{{ $entry['count'] }} subjects available</p>
+                        </div>
+                        <div class="focus-home-carousel-controls">
+                            <button type="button" class="focus-home-carousel-btn" data-carousel-prev aria-label="Previous subjects">←</button>
+                            <button type="button" class="focus-home-carousel-btn" data-carousel-next aria-label="Next subjects">→</button>
+                        </div>
+                    </div>
+
+                    <div class="focus-home-subject-carousel" data-carousel-track aria-label="{{ $module['label'] }} subjects">
+                        @foreach($entry['subjects'] as $subject)
                             @php
-                                $entry = $subjectsByLevel[$levelKey] ?? ['count' => 0, 'subjects' => []];
-                                $accent = $module['accent'];
+                                $subjectColor = \App\Models\Subject::normalizeColor($subject['color'] ?? null, $accent);
                             @endphp
-                            <section
-                                class="focus-home-level-card"
-                                style="--level-accent: {{ $accent }}; --level-accent-soft: {{ \App\Models\Subject::colorToRgba($accent, 0.16) }};"
+                            <article
+                                class="focus-home-subject-card"
+                                style="--subject-accent: {{ $subjectColor }}; --subject-soft: {{ \App\Models\Subject::colorToRgba($subjectColor, 0.18) }};"
                             >
-                                <p class="focus-home-level-badge">{{ $module['label'] }}</p>
-                                <h4>{{ $module['headline'] }}</h4>
-                                <p class="focus-home-level-meta">{{ $entry['count'] }} subjects available</p>
-
-                                <div class="focus-home-subject-chips" aria-label="{{ $module['label'] }} subjects">
-                                    @foreach($entry['subjects'] as $subject)
-                                        @php
-                                            $subjectColor = \App\Models\Subject::normalizeColor($subject['color'] ?? null, $accent);
-                                        @endphp
-                                        <span
-                                            class="focus-home-subject-chip"
-                                            style="--subject-accent: {{ $subjectColor }}; --subject-soft: {{ \App\Models\Subject::colorToRgba($subjectColor, 0.18) }};"
-                                        >
-                                            {{ $subject['name'] }}
-                                        </span>
-                                    @endforeach
-                                </div>
-                            </section>
+                                <span class="focus-home-subject-dot" aria-hidden="true"></span>
+                                <p>{{ $subject['name'] }}</p>
+                            </article>
                         @endforeach
                     </div>
+                </div>
+            @endforeach
+        </section>
+
+        <section class="focus-home-question-types-row">
+            <div class="focus-home-question-types-head">
+                <p class="focus-home-section-label">Question types</p>
+                <h2>Train with the mode you need</h2>
+            </div>
+
+            <div class="focus-home-question-type-grid">
+                <article class="focus-home-question-type-card">
+                    <span>☑</span>
+                    <h3>MCQ</h3>
+                    <p>Fast checks for exam-style recall.</p>
                 </article>
-
-                <article class="focus-home-practice-card">
-                    <header>
-                        <h3>Question Types</h3>
-                        <p>Practice both speed and written reasoning in one flow.</p>
-                    </header>
-
-                    <div class="focus-home-question-types">
-                        <div class="focus-home-question-pill">
-                            <span>☑</span>
-                            <div>
-                                <strong>MCQ Practice</strong>
-                                <small>Fast recall and exam-style choices</small>
-                            </div>
-                        </div>
-                        <div class="focus-home-question-pill">
-                            <span>✎</span>
-                            <div>
-                                <strong>Theory Responses</strong>
-                                <small>Structured written-answer preparation</small>
-                            </div>
-                        </div>
-                        <div class="focus-home-question-pill">
-                            <span>⇄</span>
-                            <div>
-                                <strong>Mixed Mode</strong>
-                                <small>Balanced drills for complete readiness</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="focus-home-pacing-card" aria-label="Exam pacing guidance">
-                        <div class="focus-home-pacing-heading">
-                            <h4>Practice With Pace</h4>
-                            <span>Exam pacing guide</span>
-                        </div>
-                        <p>Aim for ideal timing per question to build speed, accuracy, and confidence under real exam pressure.</p>
-                        <div class="focus-home-pacing-track" role="presentation">
-                            <span style="width: 72%"></span>
-                        </div>
-                        <div class="focus-home-pacing-stats">
-                            <small>Ideal: 01:45 / question</small>
-                            <small>Current: 01:52 avg</small>
-                        </div>
-                    </div>
+                <article class="focus-home-question-type-card">
+                    <span>✎</span>
+                    <h3>Theory</h3>
+                    <p>Structured written answers with feedback.</p>
                 </article>
+                <article class="focus-home-question-type-card">
+                    <span>⇄</span>
+                    <h3>Mixed</h3>
+                    <p>Balanced drills across both formats.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="focus-home-pacing-row" aria-label="Exam pacing guidance">
+            <div class="focus-home-pacing-copy">
+                <p class="focus-home-section-label">Exam pacing</p>
+                <h2>Practice with ideal timing</h2>
+                <p>Build speed, time awareness, and confidence before exam day.</p>
+            </div>
+            <div class="focus-home-pacing-visual">
+                <div class="focus-home-pacing-timer">
+                    <strong>01:45</strong>
+                    <small>Ideal per question</small>
+                </div>
+                <div class="focus-home-pacing-track" role="presentation">
+                    <span style="width: 74%"></span>
+                </div>
+                <div class="focus-home-pacing-stats">
+                    <small>Current pace: 01:52 avg</small>
+                    <small>Target confidence: +18%</small>
+                </div>
             </div>
         </section>
 
@@ -294,6 +312,40 @@
                 const next = current === 'dark' ? 'light' : 'dark';
                 document.documentElement.dataset.theme = next;
                 localStorage.setItem(storageKey, next);
+            });
+
+            const levelTabs = document.querySelectorAll('[data-level-tab]');
+            const levelPanels = document.querySelectorAll('[data-level-panel]');
+
+            const activateLevel = (level) => {
+                levelTabs.forEach((tab) => {
+                    const isActive = tab.dataset.level === level;
+                    tab.classList.toggle('is-active', isActive);
+                    tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                });
+
+                levelPanels.forEach((panel) => {
+                    const isActive = panel.dataset.level === level;
+                    panel.classList.toggle('is-active', isActive);
+                });
+            };
+
+            levelTabs.forEach((tab) => {
+                tab.addEventListener('click', () => activateLevel(tab.dataset.level));
+            });
+
+            document.querySelectorAll('[data-level-panel]').forEach((panel) => {
+                const track = panel.querySelector('[data-carousel-track]');
+                const prev = panel.querySelector('[data-carousel-prev]');
+                const next = panel.querySelector('[data-carousel-next]');
+
+                prev?.addEventListener('click', () => {
+                    track?.scrollBy({ left: -220, behavior: 'smooth' });
+                });
+
+                next?.addEventListener('click', () => {
+                    track?.scrollBy({ left: 220, behavior: 'smooth' });
+                });
             });
         })();
     </script>
