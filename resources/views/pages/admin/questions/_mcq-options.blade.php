@@ -6,7 +6,7 @@
     $correctOptionKey = old('correct_option_key', $correctOptionKey ?? 'A');
 @endphp
 
-<div id="mcq-fields" class="form-panel">
+<div id="mcq-fields" class="form-panel" data-question-section="mcq">
     <div class="row-between">
         <div class="stack-sm">
             <h3 class="h3">MCQ Options</h3>
