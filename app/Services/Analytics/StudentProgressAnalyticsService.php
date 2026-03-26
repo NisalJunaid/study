@@ -91,8 +91,8 @@ class StudentProgressAnalyticsService
         $timingSummary = StudentAnswer::query()
             ->where('user_id', $studentId)
             ->whereNotNull('answered_on_time')
-            ->selectRaw('SUM(CASE WHEN answered_on_time = 1 THEN 1 ELSE 0 END) as on_time_answers')
-            ->selectRaw('SUM(CASE WHEN answered_on_time = 0 THEN 1 ELSE 0 END) as late_answers')
+            ->selectRaw('SUM(CASE WHEN answered_on_time IS TRUE THEN 1 ELSE 0 END) as on_time_answers')
+            ->selectRaw('SUM(CASE WHEN answered_on_time IS FALSE THEN 1 ELSE 0 END) as late_answers')
             ->selectRaw('COUNT(*) as measured_answers')
             ->first();
 
