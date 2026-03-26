@@ -150,6 +150,56 @@ class StructuredResponseWorkflowTest extends TestCase
             ->assertSee('Part B prompt');
     }
 
+    public function test_structured_response_answers_must_be_keyed_by_snapshot_part_ids(): void
+    {
+        $student = User::factory()->create(['role' => User::ROLE_STUDENT]);
+        $subject = Subject::factory()->create(['is_active' => true]);
+
+        $question = Question::query()->create([
+            'subject_id' => $subject->id,
+            'topic_id' => null,
+            'type' => Question::TYPE_STRUCTURED_RESPONSE,
+            'question_text' => 'Answer every part.',
+            'marks' => 4,
+            'is_published' => true,
+        ]);
+
+        $question->structuredParts()->createMany([
+            ['part_label' => 'a', 'prompt_text' => 'Part A prompt', 'max_score' => 2, 'sample_answer' => 'Part A sample', 'sort_order' => 0],
+            ['part_label' => 'b', 'prompt_text' => 'Part B prompt', 'max_score' => 2, 'sample_answer' => 'Part B sample', 'sort_order' => 1],
+        ]);
+
+        $quiz = app(BuildQuizAction::class)->execute($student, [
+            'levels' => [$subject->level],
+            'subject_ids' => [$subject->id],
+            'mode' => Quiz::MODE_THEORY,
+            'question_count' => 1,
+        ]);
+
+        $quizQuestion = $quiz->quizQuestions()->firstOrFail();
+
+        $this->actingAs($student)
+            ->putJson(route('student.quiz.answer.save', [$quiz, $quizQuestion]), [
+                'structured_answers' => [
+                    'a' => 'Wrong key for part A',
+                    'b' => 'Wrong key for part B',
+                ],
+                'answered_at' => now()->toIso8601String(),
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['structured_answers']);
+
+        $this->actingAs($student)
+            ->putJson(route('student.quiz.answer.save', [$quiz, $quizQuestion]), [
+                'structured_answers' => [
+                    (string) $question->structuredParts[0]->id => 'Correct key for part A',
+                    (string) $question->structuredParts[1]->id => 'Correct key for part B',
+                ],
+                'answered_at' => now()->toIso8601String(),
+            ])
+            ->assertOk();
+    }
+
     public function test_admin_can_download_sample_csv_templates_and_import_structured_rows(): void
     {
         Storage::fake();
