@@ -13,7 +13,7 @@
             root.dataset.theme = saved === 'dark' || saved === 'light' ? saved : preferred;
         })();
     </script>
-    @vite(['resources/css/app.css'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 @php
     $user = auth()->user();
