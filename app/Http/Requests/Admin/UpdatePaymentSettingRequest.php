@@ -19,6 +19,8 @@ class UpdatePaymentSettingRequest extends FormRequest
             'bank_name' => ['nullable', 'string', 'max:255'],
             'currency' => ['required', 'string', 'max:8'],
             'registration_fee' => ['required', 'numeric', 'min:0', 'max:999999.99'],
+            'daily_ai_credits' => ['required', 'integer', 'min:0', 'max:5000'],
+            'mixed_quiz_ai_weight_percentage' => ['required', 'integer', 'min:0', 'max:100'],
             'payment_instructions' => ['nullable', 'string', 'max:2000'],
         ];
     }

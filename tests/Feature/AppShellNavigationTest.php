@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\PaymentSetting;
+use App\Models\Question;
+use App\Models\Quiz;
+use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -64,5 +68,41 @@ class AppShellNavigationTest extends TestCase
             ->assertSee('Profile')
             ->assertSee('Settings')
             ->assertSee('Sign out');
+    }
+
+    public function test_student_header_displays_ai_credits_as_available_over_total(): void
+    {
+        $student = User::factory()->student()->create();
+        $subject = Subject::factory()->create(['is_active' => true]);
+        $question = Question::factory()->theory()->create([
+            'subject_id' => $subject->id,
+            'is_published' => true,
+            'topic_id' => null,
+        ]);
+
+        PaymentSetting::current()->update(['daily_ai_credits' => 10]);
+
+        $quiz = Quiz::query()->create([
+            'user_id' => $student->id,
+            'subject_id' => $subject->id,
+            'mode' => Quiz::MODE_THEORY,
+            'status' => Quiz::STATUS_SUBMITTED,
+            'total_questions' => 1,
+            'total_possible_score' => 1,
+            'started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+
+        $quiz->quizQuestions()->create([
+            'question_id' => $question->id,
+            'order_no' => 1,
+            'question_snapshot' => ['type' => Question::TYPE_THEORY, 'question_text' => 'Q'],
+            'max_score' => 1,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.quiz.setup'))
+            ->assertOk()
+            ->assertSee('9 / 10');
     }
 }

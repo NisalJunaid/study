@@ -38,6 +38,11 @@
                 <button class="topbar-user-button" type="button" data-user-menu-toggle aria-expanded="false" aria-haspopup="true" aria-controls="user-menu-panel">
                     <span class="avatar-circle">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
                     <span class="user-name text-sm">{{ auth()->user()->name }}</span>
+                    @if(!auth()->user()->isAdmin() && is_array($aiCredits ?? null))
+                        <span class="pill" title="AI credits (available / total)">
+                            {{ $aiCredits['available'] }} / {{ $aiCredits['total'] }}
+                        </span>
+                    @endif
                     <span aria-hidden="true">▾</span>
                 </button>
 

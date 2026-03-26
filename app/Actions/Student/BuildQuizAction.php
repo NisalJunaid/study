@@ -6,6 +6,7 @@ use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\Billing\QuizAiSettingsService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,10 @@ use RuntimeException;
 
 class BuildQuizAction
 {
+    public function __construct(private readonly QuizAiSettingsService $quizAiSettingsService)
+    {
+    }
+
     public function availableQuestionCount(array $subjectIds, array $topicIds, string $mode, ?string $difficulty): int
     {
         $countByType = $this->countByType($subjectIds, $topicIds, $difficulty);
@@ -123,8 +128,8 @@ class BuildQuizAction
 
         $counts = $this->countByType($subjectIds, $topicIds, $difficulty);
 
-        $targetMcq = (int) floor($questionCount / 2);
-        $targetTheory = $questionCount - $targetMcq;
+        $targetTheory = (int) round($questionCount * ($this->quizAiSettingsService->mixedQuizAiWeightPercentage() / 100));
+        $targetMcq = max(0, $questionCount - $targetTheory);
 
         $mcqTake = min($counts[Question::TYPE_MCQ], $targetMcq);
         $theoryTake = min($counts['theory_bucket'], $targetTheory);

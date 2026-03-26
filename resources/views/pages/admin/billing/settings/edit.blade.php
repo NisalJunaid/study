@@ -38,6 +38,19 @@
         </label>
 
         <label class="field">
+            <span>Daily AI credits per student</span>
+            <input class="field-control" name="daily_ai_credits" type="number" min="0" step="1" value="{{ old('daily_ai_credits', $setting->daily_ai_credits) }}" required>
+            @error('daily_ai_credits') <small class="field-error">{{ $message }}</small> @enderror
+        </label>
+
+        <label class="field">
+            <span>Mixed quiz AI question weight (%)</span>
+            <input class="field-control" name="mixed_quiz_ai_weight_percentage" type="number" min="0" max="100" step="1" value="{{ old('mixed_quiz_ai_weight_percentage', $setting->mixed_quiz_ai_weight_percentage) }}" required>
+            <small class="muted text-xs">Controls the target share of AI-marked question types in mixed quizzes.</small>
+            @error('mixed_quiz_ai_weight_percentage') <small class="field-error">{{ $message }}</small> @enderror
+        </label>
+
+        <label class="field">
             <span>Payment instructions (optional)</span>
             <textarea class="field-control" name="payment_instructions" rows="4">{{ old('payment_instructions', $setting->payment_instructions) }}</textarea>
             @error('payment_instructions') <small class="field-error">{{ $message }}</small> @enderror

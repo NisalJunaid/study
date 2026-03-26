@@ -436,6 +436,8 @@ class BillingSubscriptionFlowTest extends TestCase
                 'bank_name' => 'Scholars Bank',
                 'currency' => 'USD',
                 'registration_fee' => 12,
+                'daily_ai_credits' => 60,
+                'mixed_quiz_ai_weight_percentage' => 35,
                 'payment_instructions' => 'Reference your email in transfer note.',
             ])
             ->assertRedirect(route('admin.billing.settings.edit'));
@@ -444,6 +446,8 @@ class BillingSubscriptionFlowTest extends TestCase
             'bank_account_number' => '4444333322',
             'bank_name' => 'Scholars Bank',
             'registration_fee' => 12,
+            'daily_ai_credits' => 60,
+            'mixed_quiz_ai_weight_percentage' => 35,
         ]);
     }
 
