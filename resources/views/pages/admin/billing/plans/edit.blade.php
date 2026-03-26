@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Edit Billing Plan', 'subheading' => 'Update plan pricing and state.'])
+@extends('layouts.admin', ['heading' => 'Edit Billing Plan'])
 
 @section('content')
 <div class="card">

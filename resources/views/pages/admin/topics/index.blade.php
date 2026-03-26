@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Manage Topics', 'subheading' => 'Organize topic coverage within subjects.'])
+@extends('layouts.admin', ['heading' => 'Manage Topics'])
 
 @section('content')
 <x-admin.flash />
@@ -29,7 +29,6 @@
     @if($topics->count() === 0)
         <div class="empty-state">
             <h4>No topics found</h4>
-            <p class="muted">Create topics and assign them to subjects for better quiz filtering.</p>
             <a href="{{ route('admin.topics.create') }}" class="btn btn-primary">Create Topic</a>
         </div>
     @else

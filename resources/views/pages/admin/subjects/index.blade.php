@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Manage Subjects', 'subheading' => 'Create and organize subject domains.'])
+@extends('layouts.admin', ['heading' => 'Manage Subjects'])
 
 @section('content')
 <x-admin.flash />
@@ -29,7 +29,6 @@
     @if($subjects->count() === 0)
         <div class="empty-state">
             <h4>No subjects found</h4>
-            <p class="muted">Create your first subject to start organizing topics and questions.</p>
             <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary">Create Subject</a>
         </div>
     @else

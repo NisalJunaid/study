@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Theory Reviews', 'subheading' => 'Review and override AI-assisted grading.'])
+@extends('layouts.admin', ['heading' => 'Theory Reviews'])
 
 @section('content')
 <div class="stack-lg">
@@ -17,7 +17,6 @@
             <div class="checkbox-row toggle-row">
                 <div class="stack-sm">
                     <div class="text-strong">Manual review only</div>
-                    <small class="muted">Show only answers flagged for manual checks.</small>
                 </div>
                 <label class="switch" aria-label="Filter manual review answers">
                     <input type="checkbox" name="manual_only" value="1" @checked($filters['manual_only'])>

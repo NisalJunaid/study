@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Billing & Subscription', 'subheading' => 'Manage plan access, payment uploads, and verification status.'])
+@extends('layouts.student', ['heading' => 'Billing & Subscription'])
 
 @section('content')
 <div class="stack-lg">
@@ -21,7 +21,6 @@
 
     <section class="card">
         <h2 class="h2">Choose a plan and upload payment proof</h2>
-        <p class="muted">After slip upload, temporary access activates immediately (up to 6 quizzes for today) for 24 hours pending admin verification.</p>
 
         <form class="stack-md" method="POST" action="{{ route('student.billing.payments.store') }}" enctype="multipart/form-data">
             @csrf

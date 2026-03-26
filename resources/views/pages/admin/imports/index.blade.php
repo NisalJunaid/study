@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Question Imports', 'subheading' => 'Upload CSV files, preview validation, and process imports safely.'])
+@extends('layouts.admin', ['heading' => 'Question Imports'])
 
 @section('content')
 <div class="stack-lg">
@@ -6,7 +6,6 @@
         <div class="row-between" style="margin-bottom: 1rem;">
             <div>
                 <h3 class="h2">Upload Question CSV</h3>
-                <p class="muted text-sm mb-0">Supported format includes both MCQ and theory rows in one file.</p>
             </div>
         </div>
 
@@ -23,7 +22,6 @@
                 <div class="checkbox-row toggle-row">
                     <div class="stack-sm">
                         <div class="text-strong">Create missing subjects</div>
-                        <small class="muted">Enable when CSV may contain new subject names.</small>
                     </div>
                     <label class="switch" aria-label="Allow creating missing subjects">
                         <input type="checkbox" name="allow_create_subjects" value="1" {{ old('allow_create_subjects') ? 'checked' : '' }}>
@@ -33,7 +31,6 @@
                 <div class="checkbox-row toggle-row">
                     <div class="stack-sm">
                         <div class="text-strong">Create missing topics</div>
-                        <small class="muted">Create topics only within matched/created subjects.</small>
                     </div>
                     <label class="switch" aria-label="Allow creating missing topics">
                         <input type="checkbox" name="allow_create_topics" value="1" {{ old('allow_create_topics') ? 'checked' : '' }}>
@@ -53,7 +50,6 @@
         @if($imports->count() === 0)
             <div class="empty-state">
                 <h4>No imports yet</h4>
-                <p class="muted" style="margin:0">Upload your first CSV file to preview and import questions.</p>
             </div>
         @else
             <div class="table-wrap">

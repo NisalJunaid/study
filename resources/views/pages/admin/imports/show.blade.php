@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => "Import #{$import->id}", 'subheading' => 'Preview row validation results and run import processing.'])
+@extends('layouts.admin', ['heading' => "Import #{$import->id}"])
 
 @section('content')
 <div class="stack-lg">
@@ -21,7 +21,7 @@
             </div>
         </div>
 
-        <p id="import-live-note" class="muted" style="display:none;margin-top:1rem;margin-bottom:0;">Live updates connected. Refresh to load newest row-level details.</p>
+        <p id="import-live-note" class="muted" style="display:none;margin-top:1rem;margin-bottom:0;">Live updates connected.</p>
 
         <div class="metric-grid" style="margin-top:1rem;">
             <div class="summary-tile"><div class="muted text-sm">Status</div><h3 id="import-status-value" class="h3">{{ $statusLabels[$import->status] ?? $import->status }}</h3></div>
@@ -56,7 +56,6 @@
         @if($rows->count() === 0)
             <div class="empty-state">
                 <h4>No rows parsed</h4>
-                <p class="muted" style="margin:0">This import currently has no row records.</p>
             </div>
         @else
             <div class="table-wrap">

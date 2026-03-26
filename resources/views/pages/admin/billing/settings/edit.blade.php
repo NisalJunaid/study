@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Billing Payment Settings', 'subheading' => 'Configure bank transfer destination and payment instructions.'])
+@extends('layouts.admin', ['heading' => 'Billing Payment Settings'])
 
 @section('content')
 <x-admin.flash />

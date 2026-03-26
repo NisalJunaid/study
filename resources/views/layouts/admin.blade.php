@@ -1,8 +1,8 @@
 @extends('layouts.app-shell', [
     'title' => $title ?? 'Admin Area | Focus Lab',
-    'navDescription' => 'Admin control center',
+    'navDescription' => 'Admin',
     'heading' => $heading ?? 'Admin dashboard',
-    'subheading' => $subheading ?? 'Manage curriculum, quality, and student outcomes.',
+    'subheading' => $subheading ?? null,
 ])
 
 @section('sidebar')

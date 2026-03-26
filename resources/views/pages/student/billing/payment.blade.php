@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Payment confirmation', 'subheading' => 'Review amount due, transfer to bank, and upload your slip on one clean confirmation screen.'])
+@extends('layouts.student', ['heading' => 'Payment confirmation'])
 
 @section('content')
 <div class="stack-lg" id="guided-billing-payment">
@@ -48,7 +48,7 @@
                 @if($setting->payment_instructions)
                     <p class="muted mb-0">{{ $setting->payment_instructions }}</p>
                 @else
-                    <p class="muted mb-0">Complete your transfer, then upload your payment slip below to activate temporary access while verification is pending.</p>
+                    <p class="muted mb-0">Complete your transfer, then upload your payment slip.</p>
                 @endif
             </div>
         </section>
@@ -58,7 +58,7 @@
                 <h2 id="payment-upload-heading" class="h2">Upload payment slip</h2>
                 <span class="pill">Step 2</span>
             </div>
-            <p class="muted mb-0">After submission, temporary access activates immediately while verification is pending (up to 24 hours and up to 6 quizzes for today).</p>
+            <p class="muted mb-0">Temporary access activates after submission while verification is pending.</p>
 
             <label class="payment-upload-field" data-slip-preview>
                 <input class="field-control payment-upload-input" type="file" name="slip" required data-slip-input accept=".jpg,.jpeg,.png,.pdf">
@@ -68,8 +68,8 @@
                 </div>
 
                 <p class="text-sm mb-0"><strong>Selected file:</strong> <span data-slip-filename>No file selected yet.</span></p>
-                <p class="muted text-sm mb-0" data-slip-placeholder>Upload an image (JPG/PNG) to preview it here. For PDF files, we will show the filename before submission.</p>
-                <p class="muted text-sm mb-0" data-slip-non-image hidden>File selected and ready to upload. PDF previews are not shown.</p>
+                <p class="muted text-sm mb-0" data-slip-placeholder>Image files show a preview. PDFs show filename only.</p>
+                <p class="muted text-sm mb-0" data-slip-non-image hidden>PDF preview is not available.</p>
                 <img data-slip-image alt="Transfer slip preview" hidden>
             </label>
             @error('slip') <small class="field-error">{{ $message }}</small> @enderror

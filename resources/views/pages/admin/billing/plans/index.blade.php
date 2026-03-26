@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Billing Plans', 'subheading' => 'Manage pricing and plan availability.'])
+@extends('layouts.admin', ['heading' => 'Billing Plans'])
 
 @section('content')
 <x-admin.flash />

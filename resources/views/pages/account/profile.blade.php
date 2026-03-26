@@ -1,11 +1,10 @@
-@extends($layout, ['heading' => $heading ?? 'Profile', 'subheading' => $subheading ?? 'Manage your account details.', 'contentWidthClass' => 'content-shell'])
+@extends($layout, ['heading' => $heading ?? 'Profile', 'subheading' => $subheading ?? null, 'contentWidthClass' => 'content-shell'])
 
 @section('content')
 <div class="stack-lg">
     <section class="card account-card">
         <div class="section-title">
             <h2 class="h1">Profile details</h2>
-            <p class="muted">Keep your account information up to date.</p>
         </div>
 
         <form class="stack-md" method="POST" action="{{ route('profile.update') }}">
@@ -35,7 +34,6 @@
                     <p class="muted text-xs mb-0">Avatar</p>
                     <div class="row-wrap" style="align-items:center;">
                         <span class="avatar-circle">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
-                        <p class="muted text-sm mb-0">Initials avatar is used automatically.</p>
                     </div>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Student Dashboard', 'subheading' => 'Plan your revision and keep your progress moving.'])
+@extends('layouts.student', ['heading' => 'Student Dashboard'])
 
 @section('content')
 <div class="actions-inline">

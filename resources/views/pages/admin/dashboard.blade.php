@@ -1,9 +1,8 @@
-@extends('layouts.admin', ['heading' => 'Admin Dashboard', 'subheading' => 'Monitor system activity and authoring progress.'])
+@extends('layouts.admin', ['heading' => 'Admin Dashboard'])
 
 @section('content')
 <div class="page-hero">
     <h2 class="h1">Control center</h2>
-    <p class="mb-0" style="opacity:.9">Track content quality, import operations, and grading workload from one place.</p>
 </div>
 <div class="card-grid">
     <article class="card"><h3 class="h2">Published questions</h3><p class="muted mb-0">124</p></article>

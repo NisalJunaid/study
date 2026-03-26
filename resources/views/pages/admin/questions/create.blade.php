@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Create Question', 'subheading' => 'Add MCQ and theory questions to the bank.'])
+@extends('layouts.admin', ['heading' => 'Create Question'])
 
 @section('content')
 <x-admin.flash />

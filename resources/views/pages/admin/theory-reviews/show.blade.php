@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Theory Review Detail', 'subheading' => 'Inspect AI grading and override when needed.'])
+@extends('layouts.admin', ['heading' => 'Theory Review Detail'])
 
 @section('content')
 @php

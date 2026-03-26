@@ -22,7 +22,6 @@
 
     <section class="form-panel">
         <h3 class="h3">Question Metadata</h3>
-        <p class="panel-description">Choose where this question belongs and how it should be scored.</p>
 
         <div class="grid-2">
             <label class="field">
@@ -72,7 +71,6 @@
             <label class="field">
                 <span>Marks</span>
                 <input type="number" min="0" step="0.25" name="marks" value="{{ old('marks', $question?->marks ?? 1) }}" required>
-                <small>Use decimal scores for partial theory grading (e.g., 2.5).</small>
                 @error('marks')<small class="field-error">{{ $message }}</small>@enderror
             </label>
         </div>
@@ -80,7 +78,6 @@
 
     <section class="form-panel">
         <h3 class="h3">Core Question Content</h3>
-        <p class="panel-description">Write the prompt students will see during quiz attempts.</p>
         <label class="field">
             <span>Question Text</span>
             <textarea name="question_text" rows="5" required>{{ old('question_text', $question?->question_text) }}</textarea>
@@ -90,7 +87,6 @@
 
     <section class="form-panel">
         <h3 class="h3">Media and Explanation</h3>
-        <p class="panel-description">Optional enrichment for context and answer review feedback.</p>
         <div class="grid-2">
             <label class="field">
                 <span>Question Image (optional)</span>
@@ -107,7 +103,6 @@
             <label class="field">
                 <span>Explanation (optional)</span>
                 <textarea name="explanation" rows="4">{{ old('explanation', $question?->explanation) }}</textarea>
-                <small>Shown after quiz submission to support learning.</small>
                 @error('explanation')<small class="field-error">{{ $message }}</small>@enderror
             </label>
         </div>
@@ -126,7 +121,6 @@
         <div class="checkbox-row toggle-row">
             <div class="stack-sm">
                 <div class="text-strong">Published</div>
-                <small class="muted">Published questions become available for quiz generation.</small>
             </div>
             <input type="hidden" name="is_published" value="0">
             <label class="switch" aria-label="Toggle published status">

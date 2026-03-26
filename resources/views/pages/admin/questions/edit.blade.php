@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Edit Question', 'subheading' => 'Refine wording, difficulty, and grading metadata.'])
+@extends('layouts.admin', ['heading' => 'Edit Question'])
 
 @section('content')
 <x-admin.flash />
