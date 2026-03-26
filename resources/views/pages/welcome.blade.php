@@ -1,9 +1,18 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Focus Lab | Guided O'Level & A'Level Study Help</title>
+    <script>
+        (() => {
+            const storageKey = 'focus-lab-theme';
+            const root = document.documentElement;
+            const preferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            const saved = localStorage.getItem(storageKey);
+            root.dataset.theme = saved === 'dark' || saved === 'light' ? saved : preferred;
+        })();
+    </script>
     @vite(['resources/css/app.css'])
 </head>
 @php
