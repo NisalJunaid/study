@@ -1,25 +1,17 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Focus Lab | Get Started</title>
-    <script>
-        (() => {
-            const storageKey = 'focus-lab-theme';
-            const preferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            const saved = localStorage.getItem(storageKey);
-            document.documentElement.dataset.theme = saved === 'dark' || saved === 'light' ? saved : preferred;
-        })();
-    </script>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="landing-page">
-<main class="onboarding-shell" id="guided-register-root">
-    <section class="onboarding-panel card stack-lg">
+@extends('layouts.auth', [
+    'title' => 'Focus Lab | Get Started',
+    'heroTitle' => 'Start your Focus Lab learning account',
+    'heroCopy' => "Complete the guided registration flow to unlock your personalized quiz workspace.",
+    'shellClass' => 'focus-auth-shell-wide',
+    'mainId' => 'guided-register-root',
+])
+
+@section('content')
+    <section class="onboarding-panel focus-auth-onboarding-panel card stack-lg">
         <header class="stack-sm">
             <p class="pill">Get Started</p>
-            <h1 class="h1">Create Account</h1>
+            <h2 class="h1">Create Account</h2>
+            <p class="muted mb-0">Three quick steps and you're ready to learn.</p>
         </header>
 
         @if ($errors->any())
@@ -209,6 +201,4 @@
             </footer>
         </form>
     </section>
-</main>
-</body>
-</html>
+@endsection
