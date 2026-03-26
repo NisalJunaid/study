@@ -12,7 +12,7 @@ class ResultController extends Controller
     {
         $latest = Quiz::query()
             ->forUser((int) request()->user()->id)
-            ->whereIn('status', [Quiz::STATUS_SUBMITTED, Quiz::STATUS_GRADING, Quiz::STATUS_GRADED])
+            ->submittedAttempts()
             ->latest('submitted_at')
             ->latest('id')
             ->first();

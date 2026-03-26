@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Models\SubscriptionPayment;
+use App\Models\Quiz;
 use App\Models\User;
 use App\Models\UserSubscription;
 
@@ -97,16 +98,18 @@ class QuizAccessService
         ];
     }
 
-    public function registerQuizUsage(User $user, array $access): void
+    public function registerSubmittedQuizUsage(User $user, Quiz $quiz): void
     {
-        if (($access['access_type'] ?? null) !== self::ACCESS_TEMPORARY_PENDING_PAYMENT || empty($access['payment'])) {
+        if (! $quiz->isSubmittedAttempt()) {
             return;
         }
 
-        $payment = $access['payment'];
+        if ($quiz->billing_access_type !== self::ACCESS_TEMPORARY_PENDING_PAYMENT || ! $quiz->subscription_payment_id) {
+            return;
+        }
 
         $usage = $user->dailyQuizUsages()->firstOrCreate([
-            'subscription_payment_id' => $payment->id,
+            'subscription_payment_id' => $quiz->subscription_payment_id,
             'usage_date' => now()->toDateString(),
         ], [
             'quiz_count' => 0,

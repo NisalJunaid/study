@@ -33,6 +33,7 @@ class Quiz extends Model
         'total_possible_score',
         'total_awarded_score',
         'started_at',
+        'last_interacted_at',
         'submitted_at',
         'graded_at',
     ];
@@ -41,6 +42,7 @@ class Quiz extends Model
         'total_possible_score' => 'decimal:2',
         'total_awarded_score' => 'decimal:2',
         'started_at' => 'datetime',
+        'last_interacted_at' => 'datetime',
         'submitted_at' => 'datetime',
         'graded_at' => 'datetime',
     ];
@@ -73,5 +75,41 @@ class Quiz extends Model
     public function scopeWithStatus($query, string $status)
     {
         return $query->where('status', $status);
+    }
+
+    public function scopeSubmittedAttempts($query)
+    {
+        return $query
+            ->whereNotNull('submitted_at')
+            ->whereIn('status', self::submittedAttemptStatuses());
+    }
+
+    public function scopeAbandonable($query, \Carbon\CarbonInterface $cutoff)
+    {
+        return $query
+            ->whereNull('submitted_at')
+            ->whereIn('status', [self::STATUS_DRAFT, self::STATUS_IN_PROGRESS])
+            ->whereRaw('COALESCE(last_interacted_at, started_at, updated_at) <= ?', [$cutoff]);
+    }
+
+    public function markInteracted(?\Carbon\CarbonInterface $at = null): void
+    {
+        if ($this->submitted_at !== null || ! in_array($this->status, [self::STATUS_DRAFT, self::STATUS_IN_PROGRESS], true)) {
+            return;
+        }
+
+        $this->forceFill([
+            'last_interacted_at' => $at ?? now(),
+        ])->save();
+    }
+
+    public function isSubmittedAttempt(): bool
+    {
+        return $this->submitted_at !== null && in_array($this->status, self::submittedAttemptStatuses(), true);
+    }
+
+    public static function submittedAttemptStatuses(): array
+    {
+        return [self::STATUS_SUBMITTED, self::STATUS_GRADING, self::STATUS_GRADED];
     }
 }

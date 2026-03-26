@@ -47,6 +47,7 @@
 <div class="quiz-minimal-wrap" id="quiz-take-app"
     data-questions='@json($questionPayload)'
     data-save-route-template="{{ route('student.quiz.answer.save', ['quiz' => $quiz, 'quizQuestion' => '__QUESTION__']) }}"
+    data-interaction-route="{{ route('student.quiz.interact', $quiz) }}"
     data-csrf="{{ csrf_token() }}"
     data-locked="{{ $isLockedQuiz ? '1' : '0' }}"
 >

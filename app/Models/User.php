@@ -123,7 +123,7 @@ class User extends Authenticatable
             return false;
         }
 
-        return $this->quizzes()->count() === 0;
+        return $this->quizzes()->submittedAttempts()->count() === 0;
     }
 
     public function hasTemporaryAccess(): bool

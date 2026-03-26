@@ -15,6 +15,7 @@ class HistoryController extends Controller
 
         $quizzes = Quiz::query()
             ->forUser($studentId)
+            ->submittedAttempts()
             ->with('subject:id,name,color')
             ->latest('submitted_at')
             ->latest('id')

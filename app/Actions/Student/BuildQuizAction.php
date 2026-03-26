@@ -80,7 +80,7 @@ class BuildQuizAction
 
         $singleSubjectId = count($subjectIds) === 1 ? $subjectIds[0] : null;
 
-        return DB::transaction(function () use ($student, $levels, $singleSubjectId, $mode, $selectedQuestions): Quiz {
+        return DB::transaction(function () use ($student, $levels, $singleSubjectId, $mode, $selectedQuestions, $payload): Quiz {
             $quiz = Quiz::query()->create([
                 'user_id' => $student->id,
                 'level' => $levels->first(),
@@ -92,6 +92,7 @@ class BuildQuizAction
                 'total_questions' => $selectedQuestions->count(),
                 'total_possible_score' => $selectedQuestions->sum(fn (Question $question) => (float) $question->marks),
                 'started_at' => now(),
+                'last_interacted_at' => now(),
             ]);
 
             $selectedQuestions

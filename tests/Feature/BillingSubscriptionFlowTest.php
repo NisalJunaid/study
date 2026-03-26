@@ -105,7 +105,7 @@ class BillingSubscriptionFlowTest extends TestCase
             ->assertSessionHas('overlay', fn (array $overlay) => ($overlay['primary_label'] ?? null) === 'Choose a Plan');
     }
 
-    public function test_trial_exhaustion_triggers_paywall_redirect(): void
+    public function test_trial_exhaustion_triggers_paywall_redirect_after_submitted_attempt(): void
     {
         $student = User::factory()->student()->create();
         $subject = Subject::factory()->create(['is_active' => true]);
@@ -113,10 +113,13 @@ class BillingSubscriptionFlowTest extends TestCase
             'user_id' => $student->id,
             'subject_id' => $subject->id,
             'mode' => Quiz::MODE_MCQ,
-            'status' => Quiz::STATUS_IN_PROGRESS,
+            'status' => Quiz::STATUS_GRADED,
             'total_questions' => 1,
             'total_possible_score' => 1,
+            'total_awarded_score' => 1,
             'started_at' => now(),
+            'submitted_at' => now(),
+            'graded_at' => now(),
         ]);
 
         $this->assertDatabaseHas('quizzes', ['id' => $quiz->id]);
