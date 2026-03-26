@@ -2651,7 +2651,9 @@ body.overlay-open {
 
 .focus-home-subjects {
     display: grid;
-    gap: 1rem;
+    gap: 0.72rem;
+    justify-items: center;
+    text-align: center;
 }
 
 .focus-home-subjects-head h2,
@@ -2665,12 +2667,13 @@ body.overlay-open {
 .focus-home-level-tabs {
     display: inline-flex;
     align-items: center;
-    gap: 0.55rem;
-    padding: 0.3rem;
+    gap: 0.4rem;
+    padding: 0.26rem;
     border: 1px solid var(--border);
     border-radius: 999px;
-    background: var(--surface);
+    background: color-mix(in srgb, var(--surface-glass) 68%, var(--surface) 32%);
     width: fit-content;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .focus-home-level-tab {
@@ -2680,7 +2683,8 @@ body.overlay-open {
     color: var(--muted);
     font-weight: 700;
     font-size: 0.86rem;
-    padding: 0.44rem 0.8rem;
+    padding: 0.46rem 0.88rem;
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
 .focus-home-level-tab.is-active {
@@ -2690,75 +2694,47 @@ body.overlay-open {
 }
 
 .focus-home-level-panel { display: none; }
-.focus-home-level-panel.is-active { display: grid; gap: 0.88rem; }
+.focus-home-level-panel.is-active { display: grid; gap: 0.72rem; justify-items: center; }
 
-.focus-home-level-panel-head {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 0.7rem;
-}
-
-.focus-home-level-panel-head h3 {
+.focus-home-level-panel-meta {
     margin: 0;
-    font-size: 1rem;
-}
-
-.focus-home-level-panel-head p {
-    margin: 0.24rem 0 0;
     color: var(--muted);
     font-size: 0.82rem;
+    font-weight: 600;
 }
 
-.focus-home-carousel-controls {
-    display: inline-flex;
-    gap: 0.42rem;
-}
-
-.focus-home-carousel-btn {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 0.66rem;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    background: var(--surface);
-    font-weight: 700;
-}
-
-.focus-home-subject-carousel {
+.focus-home-subject-chip-list {
     display: flex;
-    gap: 0.72rem;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 0.35rem;
-    scrollbar-width: thin;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.58rem;
+    max-width: 56rem;
 }
 
-.focus-home-subject-card {
-    min-width: clamp(150px, 24vw, 186px);
-    scroll-snap-align: start;
+.focus-home-subject-chip {
     border-radius: 0.9rem;
-    border: 1px solid color-mix(in srgb, var(--subject-accent) 30%, var(--border) 70%);
-    background: linear-gradient(155deg, var(--surface), var(--subject-soft));
-    padding: 0.76rem 0.78rem;
+    border: 1px solid color-mix(in srgb, var(--subject-accent) 38%, var(--border) 62%);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 86%, var(--subject-soft) 14%), color-mix(in srgb, var(--surface) 78%, var(--subject-soft) 22%));
+    padding: 0.52rem 0.72rem;
     display: flex;
     align-items: center;
-    gap: 0.56rem;
+    gap: 0.48rem;
+    box-shadow: 0 8px 18px -14px color-mix(in srgb, var(--subject-accent) 65%, transparent 35%);
 }
 
 .focus-home-subject-dot {
-    width: 0.62rem;
-    height: 0.62rem;
+    width: 0.55rem;
+    height: 0.55rem;
     border-radius: 999px;
     background: var(--subject-accent);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--subject-accent) 18%, transparent 82%);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--subject-accent) 18%, transparent 82%);
 }
 
-.focus-home-subject-card p {
+.focus-home-subject-chip p {
     margin: 0;
-    font-size: 0.88rem;
-    font-weight: 700;
-    color: color-mix(in srgb, var(--text) 84%, var(--subject-accent) 16%);
+    font-size: 0.84rem;
+    font-weight: 650;
+    color: color-mix(in srgb, var(--text) 88%, var(--subject-accent) 12%);
 }
 
 .focus-home-question-types-row {
@@ -2992,6 +2968,16 @@ body.overlay-open {
     .focus-home-hero-copy h1 {
         font-size: clamp(1.85rem, 12vw, 2.6rem);
     }
+
+    .focus-home-level-tabs {
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 100%;
+    }
+
+    .focus-home-subject-chip-list {
+        gap: 0.5rem;
+    }
 }
 
 :root[data-theme="dark"] .focus-home-bg {
@@ -3002,6 +2988,21 @@ body.overlay-open {
 
 :root[data-theme="dark"] .focus-home-level-tab:not(.is-active) {
     color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .focus-home-level-tabs {
+    background: color-mix(in srgb, var(--surface) 70%, #0f172a 30%);
+    box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.16);
+}
+
+:root[data-theme="dark"] .focus-home-subject-chip {
+    border-color: color-mix(in srgb, var(--subject-accent) 40%, rgba(148, 163, 184, 0.28) 60%);
+    background: linear-gradient(160deg, color-mix(in srgb, #0f172a 84%, var(--subject-soft) 16%), color-mix(in srgb, #111827 74%, var(--subject-soft) 26%));
+    box-shadow: 0 10px 20px -16px color-mix(in srgb, var(--subject-accent) 68%, transparent 32%);
+}
+
+:root[data-theme="dark"] .focus-home-subject-chip p {
+    color: color-mix(in srgb, #e2e8f0 88%, var(--subject-accent) 12%);
 }
 
 :root[data-theme="dark"] .focus-home-pacing-row {

@@ -135,7 +135,7 @@
             <div class="focus-home-subjects-head">
                 <p class="focus-home-section-label">Subjects</p>
                 <h2>Pick your level, then revise by subject</h2>
-                <p class="focus-home-section-copy">Switch between levels and browse supported subjects with quick, focused navigation.</p>
+                <p class="focus-home-section-copy">Switch levels and scan available subjects in one clean view.</p>
             </div>
 
             <div class="focus-home-level-tabs" role="tablist" aria-label="Select level">
@@ -168,29 +168,20 @@
                     data-level-panel
                     data-level="{{ $levelKey }}"
                 >
-                    <div class="focus-home-level-panel-head">
-                        <div>
-                            <h3>{{ $module['headline'] }}</h3>
-                            <p>{{ $entry['count'] }} subjects available</p>
-                        </div>
-                        <div class="focus-home-carousel-controls">
-                            <button type="button" class="focus-home-carousel-btn" data-carousel-prev aria-label="Previous subjects">←</button>
-                            <button type="button" class="focus-home-carousel-btn" data-carousel-next aria-label="Next subjects">→</button>
-                        </div>
-                    </div>
+                    <p class="focus-home-level-panel-meta">{{ $module['headline'] }} · {{ $entry['count'] }} subjects available</p>
 
-                    <div class="focus-home-subject-carousel" data-carousel-track aria-label="{{ $module['label'] }} subjects">
+                    <div class="focus-home-subject-chip-list" aria-label="{{ $module['label'] }} subjects">
                         @foreach($entry['subjects'] as $subject)
                             @php
                                 $subjectColor = \App\Models\Subject::normalizeColor($subject['color'] ?? null, $accent);
                             @endphp
-                            <article
-                                class="focus-home-subject-card"
+                            <span
+                                class="focus-home-subject-chip"
                                 style="--subject-accent: {{ $subjectColor }}; --subject-soft: {{ \App\Models\Subject::colorToRgba($subjectColor, 0.18) }};"
                             >
                                 <span class="focus-home-subject-dot" aria-hidden="true"></span>
                                 <p>{{ $subject['name'] }}</p>
-                            </article>
+                            </span>
                         @endforeach
                     </div>
                 </div>
@@ -332,20 +323,6 @@
 
             levelTabs.forEach((tab) => {
                 tab.addEventListener('click', () => activateLevel(tab.dataset.level));
-            });
-
-            document.querySelectorAll('[data-level-panel]').forEach((panel) => {
-                const track = panel.querySelector('[data-carousel-track]');
-                const prev = panel.querySelector('[data-carousel-prev]');
-                const next = panel.querySelector('[data-carousel-next]');
-
-                prev?.addEventListener('click', () => {
-                    track?.scrollBy({ left: -220, behavior: 'smooth' });
-                });
-
-                next?.addEventListener('click', () => {
-                    track?.scrollBy({ left: 220, behavior: 'smooth' });
-                });
             });
         })();
     </script>
