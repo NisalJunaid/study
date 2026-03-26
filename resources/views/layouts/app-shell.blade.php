@@ -1,9 +1,18 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? 'Focus Lab' }}</title>
+    <script>
+        (() => {
+            const storageKey = 'focus-lab-theme';
+            const root = document.documentElement;
+            const preferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            const saved = localStorage.getItem(storageKey);
+            root.dataset.theme = saved === 'dark' || saved === 'light' ? saved : preferred;
+        })();
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
@@ -33,6 +42,11 @@
                 </button>
 
                 <div class="user-dropdown card" id="user-menu-panel" data-user-menu-panel hidden>
+                    @if(auth()->user()->isAdmin())
+                        <a href="{{ route('admin.billing.payments.index') }}" class="user-dropdown-item">Billing</a>
+                    @else
+                        <a href="{{ route('student.billing.subscription') }}" class="user-dropdown-item">Billing</a>
+                    @endif
                     <a href="{{ route('profile.edit') }}" class="user-dropdown-item">Profile</a>
                     <a href="{{ route('profile.settings') }}" class="user-dropdown-item">Settings</a>
                     <form method="POST" action="{{ route('logout') }}">
@@ -60,6 +74,17 @@
         </div>
 
         @yield('sidebar')
+
+        <div class="sidebar-theme-toggle card" data-theme-control>
+            <div>
+                <p class="h3 mb-0">Theme</p>
+                <p class="text-sm muted mb-0" data-theme-label>Light mode</p>
+            </div>
+            <label class="switch" aria-label="Toggle theme">
+                <input type="checkbox" data-theme-toggle>
+                <span class="switch-track"></span>
+            </label>
+        </div>
     </aside>
 
     <main class="main">
@@ -135,10 +160,34 @@
         const overlay = shell.querySelector('[data-nav-overlay]');
         const toggleButton = shell.querySelector('[data-nav-toggle]');
         const closeButton = shell.querySelector('[data-nav-close]');
-        const navItems = shell.querySelectorAll('[data-student-nav] .nav-item');
+        const navItems = shell.querySelectorAll('[data-student-nav] .nav-item, [data-admin-nav] .nav-item');
         const userMenu = shell.querySelector('[data-user-menu]');
         const userMenuToggle = shell.querySelector('[data-user-menu-toggle]');
         const userMenuPanel = shell.querySelector('[data-user-menu-panel]');
+        const themeToggle = shell.querySelector('[data-theme-toggle]');
+        const themeLabel = shell.querySelector('[data-theme-label]');
+        const storageKey = 'focus-lab-theme';
+
+        const applyTheme = (theme) => {
+            const resolved = theme === 'dark' ? 'dark' : 'light';
+            document.documentElement.dataset.theme = resolved;
+            localStorage.setItem(storageKey, resolved);
+            if (themeToggle) {
+                themeToggle.checked = resolved === 'dark';
+            }
+            if (themeLabel) {
+                themeLabel.textContent = resolved === 'dark' ? 'Dark mode' : 'Light mode';
+            }
+        };
+
+        if (themeToggle) {
+            const currentTheme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+            applyTheme(currentTheme);
+
+            themeToggle.addEventListener('change', () => {
+                applyTheme(themeToggle.checked ? 'dark' : 'light');
+            });
+        }
 
         const closeNav = () => {
             shell.classList.remove('nav-open');
