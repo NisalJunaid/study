@@ -21,96 +21,173 @@
     if (! $user) {
         $primaryCtaLabel = 'Get Started';
         $primaryCtaRoute = route('register');
-        $secondaryCtaLabel = 'Log In';
-        $secondaryCtaRoute = route('login');
+        $secondaryCtaLabel = 'See how it works';
+        $secondaryCtaRoute = '#how-it-works';
     } elseif ($user->isAdmin()) {
-        $primaryCtaLabel = 'Open Admin Dashboard';
+        $primaryCtaLabel = 'Admin Dashboard';
         $primaryCtaRoute = route('admin.dashboard');
-        $secondaryCtaLabel = 'Manage Billing';
-        $secondaryCtaRoute = route('admin.billing.payments.index');
+        $secondaryCtaLabel = 'See how it works';
+        $secondaryCtaRoute = '#how-it-works';
     } else {
         $primaryCtaLabel = 'Build Quiz';
         $primaryCtaRoute = route('student.quiz.setup');
-        $secondaryCtaLabel = 'View Progress';
-        $secondaryCtaRoute = route('student.progress.index');
+        $secondaryCtaLabel = 'See how it works';
+        $secondaryCtaRoute = '#how-it-works';
     }
 @endphp
-<body class="landing-page">
-    <main class="landing-shell">
-        <header class="landing-surface row-between" style="align-items:flex-start;">
-            <div class="stack-sm">
-                <span class="pill">Focus Lab</span>
-                <h1 class="h0">Focused O'Level & A'Level prep.</h1>
-            </div>
-            <div class="actions-inline">
-                <a href="{{ $primaryCtaRoute }}" class="btn btn-primary">{{ $primaryCtaLabel }}</a>
-                <a href="{{ $secondaryCtaRoute }}" class="btn">{{ $secondaryCtaLabel }}</a>
-            </div>
+<body class="focus-home-page">
+    <div class="focus-home-bg"></div>
+    <main class="focus-home-shell">
+        <header class="focus-home-nav-wrap">
+            <nav class="focus-home-nav" aria-label="Primary">
+                <a href="{{ route('home') }}" class="focus-home-brand">
+                    <span class="focus-home-brand-badge">F</span>
+                    <span>Focus Lab</span>
+                </a>
+
+                <button class="focus-home-menu-toggle" type="button" data-home-menu-toggle aria-expanded="false" aria-controls="home-nav-links">
+                    Menu
+                </button>
+
+                <div class="focus-home-links" id="home-nav-links" data-home-nav-links>
+                    <a href="{{ route('home') }}">Home</a>
+                    <a href="#features">Features</a>
+                    <a href="#how-it-works">How it works</a>
+                    <a href="#pricing">Pricing</a>
+                </div>
+
+                <div class="focus-home-actions">
+                    <button class="focus-home-theme-toggle" type="button" data-theme-toggle-public aria-label="Toggle theme">🌗</button>
+                    @guest
+                        <a href="{{ route('login') }}" class="focus-home-login-link">Log in</a>
+                    @else
+                        <a href="{{ $user->isAdmin() ? route('admin.dashboard') : route('student.dashboard') }}" class="focus-home-login-link">Dashboard</a>
+                    @endguest
+                    <a href="{{ $primaryCtaRoute }}" class="focus-home-btn focus-home-btn-primary">{{ $primaryCtaLabel }}</a>
+                </div>
+            </nav>
         </header>
 
-        <section class="landing-hero">
-            <article class="landing-surface stack-md">
-                <h2 class="h1">Smart quiz prep</h2>
-                <div class="actions-inline" style="justify-content:flex-start;">
-                    <a href="{{ $primaryCtaRoute }}" class="btn btn-primary">{{ $primaryCtaLabel }}</a>
-                    <a href="{{ $secondaryCtaRoute }}" class="btn">{{ $secondaryCtaLabel }}</a>
+        <section class="focus-home-hero" id="how-it-works">
+            <article class="focus-home-hero-copy">
+                <span class="focus-home-chip">● O’Level & A’Level support added</span>
+                <h1>Master your exams with <span>guided practice.</span></h1>
+                <p>
+                    Focus Lab gives you step-by-step, subject-based quiz preparation built for O’Level and A’Level learners.
+                    Stay focused, build confidence, and improve one quiz at a time.
+                </p>
+                <div class="focus-home-hero-actions">
+                    <a href="{{ $primaryCtaRoute }}" class="focus-home-btn focus-home-btn-primary">{{ $primaryCtaLabel }} →</a>
+                    <a href="{{ $secondaryCtaRoute }}" class="focus-home-btn">{{ $secondaryCtaLabel }}</a>
                 </div>
-                <div class="landing-grid-3">
-                    <div class="summary-tile"><p class="h2 mb-0">Guided setup</p></div>
-                    <div class="summary-tile"><p class="h2 mb-0">Topic focus</p></div>
-                    <div class="summary-tile"><p class="h2 mb-0">Progress tracking</p></div>
+                <div class="focus-home-trust-strip">
+                    <div class="focus-home-avatars" aria-hidden="true">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <p><strong>4.9/5</strong> from students using Focus Lab weekly</p>
                 </div>
             </article>
-            <aside class="landing-surface stack-sm">
-                <div class="landing-placeholder">Hero Illustration</div>
+
+            <aside class="focus-home-hero-preview" aria-label="Quiz Builder preview">
+                <div class="focus-home-preview-window">
+                    <div class="focus-home-preview-top">
+                        <span></span><span></span><span></span>
+                        <small>Quiz Builder</small>
+                    </div>
+                    <p class="focus-home-preview-step">Step 2 of 4</p>
+                    <div class="focus-home-preview-progress"><span></span></div>
+                    <h2>What do you want to practice?</h2>
+                    <div class="focus-home-preview-option is-active">
+                        <div>
+                            <strong>Mathematics</strong>
+                            <small>Core & Extended</small>
+                        </div>
+                        <span>✓</span>
+                    </div>
+                    <div class="focus-home-preview-option">
+                        <div>
+                            <strong>Physics</strong>
+                            <small>Mechanics & Thermal</small>
+                        </div>
+                        <span></span>
+                    </div>
+                    <a href="{{ $primaryCtaRoute }}" class="focus-home-preview-cta">Continue</a>
+                </div>
+                <div class="focus-home-preview-score">Score 96% <small>Last quiz</small></div>
             </aside>
         </section>
 
-        <section class="landing-surface stack-sm">
-            <h2 class="h1">How it works</h2>
-            <div class="landing-steps">
-                <article class="landing-step"><p class="pill">Step 1</p><h3 class="h3">Choose level</h3></article>
-                <article class="landing-step"><p class="pill">Step 2</p><h3 class="h3">Build quiz</h3></article>
-                <article class="landing-step"><p class="pill">Step 3</p><h3 class="h3">Submit answers</h3></article>
-                <article class="landing-step"><p class="pill">Step 4</p><h3 class="h3">Review results</h3></article>
+        <section class="focus-home-features" id="features">
+            <p class="focus-home-section-label">Key benefits</p>
+            <h2>Everything you need to excel</h2>
+            <p class="focus-home-section-copy">Built for focused revision with clear steps, clean screens, and meaningful feedback after every quiz.</p>
+
+            <div class="focus-home-feature-grid">
+                <article class="focus-home-feature-card">
+                    <span class="focus-home-feature-icon">✦</span>
+                    <h3>Guided Quiz Builder</h3>
+                    <p>Choose level, subject, and topics through a smooth step-by-step flow that keeps setup simple.</p>
+                </article>
+                <article class="focus-home-feature-card">
+                    <span class="focus-home-feature-icon">◔</span>
+                    <h3>Distraction-Free Interface</h3>
+                    <p>Practice one question at a time in a focused workspace designed for calm, consistent progress.</p>
+                </article>
+                <article class="focus-home-feature-card">
+                    <span class="focus-home-feature-icon">◕</span>
+                    <h3>Clear Results & Feedback</h3>
+                    <p>Review instant scores, explanations, and performance trends so you know exactly what to improve.</p>
+                </article>
             </div>
         </section>
 
-        <section class="landing-grid-2">
-            <article class="landing-surface stack-sm">
-                <h2 class="h1">For students</h2>
-                <div class="stack-sm">
-                    <div class="summary-tile"><p class="mb-0">Subject and topic-based practice</p></div>
-                    <div class="summary-tile"><p class="mb-0">MCQ, theory, and mixed quizzes</p></div>
-                    <div class="summary-tile"><p class="mb-0">Clear progress history</p></div>
-                </div>
-            </article>
-            <article class="landing-surface stack-sm">
-                <h2 class="h1">Highlights</h2>
-                <div class="stack-sm">
-                    <div class="summary-tile"><p class="h3 mb-0">Guided quiz builder</p></div>
-                    <div class="summary-tile"><p class="h3 mb-0">Fast billing flow</p></div>
-                    <div class="summary-tile"><p class="h3 mb-0">Realtime updates</p></div>
-                </div>
-                <div class="landing-placeholder">Highlights</div>
-            </article>
-        </section>
-
-        <section class="landing-surface stack-sm">
-            <h2 class="h1">Start now</h2>
-            <div class="actions-inline" style="justify-content:flex-start;">
-                <a href="{{ $primaryCtaRoute }}" class="btn btn-primary">{{ $primaryCtaLabel }}</a>
-                <a href="{{ $secondaryCtaRoute }}" class="btn">{{ $secondaryCtaLabel }}</a>
+        <footer class="focus-home-footer" id="pricing">
+            <div>
+                <a href="{{ route('home') }}" class="focus-home-brand">
+                    <span class="focus-home-brand-badge">F</span>
+                    <span>Focus Lab</span>
+                </a>
+                <p>Modern exam preparation for O’Level and A’Level students.</p>
+                <small>© {{ now()->year }} Focus Lab. All rights reserved.</small>
             </div>
-        </section>
 
-        <footer class="landing-surface landing-footer">
-            <p class="mb-0">© {{ now()->year }} Focus Lab • O'Level & A'Level study support.</p>
-            <div class="actions-inline">
-                <a class="btn btn-ghost" href="{{ route('home') }}">Home</a>
-                <a class="btn btn-ghost" href="{{ $secondaryCtaRoute }}">Account</a>
+            <div class="focus-home-footer-links">
+                <div>
+                    <h4>Platform</h4>
+                    <a href="#features">Features</a>
+                    <a href="#pricing">Pricing</a>
+                    <a href="#features">Subjects</a>
+                </div>
+                <div>
+                    <h4>Support</h4>
+                    <a href="{{ route('login') }}">Help Center</a>
+                    <a href="{{ route('register') }}">Contact Us</a>
+                    <a href="{{ route('home') }}">Terms of Service</a>
+                </div>
             </div>
         </footer>
     </main>
+
+    <script>
+        (() => {
+            const menuToggle = document.querySelector('[data-home-menu-toggle]');
+            const navLinks = document.querySelector('[data-home-nav-links]');
+            const themeToggle = document.querySelector('[data-theme-toggle-public]');
+            const storageKey = 'focus-lab-theme';
+
+            menuToggle?.addEventListener('click', () => {
+                const expanded = menuToggle.getAttribute('aria-expanded') === 'true';
+                menuToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+                navLinks?.classList.toggle('is-open', !expanded);
+            });
+
+            themeToggle?.addEventListener('click', () => {
+                const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+                const next = current === 'dark' ? 'light' : 'dark';
+                document.documentElement.dataset.theme = next;
+                localStorage.setItem(storageKey, next);
+            });
+        })();
+    </script>
 </body>
 </html>
