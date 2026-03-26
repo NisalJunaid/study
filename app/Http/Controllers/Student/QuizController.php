@@ -39,7 +39,6 @@ class QuizController extends Controller
 
         $subjects = Subject::query()
             ->active()
-            ->whereIn('level', $selectedLevels->all())
             ->with([
                 'topics' => fn ($query) => $query->active()->orderBy('sort_order')->orderBy('name'),
             ])
