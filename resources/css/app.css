@@ -2557,6 +2557,8 @@ body.overlay-open {
 .focus-home-links { display: inline-flex; align-items: center; gap: 1.3rem; }
 .focus-home-links a { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
 .focus-home-links a:hover { color: var(--text); }
+.focus-home-mobile-auth,
+.focus-home-mobile-menu-meta { display: none; }
 
 .focus-home-actions { display: inline-flex; align-items: center; gap: 0.65rem; }
 .focus-home-login-link { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
@@ -3047,15 +3049,55 @@ body.overlay-open {
 @media (max-width: 960px) {
     .focus-home-links { display: none; }
     .focus-home-menu-toggle { display: inline-flex; }
+    .focus-home-menu-toggle { margin-left: auto; }
     .focus-home-nav { flex-wrap: wrap; }
-    .focus-home-actions { margin-left: auto; }
+    .focus-home-actions { display: none; }
 
     .focus-home-links.is-open {
         display: grid;
         width: 100%;
-        gap: 0.35rem;
+        gap: 0.45rem;
         border-top: 1px solid var(--border);
-        padding-top: 0.7rem;
+        padding-top: 0.85rem;
+    }
+
+    .focus-home-links.is-open a {
+        padding: 0.45rem 0.15rem;
+    }
+
+    .focus-home-mobile-menu-meta {
+        display: flex;
+        justify-content: flex-start;
+        padding-top: 0.2rem;
+    }
+
+    .focus-home-theme-toggle-mobile {
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 0.65rem;
+    }
+
+    .focus-home-mobile-auth {
+        display: grid;
+        gap: 0.65rem;
+        padding-top: 0.5rem;
+        margin-top: 0.2rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .focus-home-mobile-auth .focus-home-login-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.5rem;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        width: 100%;
+    }
+
+    .focus-home-mobile-auth .focus-home-btn {
+        width: 100%;
     }
 
     .focus-home-hero { grid-template-columns: 1fr; }
@@ -3067,12 +3109,6 @@ body.overlay-open {
 }
 
 @media (max-width: 640px) {
-    .focus-home-actions {
-        width: 100%;
-        justify-content: flex-end;
-        flex-wrap: wrap;
-    }
-
     .focus-home-btn,
     .focus-home-login-link {
         font-size: 0.85rem;

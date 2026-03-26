@@ -68,6 +68,20 @@
                     <a href="#features">Features</a>
                     <a href="#how-it-works">How it works</a>
                     <a href="#pricing">Pricing</a>
+
+                    <div class="focus-home-mobile-menu-meta">
+                        <button class="focus-home-theme-toggle focus-home-theme-toggle-mobile" type="button" data-theme-toggle-public aria-label="Toggle theme">🌗</button>
+                    </div>
+
+                    <div class="focus-home-mobile-auth">
+                        @guest
+                            <a href="{{ route('login') }}" class="focus-home-login-link">Log in</a>
+                            <a href="{{ route('register') }}" class="focus-home-btn focus-home-btn-primary">Get Started</a>
+                        @else
+                            <a href="{{ $user->isAdmin() ? route('admin.dashboard') : route('student.dashboard') }}" class="focus-home-login-link">Dashboard</a>
+                            <a href="{{ $primaryCtaRoute }}" class="focus-home-btn focus-home-btn-primary">{{ $primaryCtaLabel }}</a>
+                        @endguest
+                    </div>
                 </div>
 
                 <div class="focus-home-actions">
@@ -289,7 +303,7 @@
         (() => {
             const menuToggle = document.querySelector('[data-home-menu-toggle]');
             const navLinks = document.querySelector('[data-home-nav-links]');
-            const themeToggle = document.querySelector('[data-theme-toggle-public]');
+            const themeToggles = document.querySelectorAll('[data-theme-toggle-public]');
             const storageKey = 'focus-lab-theme';
 
             menuToggle?.addEventListener('click', () => {
@@ -298,11 +312,13 @@
                 navLinks?.classList.toggle('is-open', !expanded);
             });
 
-            themeToggle?.addEventListener('click', () => {
-                const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
-                const next = current === 'dark' ? 'light' : 'dark';
-                document.documentElement.dataset.theme = next;
-                localStorage.setItem(storageKey, next);
+            themeToggles.forEach((themeToggle) => {
+                themeToggle.addEventListener('click', () => {
+                    const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+                    const next = current === 'dark' ? 'light' : 'dark';
+                    document.documentElement.dataset.theme = next;
+                    localStorage.setItem(storageKey, next);
+                });
             });
 
             const levelTabs = document.querySelectorAll('[data-level-tab]');
