@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Plan Discounts', 'subheading' => 'Create and manage promotions and discount windows.'])
+@extends('layouts.admin', ['heading' => 'Plan Discounts'])
 
 @section('content')
 <x-admin.flash />

@@ -1,7 +1,6 @@
 @extends('layouts.student', [
     'heading' => 'Quiz In Progress',
-    'subheading' => 'Focused one-question flow',
-    'minimalHeader' => true,
+        'minimalHeader' => true,
     'suppressFlash' => true,
 ])
 
@@ -64,7 +63,6 @@
     @if($quiz->quizQuestions->isEmpty())
         <section class="empty-state">
             <h4>No quiz questions assigned</h4>
-            <p class="muted">This quiz could not be initialized. Please return to quiz setup.</p>
         </section>
     @else
         <section class="card stack-lg quiz-panel quiz-minimal-main" id="active-question-panel"></section>

@@ -1,8 +1,8 @@
 @extends('layouts.app-shell', [
     'title' => $title ?? 'Student Area | Focus Lab',
-    'navDescription' => 'Student workspace',
+    'navDescription' => 'Student',
     'heading' => $heading ?? 'Student dashboard',
-    'subheading' => $subheading ?? 'Track your progress and keep improving.',
+    'subheading' => $subheading ?? null,
     'minimalHeader' => $minimalHeader ?? false,
     'suppressFlash' => $suppressFlash ?? false,
     'contentWidthClass' => $contentWidthClass ?? 'content-shell',

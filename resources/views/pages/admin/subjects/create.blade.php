@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Create Subject', 'subheading' => 'Add a new subject to the curriculum.'])
+@extends('layouts.admin', ['heading' => 'Create Subject'])
 
 @section('content')
 <x-admin.flash />

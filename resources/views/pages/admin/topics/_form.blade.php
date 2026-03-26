@@ -53,7 +53,6 @@
     <div class="checkbox-row toggle-row">
         <div class="stack-sm">
             <div class="text-strong">Active topic</div>
-            <small class="muted">Inactive topics will not appear to students in quiz filters.</small>
         </div>
         <input type="hidden" name="is_active" value="0">
         <label class="switch" aria-label="Toggle topic active state">

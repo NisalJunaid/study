@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Progress', 'subheading' => 'Track your performance trends and focus on weak areas.'])
+@extends('layouts.student', ['heading' => 'Progress'])
 
 @section('content')
 <div class="stack-lg">
@@ -6,22 +6,18 @@
         <x-student.metric-card
             title="Total quizzes"
             :value="$summary['total_quizzes']"
-            subtitle="All attempts created"
         />
         <x-student.metric-card
             title="Completed quizzes"
             :value="$summary['completed_quizzes']"
-            subtitle="Submitted, grading, or graded"
         />
         <x-student.metric-card
             title="In progress"
             :value="$summary['in_progress_quizzes']"
-            subtitle="Drafts you can resume"
         />
         <x-student.metric-card
             title="Average score"
             :value="$summary['average_score_percentage'] !== null ? number_format((float) $summary['average_score_percentage'], 1).'%' : 'Not enough data'"
-            subtitle="Calculated from completed quizzes"
         />
     </section>
 
@@ -34,7 +30,6 @@
         @if($subjectPerformance->isEmpty())
             <div class="empty-state">
                 <h4>No subject performance yet</h4>
-                <p class="muted">Complete quizzes to see per-subject trends and consistency.</p>
             </div>
         @else
             <div class="stack-md">
@@ -69,7 +64,6 @@
             @if($weakTopics->isEmpty())
                 <div class="empty-state">
                     <h4>No weak topics yet</h4>
-                    <p class="muted">Once you have graded topic attempts, this list highlights where to focus next.</p>
                 </div>
             @else
                 <div class="stack-sm">
@@ -95,7 +89,6 @@
             @if($recentActivity->isEmpty())
                 <div class="empty-state">
                     <h4>No recent submissions</h4>
-                    <p class="muted">Submit a quiz to start your learning timeline.</p>
                 </div>
             @else
                 <div class="stack-sm">

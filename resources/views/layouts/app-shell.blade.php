@@ -52,7 +52,9 @@
         <div class="sidebar-top row-between">
             <div>
                 <div class="brand">Focus Lab</div>
-                <p class="muted mt-0">{{ $navDescription ?? "O'Level Study Help" }}</p>
+                @if(!empty($navDescription))
+                    <p class="muted mt-0">{{ $navDescription }}</p>
+                @endif
             </div>
             <button class="mobile-nav-close" type="button" aria-label="Close navigation" data-nav-close>✕</button>
         </div>

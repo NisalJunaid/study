@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Build Your Quiz', 'subheading' => 'Follow the guided steps to create a quiz without guesswork.'])
+@extends('layouts.student', ['heading' => 'Build Your Quiz'])
 
 @section('content')
 @php
@@ -39,7 +39,6 @@
     @if($subjects->isEmpty())
         <section class="empty-state card">
             <h4>No subjects available right now</h4>
-            <p class="muted">Try another level selection or ask an admin to activate content.</p>
             <a class="btn" href="{{ route('student.levels.index') }}">Back to levels</a>
         </section>
     @else
@@ -49,7 +48,6 @@
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="1">
                 <h2 class="section-heading">Step 1: Select level(s)</h2>
-                <p class="section-intro">Pick one level, or enable multi-level mode for mixed practice.</p>
 
                 <label class="toggle-row" style="gap:.55rem; max-width:fit-content;">
                     <span class="text-sm text-strong">Multi-level mode</span>
@@ -84,7 +82,6 @@
                 <div class="row-between">
                     <div>
                         <h2 class="section-heading">Step 2: Select subject(s)</h2>
-                        <p class="section-intro">Choose one subject or enable multi-subject mode.</p>
                     </div>
                     <label class="toggle-row" style="gap:.55rem">
                         <span class="text-sm text-strong">Multi-subject mode</span>
@@ -129,7 +126,6 @@
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="3" hidden>
                 <h2 class="section-heading">Step 3: Select topics (optional)</h2>
-                <p class="section-intro">Narrow your quiz by topic, or skip for broader practice.</p>
                 <label class="field input-field">
                     <span>Search topics across selected subjects</span>
                     <input type="search" class="field-control input-control" id="shared-topic-search" placeholder="Search topics..." autocomplete="off">
@@ -167,7 +163,6 @@
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="4" hidden>
                 <h2 class="section-heading">Step 4: Configure quiz settings</h2>
-                <p class="section-intro">Set quiz mode, size, and optional difficulty filter.</p>
                 <div class="grid-3">
                     <label class="field input-field">
                         <span>Mode</span>
@@ -202,9 +197,7 @@
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="5" hidden>
                 <h2 class="section-heading">Step 5: Review and start</h2>
-                <p class="section-intro">Confirm your selections. When ready, start your quiz.</p>
                 <div class="guided-summary" data-quiz-summary></div>
-                <p class="muted text-sm mb-0">After you click start, your quiz is generated immediately using published questions that match your choices.</p>
             </section>
 
             <div class="actions-row row-between">

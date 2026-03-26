@@ -62,7 +62,6 @@
     <div class="checkbox-row toggle-row">
         <div class="stack-sm">
             <div class="text-strong">Active subject</div>
-            <small class="muted">Controls whether students can use this subject in quiz building.</small>
         </div>
         <input type="hidden" name="is_active" value="0">
         <label class="switch" aria-label="Toggle subject active state">

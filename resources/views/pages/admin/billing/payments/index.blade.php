@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Payment Verifications', 'subheading' => 'Review pending slips and manage subscription status.'])
+@extends('layouts.admin', ['heading' => 'Payment Verifications'])
 
 @section('content')
 <x-admin.flash />

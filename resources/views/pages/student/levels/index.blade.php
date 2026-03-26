@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Choose Your Learning Level', 'subheading' => 'Select your level to continue to quiz setup.'])
+@extends('layouts.student', ['heading' => 'Choose Your Learning Level'])
 
 @section('content')
 @php
@@ -10,7 +10,6 @@
         <div class="row-between">
             <div class="stack-sm">
                 <h2 class="section-heading step-heading"><span class="step-index">1</span><span>Select your level</span></h2>
-                <p class="section-intro">Enable multi-level mode if you want to include subjects from both levels in one quiz.</p>
             </div>
             <label class="toggle-row" style="gap:.55rem">
                 <span class="text-sm text-strong">Multi-level mode</span>

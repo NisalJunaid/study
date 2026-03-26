@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Billing & Subscription', 'subheading' => 'Check your subscription status, then start payment only when needed.'])
+@extends('layouts.student', ['heading' => 'Billing & Subscription'])
 
 @section('content')
 <div class="stack-lg" id="guided-billing-subscription" data-initial-step="1">
@@ -16,7 +16,6 @@
                 @endif
             @else
                 <p class="mb-0">No active subscription yet.</p>
-                <p class="mb-0 muted">Start a payment when you are ready to unlock full access.</p>
             @endif
 
             <p class="mb-0"><strong>Access:</strong> {{ $access['message'] ?? 'No status available.' }}</p>
@@ -60,11 +59,6 @@
 
             <section class="stack-sm">
                 <h2 class="h2">{{ $isChangePlanFlow ? 'Change your plan' : 'Choose your plan' }}</h2>
-                <p class="muted mb-0">
-                    {{ $isChangePlanFlow
-                        ? 'Your active plan is shown below. Select another available monthly or annual plan to switch.'
-                        : 'Select the plan you want to pay for. Monthly and annual options are shown together.' }}
-                </p>
             </section>
 
             <section class="grid-2" data-plan-grid>
@@ -90,7 +84,9 @@
                                 <h3 class="h3">{{ $plan->name }}</h3>
                                 <span class="pill">{{ ucfirst($plan->type) }}</span>
                             </div>
-                            <p class="muted mb-0">{{ $plan->description ?: 'Reliable access with full question bank support.' }}</p>
+                            @if($plan->description)
+                                <p class="muted mb-0">{{ $plan->description }}</p>
+                            @endif
                             <p class="plan-price mb-0">{{ $plan->currency }} {{ number_format((float)$plan->price, 2) }}</p>
 
                             @if($state)

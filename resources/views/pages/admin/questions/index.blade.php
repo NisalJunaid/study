@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Question Bank', 'subheading' => 'Manage MCQ and theory questions with structured filters.'])
+@extends('layouts.admin', ['heading' => 'Question Bank'])
 
 @section('content')
 <x-admin.flash />
@@ -57,7 +57,6 @@
     @if($questions->count() === 0)
         <div class="empty-state">
             <h4>No questions found</h4>
-            <p class="muted">Try adjusting filters or create a new question to start building your bank.</p>
             <a href="{{ route('admin.questions.create') }}" class="btn btn-primary">Create Question</a>
         </div>
     @else

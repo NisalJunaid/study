@@ -1,4 +1,4 @@
-@extends('layouts.admin', ['heading' => 'Edit Topic', 'subheading' => 'Update topic details and assignment.'])
+@extends('layouts.admin', ['heading' => 'Edit Topic'])
 
 @section('content')
 <x-admin.flash />

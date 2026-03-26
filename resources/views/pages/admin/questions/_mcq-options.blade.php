@@ -10,7 +10,6 @@
     <div class="row-between">
         <div class="stack-sm">
             <h3 class="h3">MCQ Options</h3>
-            <p class="panel-description">Provide at least two options and mark exactly one correct answer.</p>
         </div>
         <button type="button" class="btn" data-add-mcq-option>Add Option</button>
     </div>

@@ -1,11 +1,10 @@
-@extends('layouts.student', ['heading' => 'Quiz History', 'subheading' => 'Review previous attempts, scores, and grading status.'])
+@extends('layouts.student', ['heading' => 'Quiz History'])
 
 @section('content')
 <div class="stack-lg">
     @if($quizzes->isEmpty())
         <section class="empty-state card">
             <h4>No quiz attempts yet</h4>
-            <p class="muted">Start your first quiz to build history and unlock progress insights.</p>
             <a class="btn btn-primary" href="{{ route('student.quiz.setup') }}">Start a Quiz</a>
         </section>
     @else
