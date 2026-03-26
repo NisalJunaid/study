@@ -34,6 +34,19 @@
         $secondaryCtaLabel = 'See how it works';
         $secondaryCtaRoute = '#how-it-works';
     }
+
+    $levelModules = [
+        \App\Models\Subject::LEVEL_O => [
+            'label' => \App\Models\Subject::levelLabel(\App\Models\Subject::LEVEL_O),
+            'headline' => 'Core exam foundations',
+            'accent' => '#4f46e5',
+        ],
+        \App\Models\Subject::LEVEL_A => [
+            'label' => \App\Models\Subject::levelLabel(\App\Models\Subject::LEVEL_A),
+            'headline' => 'Advanced exam depth',
+            'accent' => '#0ea5e9',
+        ],
+    ];
 @endphp
 <body class="focus-home-page">
     <div class="focus-home-bg"></div>
@@ -51,6 +64,7 @@
 
                 <div class="focus-home-links" id="home-nav-links" data-home-nav-links>
                     <a href="{{ route('home') }}">Home</a>
+                    <a href="#coverage">Coverage</a>
                     <a href="#features">Features</a>
                     <a href="#how-it-works">How it works</a>
                     <a href="#pricing">Pricing</a>
@@ -117,6 +131,100 @@
             </aside>
         </section>
 
+        <section class="focus-home-coverage" id="coverage">
+            <div class="focus-home-coverage-head">
+                <p class="focus-home-section-label">Coverage at a glance</p>
+                <h2>Supported levels, subjects, and practice style</h2>
+                <p class="focus-home-section-copy">Build smart revision routines with broad subject coverage, mixed question formats, and guided exam pacing.</p>
+            </div>
+
+            <div class="focus-home-coverage-grid">
+                <article class="focus-home-scope-card">
+                    <header>
+                        <h3>Supported Levels & Subjects</h3>
+                        <p>Choose your exam level and revise across key subjects.</p>
+                    </header>
+
+                    <div class="focus-home-level-grid">
+                        @foreach($levelModules as $levelKey => $module)
+                            @php
+                                $entry = $subjectsByLevel[$levelKey] ?? ['count' => 0, 'subjects' => []];
+                                $accent = $module['accent'];
+                            @endphp
+                            <section
+                                class="focus-home-level-card"
+                                style="--level-accent: {{ $accent }}; --level-accent-soft: {{ \App\Models\Subject::colorToRgba($accent, 0.16) }};"
+                            >
+                                <p class="focus-home-level-badge">{{ $module['label'] }}</p>
+                                <h4>{{ $module['headline'] }}</h4>
+                                <p class="focus-home-level-meta">{{ $entry['count'] }} subjects available</p>
+
+                                <div class="focus-home-subject-chips" aria-label="{{ $module['label'] }} subjects">
+                                    @foreach($entry['subjects'] as $subject)
+                                        @php
+                                            $subjectColor = \App\Models\Subject::normalizeColor($subject['color'] ?? null, $accent);
+                                        @endphp
+                                        <span
+                                            class="focus-home-subject-chip"
+                                            style="--subject-accent: {{ $subjectColor }}; --subject-soft: {{ \App\Models\Subject::colorToRgba($subjectColor, 0.18) }};"
+                                        >
+                                            {{ $subject['name'] }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endforeach
+                    </div>
+                </article>
+
+                <article class="focus-home-practice-card">
+                    <header>
+                        <h3>Question Types</h3>
+                        <p>Practice both speed and written reasoning in one flow.</p>
+                    </header>
+
+                    <div class="focus-home-question-types">
+                        <div class="focus-home-question-pill">
+                            <span>☑</span>
+                            <div>
+                                <strong>MCQ Practice</strong>
+                                <small>Fast recall and exam-style choices</small>
+                            </div>
+                        </div>
+                        <div class="focus-home-question-pill">
+                            <span>✎</span>
+                            <div>
+                                <strong>Theory Responses</strong>
+                                <small>Structured written-answer preparation</small>
+                            </div>
+                        </div>
+                        <div class="focus-home-question-pill">
+                            <span>⇄</span>
+                            <div>
+                                <strong>Mixed Mode</strong>
+                                <small>Balanced drills for complete readiness</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="focus-home-pacing-card" aria-label="Exam pacing guidance">
+                        <div class="focus-home-pacing-heading">
+                            <h4>Practice With Pace</h4>
+                            <span>Exam pacing guide</span>
+                        </div>
+                        <p>Aim for ideal timing per question to build speed, accuracy, and confidence under real exam pressure.</p>
+                        <div class="focus-home-pacing-track" role="presentation">
+                            <span style="width: 72%"></span>
+                        </div>
+                        <div class="focus-home-pacing-stats">
+                            <small>Ideal: 01:45 / question</small>
+                            <small>Current: 01:52 avg</small>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
         <section class="focus-home-features" id="features">
             <p class="focus-home-section-label">Key benefits</p>
             <h2>Everything you need to excel</h2>
@@ -156,7 +264,7 @@
                     <h4>Platform</h4>
                     <a href="#features">Features</a>
                     <a href="#pricing">Pricing</a>
-                    <a href="#features">Subjects</a>
+                    <a href="#coverage">Subjects</a>
                 </div>
                 <div>
                     <h4>Support</h4>
