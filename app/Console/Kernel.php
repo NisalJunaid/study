@@ -13,6 +13,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('subscriptions:enforce')->hourly();
+        $schedule->command('quizzes:cleanup-abandoned')->everyFiveMinutes();
     }
 
     /**

@@ -115,8 +115,6 @@ class QuizController extends Controller
                 ]);
         }
 
-        $quizAccessService->registerQuizUsage($request->user(), $access);
-
         return redirect()->route('student.quiz.take', $quiz);
     }
 
@@ -175,6 +173,18 @@ class QuizController extends Controller
         $submitQuizAction->execute($quiz, (int) request()->user()->id);
 
         return redirect()->route('student.quiz.results', $quiz);
+    }
+
+    public function interact(Quiz $quiz): JsonResponse
+    {
+        $this->authorize('update', $quiz);
+
+        $quiz->markInteracted();
+
+        return response()->json([
+            'status' => 'ok',
+            'last_interacted_at' => optional($quiz->fresh()->last_interacted_at)->toIso8601String(),
+        ]);
     }
 
     public function results(Request $request, Quiz $quiz): View|JsonResponse

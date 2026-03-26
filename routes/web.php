@@ -99,6 +99,7 @@ Route::middleware(['auth', 'role:student', 'suspension.guard'])->group(function 
     Route::get('/quiz/setup', [StudentQuizController::class, 'create'])->name('student.quiz.setup');
     Route::post('/quiz', [StudentQuizController::class, 'store'])->middleware('quiz.access')->name('student.quiz.store');
     Route::get('/quiz/{quiz}', [StudentQuizController::class, 'show'])->name('student.quiz.take');
+    Route::post('/quiz/{quiz}/interact', [StudentQuizController::class, 'interact'])->name('student.quiz.interact');
     Route::put('/quiz/{quiz}/questions/{quizQuestion}/answer', [StudentQuizController::class, 'saveAnswer'])->name('student.quiz.answer.save');
     Route::post('/quiz/{quiz}/submit', [StudentQuizController::class, 'submit'])->name('student.quiz.submit');
     Route::get('/quiz/{quiz}/results', [StudentQuizController::class, 'results'])->name('student.quiz.results');

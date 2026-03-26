@@ -6,6 +6,7 @@ use App\Events\QuizGradingProgressUpdated;
 use App\Models\Quiz;
 use App\Models\Question;
 use App\Models\StudentAnswer;
+use App\Services\Billing\QuizAccessService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -16,6 +17,7 @@ class SubmitQuizAction
         private readonly GradeMcqQuizAction $gradeMcqQuizAction,
         private readonly AggregateQuizScoresAction $aggregateQuizScoresAction,
         private readonly QueueTheoryGradingAction $queueTheoryGradingAction,
+        private readonly QuizAccessService $quizAccessService,
     ) {
     }
 
@@ -70,11 +72,13 @@ class SubmitQuizAction
 
             $quiz->forceFill([
                 'status' => $hasTheoryQuestions ? Quiz::STATUS_GRADING : Quiz::STATUS_GRADED,
+                'last_interacted_at' => now(),
                 'submitted_at' => now(),
                 'graded_at' => $hasTheoryQuestions ? null : now(),
             ])->save();
 
             $this->aggregateQuizScoresAction->execute($quiz);
+            $this->quizAccessService->registerSubmittedQuizUsage($quiz->user, $quiz);
 
             $queuedCount = $hasTheoryQuestions
                 ? $this->queueTheoryGradingAction->execute($quiz)

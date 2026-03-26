@@ -14,15 +14,17 @@ class StudentProgressAnalyticsService
     {
         $studentId = (int) $student->id;
 
-        $baseQuizQuery = Quiz::query()->forUser($studentId);
+        $baseQuizQuery = Quiz::query()
+            ->forUser($studentId)
+            ->submittedAttempts();
 
-        $completedStatuses = [Quiz::STATUS_SUBMITTED, Quiz::STATUS_GRADING, Quiz::STATUS_GRADED];
+        $completedStatuses = Quiz::submittedAttemptStatuses();
         $gradedAnswerStatuses = [StudentAnswer::STATUS_GRADED, StudentAnswer::STATUS_OVERRIDDEN];
 
         $summary = (clone $baseQuizQuery)
             ->selectRaw('COUNT(*) as total_quizzes')
             ->selectRaw('SUM(CASE WHEN status in (?, ?, ?) THEN 1 ELSE 0 END) as completed_quizzes', $completedStatuses)
-            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as in_progress_quizzes', [Quiz::STATUS_IN_PROGRESS])
+            ->selectRaw('0 as in_progress_quizzes')
             ->selectRaw('AVG(CASE WHEN status in (?, ?, ?) AND total_possible_score > 0 AND total_awarded_score IS NOT NULL THEN (total_awarded_score / total_possible_score) * 100 END) as average_score_percentage', $completedStatuses)
             ->first();
 
@@ -46,11 +48,14 @@ class StudentProgressAnalyticsService
 
         $topicPerformance = StudentAnswer::query()
             ->join('quiz_questions', 'quiz_questions.id', '=', 'student_answers.quiz_question_id')
+            ->join('quizzes', 'quizzes.id', '=', 'quiz_questions.quiz_id')
             ->join('questions', 'questions.id', '=', 'student_answers.question_id')
             ->leftJoin('topics', 'topics.id', '=', 'questions.topic_id')
             ->join('subjects', 'subjects.id', '=', 'questions.subject_id')
             ->where('student_answers.user_id', $studentId)
             ->whereIn('student_answers.grading_status', $gradedAnswerStatuses)
+            ->whereIn('quizzes.status', $completedStatuses)
+            ->whereNotNull('quizzes.submitted_at')
             ->select(
                 'subjects.id as subject_id',
                 'subjects.name as subject_name',
@@ -89,7 +94,11 @@ class StudentProgressAnalyticsService
         $recentActivityPreview = $recentActivityAll->take(5)->values();
 
         $timingSummary = StudentAnswer::query()
-            ->where('user_id', $studentId)
+            ->join('quiz_questions', 'quiz_questions.id', '=', 'student_answers.quiz_question_id')
+            ->join('quizzes', 'quizzes.id', '=', 'quiz_questions.quiz_id')
+            ->where('student_answers.user_id', $studentId)
+            ->whereIn('quizzes.status', $completedStatuses)
+            ->whereNotNull('quizzes.submitted_at')
             ->whereNotNull('answered_on_time')
             ->selectRaw('SUM(CASE WHEN answered_on_time IS TRUE THEN 1 ELSE 0 END) as on_time_answers')
             ->selectRaw('SUM(CASE WHEN answered_on_time IS FALSE THEN 1 ELSE 0 END) as late_answers')

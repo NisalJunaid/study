@@ -55,11 +55,15 @@ class SaveQuizAnswerAction
 
         $answerAttributes['grading_status'] = StudentAnswer::STATUS_PENDING;
 
-        return $quiz->quizQuestions()
+        $answer = $quiz->quizQuestions()
             ->whereKey($quizQuestion->id)
             ->firstOrFail()
             ->studentAnswer()
             ->updateOrCreate([], $answerAttributes);
+
+        $quiz->markInteracted();
+
+        return $answer;
     }
 
     private function normalizeStructuredAnswers(array $input): array

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Actions\Student\FinalizeQuizGradingAction;
 use App\Events\TheoryAnswerGraded;
 use App\Models\Question;
+use App\Models\Quiz;
 use App\Models\StudentAnswer;
 use App\Services\AI\TheoryGraderService;
 use App\Support\DTOs\TheoryGradeResult;
@@ -37,6 +38,11 @@ class GradeTheoryAnswerJob implements ShouldQueue
 
     public function handle(TheoryGraderService $theoryGraderService, FinalizeQuizGradingAction $finalizeQuizGradingAction): void
     {
+        $quiz = Quiz::query()->find($this->quizId);
+        if (! $quiz || ! $quiz->isSubmittedAttempt()) {
+            return;
+        }
+
         $answers = StudentAnswer::query()
             ->with('quizQuestion.quiz')
             ->whereIn('id', $this->studentAnswerIds)
@@ -140,10 +146,10 @@ class GradeTheoryAnswerJob implements ShouldQueue
             }
         }
 
-        $quiz = $answers->first()?->quizQuestion?->quiz;
+        $loadedQuiz = $answers->first()?->quizQuestion?->quiz;
 
-        if ($quiz) {
-            $finalizeQuizGradingAction->execute($quiz);
+        if ($loadedQuiz) {
+            $finalizeQuizGradingAction->execute($loadedQuiz);
         }
     }
 

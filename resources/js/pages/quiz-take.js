@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const questions = JSON.parse(root.dataset.questions || '[]');
     const saveTemplate = root.dataset.saveRouteTemplate;
+    const interactionRoute = root.dataset.interactionRoute;
     const csrfToken = root.dataset.csrf;
     const quizLocked = root.dataset.locked === '1';
 
@@ -32,6 +33,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const sanitize = (value) => String(value || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const selectedOption = (question) => Number(question.answer?.selected_option_id || 0);
     const typedAnswer = (question) => (question.answer?.answer_text || '').trim();
+    let interactionTimer = null;
+
+    const reportInteraction = (immediate = false) => {
+        if (quizLocked || !interactionRoute) return;
+
+        const send = () => {
+            fetch(interactionRoute, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+            }).catch(() => null);
+        };
+
+        if (immediate) {
+            if (interactionTimer) {
+                window.clearTimeout(interactionTimer);
+                interactionTimer = null;
+            }
+
+            send();
+
+            return;
+        }
+
+        if (interactionTimer) window.clearTimeout(interactionTimer);
+        interactionTimer = window.setTimeout(send, 400);
+    };
 
     const structuredAnswers = (question) => {
         if (!question.answer) question.answer = {};
@@ -210,7 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         html += `
-            <div class="actions-row" style="justify-content:flex-end">
+            <div class="actions-row" style="justify-content:space-between">
+                <button type="button" class="btn btn-ghost" id="previous-question" ${state.currentIndex === 0 ? 'disabled' : ''}>Previous</button>
                 <button type="button" class="btn btn-primary" id="next-question" ${locked && state.currentIndex === questions.length - 1 ? 'disabled' : ''}>
                     ${state.currentIndex === questions.length - 1 ? 'Finish Quiz' : 'Next Question'}
                 </button>
@@ -232,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.addEventListener('change', (event) => {
                     question.answer = question.answer || {};
                     question.answer.selected_option_id = Number(event.target.value);
+                    reportInteraction();
                     renderQuestion();
                 });
             });
@@ -242,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             textarea?.addEventListener('input', (event) => {
                 question.answer = question.answer || {};
                 question.answer.answer_text = event.target.value;
+                reportInteraction();
             });
         }
 
@@ -250,13 +283,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.addEventListener('input', (event) => {
                     const answers = structuredAnswers(question);
                     answers[String(event.target.dataset.structuredAnswerId)] = event.target.value;
+                    reportInteraction();
                 });
             });
         }
 
+        const previousButton = document.getElementById('previous-question');
+        previousButton?.addEventListener('click', () => {
+            if (state.busy || state.currentIndex === 0) return;
+            reportInteraction(true);
+            state.currentIndex -= 1;
+            renderQuestion();
+            updateSummary();
+            startTimer();
+        });
+
         const nextButton = document.getElementById('next-question');
         nextButton?.addEventListener('click', async () => {
             if (state.busy || quizLocked) return;
+            reportInteraction(true);
 
             const activeQuestion = currentQuestion();
             if (!activeQuestion || activeQuestion.locked) {
@@ -353,6 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     els.submitForm?.addEventListener('submit', async (event) => {
+        reportInteraction(true);
         const answeredCount = questions.filter(isAnswered).length;
         const confirmed = await (overlay?.confirm({
             title: 'Submit quiz now?',

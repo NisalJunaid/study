@@ -11,6 +11,10 @@ class QueueTheoryGradingAction
 {
     public function execute(Quiz $quiz): int
     {
+        if (! $quiz->isSubmittedAttempt()) {
+            return 0;
+        }
+
         $quiz->loadMissing('quizQuestions.studentAnswer');
 
         $theoryAnswerIds = [];
