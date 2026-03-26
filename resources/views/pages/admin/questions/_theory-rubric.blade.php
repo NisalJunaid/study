@@ -1,4 +1,4 @@
-<div id="theory-fields" class="form-panel">
+<div id="theory-fields" class="form-panel" data-question-section="theory">
     <h3 class="h3">Theory Rubric</h3>
 
     <label class="field">

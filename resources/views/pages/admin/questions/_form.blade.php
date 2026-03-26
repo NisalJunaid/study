@@ -172,19 +172,43 @@
 <script>
     (() => {
         const typeField = document.querySelector('[data-question-type]');
-        const mcqFields = document.getElementById('mcq-fields');
-        const theoryFields = document.getElementById('theory-fields');
-        const structuredFields = document.getElementById('structured-fields');
+        const questionTypeSections = Array.from(document.querySelectorAll('[data-question-section]'));
         const subjectField = document.querySelector('[data-subject-select]');
         const topicField = document.querySelector('[data-topic-select]');
+        const form = typeField?.closest('form');
+
+        const ensureRequiredStateTracking = (element) => {
+            if (!element.dataset.initialRequired) {
+                element.dataset.initialRequired = element.hasAttribute('required') ? '1' : '0';
+            }
+        };
+
+        const toggleSectionInteractivity = (section, isActive) => {
+            section.style.display = isActive ? 'grid' : 'none';
+            section.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+
+            section.querySelectorAll('input, select, textarea, button').forEach((field) => {
+                ensureRequiredStateTracking(field);
+                if (!isActive) {
+                    field.dataset.disabledBeforeSectionToggle = field.disabled ? '1' : '0';
+                    field.disabled = true;
+                } else {
+                    field.disabled = field.dataset.disabledBeforeSectionToggle === '1';
+                }
+
+                if (field.dataset.initialRequired === '1') {
+                    field.required = isActive;
+                } else {
+                    field.required = false;
+                }
+            });
+        };
 
         const syncMode = () => {
-            const isMcq = typeField.value === 'mcq';
-            const isTheory = typeField.value === 'theory';
-            const isStructured = typeField.value === 'structured_response';
-            mcqFields.style.display = isMcq ? 'grid' : 'none';
-            theoryFields.style.display = isTheory ? 'grid' : 'none';
-            structuredFields.style.display = isStructured ? 'grid' : 'none';
+            questionTypeSections.forEach((section) => {
+                const isActive = section.dataset.questionSection === typeField.value;
+                toggleSectionInteractivity(section, isActive);
+            });
         };
 
         const syncTopics = () => {
@@ -238,8 +262,8 @@
                 row.querySelector('[data-structured-label]').name = `structured_parts[${index}][part_label]`;
                 row.querySelector('[data-structured-score]').name = `structured_parts[${index}][max_score]`;
                 row.querySelector('[data-structured-prompt]').name = `structured_parts[${index}][prompt_text]`;
-                row.querySelectorAll('textarea')[1].name = `structured_parts[${index}][sample_answer]`;
-                row.querySelectorAll('textarea')[2].name = `structured_parts[${index}][marking_notes]`;
+                row.querySelector('[data-structured-sample-answer]').name = `structured_parts[${index}][sample_answer]`;
+                row.querySelector('[data-structured-marking-notes]').name = `structured_parts[${index}][marking_notes]`;
             });
 
             const rows = structuredList.querySelectorAll('[data-structured-part-row]');
@@ -285,11 +309,11 @@
                     <div class="grid-2">
                         <label class="field">
                             <span>Sample answer</span>
-                            <textarea rows="3"></textarea>
+                            <textarea rows="3" data-structured-sample-answer></textarea>
                         </label>
                         <label class="field">
                             <span>Marking notes (optional)</span>
-                            <textarea rows="3"></textarea>
+                            <textarea rows="3" data-structured-marking-notes></textarea>
                         </label>
                     </div>
                     <div class="actions-row" style="justify-content:flex-end;">
@@ -298,6 +322,7 @@
                 `;
                 structuredList.appendChild(row);
                 reindexStructured();
+                syncMode();
             }
 
             if (event.target.matches('[data-remove-structured-part]')) {
@@ -308,6 +333,7 @@
 
         typeField.addEventListener('change', syncMode);
         subjectField.addEventListener('change', syncTopics);
+        form?.addEventListener('submit', syncMode);
 
         syncMode();
         syncTopics();

@@ -10,7 +10,7 @@
     ]);
 @endphp
 
-<div id="structured-fields" class="form-panel">
+<div id="structured-fields" class="form-panel" data-question-section="structured_response">
     <div class="row-between">
         <div class="stack-sm">
             <h3 class="h3">Structured Response Parts</h3>
@@ -42,11 +42,11 @@
                 <div class="grid-2">
                     <label class="field">
                         <span>Sample answer</span>
-                        <textarea rows="3" name="structured_parts[{{ $index }}][sample_answer]">{{ $part['sample_answer'] ?? '' }}</textarea>
+                        <textarea rows="3" name="structured_parts[{{ $index }}][sample_answer]" data-structured-sample-answer>{{ $part['sample_answer'] ?? '' }}</textarea>
                     </label>
                     <label class="field">
                         <span>Marking notes (optional)</span>
-                        <textarea rows="3" name="structured_parts[{{ $index }}][marking_notes]">{{ $part['marking_notes'] ?? '' }}</textarea>
+                        <textarea rows="3" name="structured_parts[{{ $index }}][marking_notes]" data-structured-marking-notes>{{ $part['marking_notes'] ?? '' }}</textarea>
                     </label>
                 </div>
 
