@@ -66,70 +66,72 @@ class StudentProgressAndHistoryTest extends TestCase
             ->get(route('student.history.index'))
             ->assertOk()
             ->assertSee((string) $subject->name)
-            ->assertSee('View Results')
+            ->assertSee('View')
             ->assertDontSee('8.00 / 9.00');
     }
 
-    public function test_progress_dashboard_displays_summary_and_weak_topics_from_student_data_only(): void
+    public function test_progress_dashboard_displays_new_summary_weak_areas_and_activity_drawer_data(): void
     {
         $student = User::factory()->create(['role' => User::ROLE_STUDENT]);
         $otherStudent = User::factory()->create(['role' => User::ROLE_STUDENT]);
 
-        $subject = Subject::factory()->create(['name' => 'Mathematics']);
-        $topicWeak = Topic::factory()->create(['subject_id' => $subject->id, 'name' => 'Algebra']);
-        $topicStrong = Topic::factory()->create(['subject_id' => $subject->id, 'name' => 'Geometry']);
+        $math = Subject::factory()->create(['name' => 'Mathematics']);
+        $english = Subject::factory()->create(['name' => 'English']);
 
-        $weakQuestion = Question::factory()->create(['subject_id' => $subject->id, 'topic_id' => $topicWeak->id, 'type' => Question::TYPE_THEORY]);
-        $strongQuestion = Question::factory()->create(['subject_id' => $subject->id, 'topic_id' => $topicStrong->id, 'type' => Question::TYPE_THEORY]);
+        $algebra = Topic::factory()->create(['subject_id' => $math->id, 'name' => 'Algebra']);
+        $geometry = Topic::factory()->create(['subject_id' => $math->id, 'name' => 'Geometry']);
+        $grammar = Topic::factory()->create(['subject_id' => $english->id, 'name' => 'Grammar']);
 
-        $quizOne = Quiz::query()->create([
-            'user_id' => $student->id,
-            'subject_id' => $subject->id,
-            'status' => Quiz::STATUS_GRADED,
-            'mode' => Quiz::MODE_THEORY,
-            'total_questions' => 2,
-            'total_possible_score' => 10,
-            'total_awarded_score' => 6,
-            'submitted_at' => now()->subDays(2),
-        ]);
+        $algebraQuestion = Question::factory()->create(['subject_id' => $math->id, 'topic_id' => $algebra->id, 'type' => Question::TYPE_THEORY]);
+        $geometryQuestion = Question::factory()->create(['subject_id' => $math->id, 'topic_id' => $geometry->id, 'type' => Question::TYPE_THEORY]);
+        $grammarQuestion = Question::factory()->create(['subject_id' => $english->id, 'topic_id' => $grammar->id, 'type' => Question::TYPE_THEORY]);
 
-        $quizTwo = Quiz::query()->create([
-            'user_id' => $student->id,
-            'subject_id' => $subject->id,
-            'status' => Quiz::STATUS_GRADED,
-            'mode' => Quiz::MODE_THEORY,
-            'total_questions' => 2,
-            'total_possible_score' => 10,
-            'total_awarded_score' => 8,
-            'submitted_at' => now()->subDay(),
-        ]);
+        $quizOne = $this->createQuiz($student->id, $math->id, 6, 10, now()->subDays(4));
+        $quizTwo = $this->createQuiz($student->id, $math->id, 5, 10, now()->subDays(3));
+        $quizThree = $this->createQuiz($student->id, $english->id, 9, 10, now()->subDays(2));
+        $quizFour = $this->createQuiz($student->id, $english->id, 8, 10, now()->subDay());
 
-        $this->createAnsweredQuizQuestion($quizOne, $weakQuestion, 1, 1.0);
-        $this->createAnsweredQuizQuestion($quizTwo, $weakQuestion, 2, 1.5);
-        $this->createAnsweredQuizQuestion($quizTwo, $strongQuestion, 3, 3.0);
+        $this->createAnsweredQuizQuestion($quizOne, $algebraQuestion, 1, 1.0, null, false);
+        $this->createAnsweredQuizQuestion($quizTwo, $algebraQuestion, 2, 1.5, null, false);
+        $this->createAnsweredQuizQuestion($quizTwo, $geometryQuestion, 3, 3.0, null, true);
+        $this->createAnsweredQuizQuestion($quizThree, $grammarQuestion, 1, 3.6, null, true);
+        $this->createAnsweredQuizQuestion($quizFour, $grammarQuestion, 2, 3.8, null, true);
 
-        $foreignQuiz = Quiz::query()->create([
-            'user_id' => $otherStudent->id,
-            'subject_id' => $subject->id,
-            'status' => Quiz::STATUS_GRADED,
-            'mode' => Quiz::MODE_THEORY,
-            'total_questions' => 1,
-            'total_possible_score' => 4,
-            'total_awarded_score' => 4,
-            'submitted_at' => now(),
-        ]);
-        $this->createAnsweredQuizQuestion($foreignQuiz, $weakQuestion, 1, 4.0, $otherStudent->id);
+        $foreignQuiz = $this->createQuiz($otherStudent->id, $math->id, 10, 10, now());
+        $this->createAnsweredQuizQuestion($foreignQuiz, $algebraQuestion, 1, 4.0, $otherStudent->id, true);
 
-        $this->actingAs($student)
+        $response = $this->actingAs($student)
             ->get(route('student.progress.index'))
             ->assertOk()
-            ->assertSee('Completed quizzes')
-            ->assertSee('2')
+            ->assertSee('Average accuracy')
+            ->assertSee('On-time answer rate')
+            ->assertSee('Weak areas to focus on')
+            ->assertSee('View All')
+            ->assertSee('All recent activity')
             ->assertSee('Algebra')
-            ->assertDontSee('100.0%');
+            ->assertDontSee('10.00 / 10.00')
+            ->assertSee('data-progress-chart="scoreTrend"', false)
+            ->assertSee('data-activity-drawer-open', false);
+
+        preg_match_all('/class="card-soft progress-activity-item"/', $response->getContent(), $matches);
+        $this->assertNotEmpty($matches);
     }
 
-    private function createAnsweredQuizQuestion(Quiz $quiz, Question $question, int $orderNo, float $score, ?int $userId = null): void
+    private function createQuiz(int $userId, int $subjectId, float $awarded, float $possible, $submittedAt): Quiz
+    {
+        return Quiz::query()->create([
+            'user_id' => $userId,
+            'subject_id' => $subjectId,
+            'status' => Quiz::STATUS_GRADED,
+            'mode' => Quiz::MODE_THEORY,
+            'total_questions' => 2,
+            'total_possible_score' => $possible,
+            'total_awarded_score' => $awarded,
+            'submitted_at' => $submittedAt,
+        ]);
+    }
+
+    private function createAnsweredQuizQuestion(Quiz $quiz, Question $question, int $orderNo, float $score, ?int $userId = null, ?bool $answeredOnTime = null): void
     {
         $quizQuestion = QuizQuestion::query()->create([
             'quiz_id' => $quiz->id,
@@ -149,6 +151,7 @@ class StudentProgressAndHistoryTest extends TestCase
             'user_id' => $userId ?? $quiz->user_id,
             'answer_text' => 'Sample answer',
             'score' => $score,
+            'answered_on_time' => $answeredOnTime,
             'grading_status' => StudentAnswer::STATUS_GRADED,
         ]);
     }

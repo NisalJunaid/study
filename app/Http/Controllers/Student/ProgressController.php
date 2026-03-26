@@ -17,7 +17,12 @@ class ProgressController extends Controller
             'summary' => $analytics['summary'],
             'subjectPerformance' => $analytics['subject_performance'],
             'weakTopics' => $analytics['weak_topics'],
+            'weakSubjects' => $analytics['weak_subjects'],
+            'topicPerformance' => $analytics['topic_performance'],
             'recentActivity' => $analytics['recent_activity'],
+            'recentActivityAll' => $analytics['recent_activity_all'],
+            'charts' => $analytics['charts'],
+            'insights' => $analytics['insights'],
         ]);
     }
 }
