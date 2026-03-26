@@ -286,4 +286,262 @@ class TheoryGradingWorkflowTest extends TestCase
         $this->assertSame('correct', $second['42']->verdict);
         Http::assertSentCount(1);
     }
+
+    public function test_short_theory_answer_uses_low_cost_model_and_records_routing_metadata(): void
+    {
+        config()->set('openai.api_key', 'test-key');
+        config()->set('openai.models.low_cost', 'gpt-4.1-mini');
+        config()->set('openai.models.high_accuracy', 'gpt-4.1');
+
+        Http::fake([
+            '*' => Http::response([
+                'output' => [[
+                    'content' => [[
+                        'text' => json_encode([
+                            'results' => [[
+                                'item_key' => '1',
+                                'verdict' => 'correct',
+                                'score' => 1,
+                                'confidence' => 0.92,
+                                'matched_points' => ['Point'],
+                                'missing_points' => [],
+                                'feedback' => 'Good.',
+                                'should_flag_for_review' => false,
+                            ]],
+                        ], JSON_THROW_ON_ERROR),
+                    ]],
+                ]],
+            ], 200),
+        ]);
+
+        $student = User::factory()->student()->create();
+        $subject = Subject::factory()->create();
+        $quiz = Quiz::query()->create([
+            'user_id' => $student->id,
+            'subject_id' => $subject->id,
+            'mode' => Quiz::MODE_THEORY,
+            'status' => Quiz::STATUS_GRADING,
+            'total_questions' => 1,
+            'total_possible_score' => 1,
+            'started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+        $question = Question::factory()->theory()->create(['subject_id' => $subject->id, 'marks' => 1]);
+        $quizQuestion = $quiz->quizQuestions()->create([
+            'question_id' => $question->id,
+            'order_no' => 1,
+            'question_snapshot' => [
+                'type' => 'theory',
+                'question_text' => 'Define osmosis.',
+                'theory_meta' => ['sample_answer' => 'Movement of water molecules.', 'max_score' => 1],
+            ],
+            'max_score' => 1,
+        ]);
+        $answer = $quizQuestion->studentAnswer()->create([
+            'question_id' => $question->id,
+            'user_id' => $student->id,
+            'answer_text' => 'Movement of water molecules.',
+            'grading_status' => StudentAnswer::STATUS_PENDING,
+        ]);
+
+        dispatch_sync(new GradeTheoryAnswerJob($quiz->id, [$answer->id]));
+        $answer->refresh();
+
+        $this->assertSame('gpt-4.1-mini', data_get($answer->ai_result_json, 'routing.model'));
+        Http::assertSent(function ($request): bool {
+            return $request['model'] === 'gpt-4.1-mini';
+        });
+    }
+
+    public function test_low_confidence_low_cost_result_escalates_to_fallback_model(): void
+    {
+        config()->set('openai.api_key', 'test-key');
+        config()->set('openai.models.low_cost', 'gpt-4.1-mini');
+        config()->set('openai.models.fallback', 'gpt-4.1');
+        config()->set('openai.confidence_manual_review_threshold', 0.6);
+        config()->set('openai.escalation_confidence_threshold', 0.7);
+
+        Http::fake([
+            '*' => Http::sequence()
+                ->push([
+                    'output' => [[
+                        'content' => [[
+                            'text' => json_encode([
+                                'results' => [[
+                                    'item_key' => '1',
+                                    'verdict' => 'partially_correct',
+                                    'score' => 1,
+                                    'confidence' => 0.2,
+                                    'matched_points' => ['one'],
+                                    'missing_points' => ['two'],
+                                    'feedback' => 'Unclear answer.',
+                                    'should_flag_for_review' => true,
+                                ]],
+                            ], JSON_THROW_ON_ERROR),
+                        ]],
+                    ]],
+                ], 200)
+                ->push([
+                    'output' => [[
+                        'content' => [[
+                            'text' => json_encode([
+                                'results' => [[
+                                    'item_key' => '1',
+                                    'verdict' => 'correct',
+                                    'score' => 2,
+                                    'confidence' => 0.93,
+                                    'matched_points' => ['complete'],
+                                    'missing_points' => [],
+                                    'feedback' => 'Well explained.',
+                                    'should_flag_for_review' => false,
+                                ]],
+                            ], JSON_THROW_ON_ERROR),
+                        ]],
+                    ]],
+                ], 200),
+        ]);
+
+        $student = User::factory()->student()->create();
+        $subject = Subject::factory()->create();
+        $quiz = Quiz::query()->create([
+            'user_id' => $student->id,
+            'subject_id' => $subject->id,
+            'mode' => Quiz::MODE_THEORY,
+            'status' => Quiz::STATUS_GRADING,
+            'total_questions' => 1,
+            'total_possible_score' => 2,
+            'started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+        $question = Question::factory()->theory()->create(['subject_id' => $subject->id, 'marks' => 2]);
+        $quizQuestion = $quiz->quizQuestions()->create([
+            'question_id' => $question->id,
+            'order_no' => 1,
+            'question_snapshot' => [
+                'type' => 'theory',
+                'question_text' => 'Explain photosynthesis in depth.',
+                'theory_meta' => ['sample_answer' => 'Detailed rubric', 'max_score' => 2],
+            ],
+            'max_score' => 2,
+        ]);
+        $answer = $quizQuestion->studentAnswer()->create([
+            'question_id' => $question->id,
+            'user_id' => $student->id,
+            'answer_text' => 'Plants use sunlight, chlorophyll, water, and carbon dioxide to produce glucose and oxygen.',
+            'grading_status' => StudentAnswer::STATUS_PENDING,
+        ]);
+
+        dispatch_sync(new GradeTheoryAnswerJob($quiz->id, [$answer->id]));
+        $answer->refresh();
+
+        $this->assertSame('gpt-4.1', data_get($answer->ai_result_json, 'routing.model'));
+        $this->assertTrue((bool) data_get($answer->ai_result_json, 'escalated'));
+        Http::assertSentCount(2);
+    }
+
+    public function test_long_theory_answer_routes_directly_to_high_accuracy_model(): void
+    {
+        config()->set('openai.api_key', 'test-key');
+        config()->set('openai.models.low_cost', 'gpt-4.1-mini');
+        config()->set('openai.models.high_accuracy', 'gpt-4.1');
+
+        Http::fake([
+            '*' => Http::response([
+                'output' => [[
+                    'content' => [[
+                        'text' => json_encode([
+                            'results' => [[
+                                'item_key' => '1',
+                                'verdict' => 'correct',
+                                'score' => 3,
+                                'confidence' => 0.9,
+                                'matched_points' => ['complete'],
+                                'missing_points' => [],
+                                'feedback' => 'Strong answer.',
+                                'should_flag_for_review' => false,
+                            ]],
+                        ], JSON_THROW_ON_ERROR),
+                    ]],
+                ]],
+            ], 200),
+        ]);
+
+        $student = User::factory()->student()->create();
+        $subject = Subject::factory()->create();
+        $quiz = Quiz::query()->create([
+            'user_id' => $student->id,
+            'subject_id' => $subject->id,
+            'mode' => Quiz::MODE_THEORY,
+            'status' => Quiz::STATUS_GRADING,
+            'total_questions' => 1,
+            'total_possible_score' => 3,
+            'started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+        $question = Question::factory()->theory()->create(['subject_id' => $subject->id, 'marks' => 3]);
+        $quizQuestion = $quiz->quizQuestions()->create([
+            'question_id' => $question->id,
+            'order_no' => 1,
+            'question_snapshot' => [
+                'type' => 'theory',
+                'question_text' => 'Explain the role of colonial trade in shaping long-term economic structures.',
+                'theory_meta' => ['sample_answer' => str_repeat('reference detail ', 35), 'max_score' => 3],
+            ],
+            'max_score' => 3,
+        ]);
+        $answer = $quizQuestion->studentAnswer()->create([
+            'question_id' => $question->id,
+            'user_id' => $student->id,
+            'answer_text' => str_repeat('detailed explanation with evidence ', 20),
+            'grading_status' => StudentAnswer::STATUS_PENDING,
+        ]);
+
+        dispatch_sync(new GradeTheoryAnswerJob($quiz->id, [$answer->id]));
+        $answer->refresh();
+
+        $this->assertSame('gpt-4.1', data_get($answer->ai_result_json, 'routing.model'));
+        Http::assertSentCount(1);
+    }
+
+    public function test_unsubmitted_quizzes_do_not_trigger_openai_grading_jobs(): void
+    {
+        config()->set('openai.api_key', 'test-key');
+
+        Http::fake();
+
+        $student = User::factory()->student()->create();
+        $subject = Subject::factory()->create();
+        $quiz = Quiz::query()->create([
+            'user_id' => $student->id,
+            'subject_id' => $subject->id,
+            'mode' => Quiz::MODE_THEORY,
+            'status' => Quiz::STATUS_IN_PROGRESS,
+            'total_questions' => 1,
+            'total_possible_score' => 2,
+            'started_at' => now(),
+            'submitted_at' => null,
+        ]);
+        $question = Question::factory()->theory()->create(['subject_id' => $subject->id, 'marks' => 2]);
+        $quizQuestion = $quiz->quizQuestions()->create([
+            'question_id' => $question->id,
+            'order_no' => 1,
+            'question_snapshot' => [
+                'type' => 'theory',
+                'question_text' => 'Explain osmosis.',
+                'theory_meta' => ['sample_answer' => 'Reference', 'max_score' => 2],
+            ],
+            'max_score' => 2,
+        ]);
+        $answer = $quizQuestion->studentAnswer()->create([
+            'question_id' => $question->id,
+            'user_id' => $student->id,
+            'answer_text' => 'test',
+            'grading_status' => StudentAnswer::STATUS_PENDING,
+        ]);
+
+        dispatch_sync(new GradeTheoryAnswerJob($quiz->id, [$answer->id]));
+
+        Http::assertNothingSent();
+        $this->assertSame(StudentAnswer::STATUS_PENDING, $answer->fresh()->grading_status);
+    }
 }
