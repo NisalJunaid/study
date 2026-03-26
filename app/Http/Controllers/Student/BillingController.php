@@ -139,17 +139,13 @@ class BillingController extends Controller
             ->findOrFail((int) $request->integer('subscription_plan_id'));
         $state = $subscriptionPaymentService->ensureUserCanSubmit($user, $plan);
 
-        $payment = $subscriptionPaymentService->submitPayment(
+        $subscriptionPaymentService->submitPayment(
             user: $user,
             plan: $plan,
             slip: $request->file('slip'),
             discountCode: $request->string('discount_code')->toString() ?: null,
             eligibilityState: $state,
         );
-
-        if ($request->filled('paid_at')) {
-            $payment->update(['paid_at' => $request->date('paid_at')]);
-        }
 
         return redirect()
             ->route('student.billing.subscription')

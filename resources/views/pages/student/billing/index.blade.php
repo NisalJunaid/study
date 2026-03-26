@@ -50,10 +50,6 @@
                 @error('slip') <small class="field-error">{{ $message }}</small> @enderror
             </label>
 
-            <label class="field">
-                <span>Paid at (optional)</span>
-                <input class="field-control" type="datetime-local" name="paid_at" value="{{ old('paid_at') }}">
-            </label>
 
             <button type="submit" class="btn btn-primary">Submit payment proof</button>
         </form>

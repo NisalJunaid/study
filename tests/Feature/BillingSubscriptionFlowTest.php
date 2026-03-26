@@ -85,6 +85,7 @@ class BillingSubscriptionFlowTest extends TestCase
             ->get(route('student.billing.payment'))
             ->assertOk()
             ->assertSee('Current due amount')
+            ->assertDontSee('Paid at')
             ->assertDontSee('Payment progress');
     }
 

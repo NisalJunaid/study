@@ -23,7 +23,7 @@ class HomepageExperienceTest extends TestCase
             ->assertOk()
             ->assertSee('Focus Lab')
             ->assertSee('Get Started')
-            ->assertSee('Login');
+            ->assertSee('Log In');
     }
 
     public function test_homepage_cta_points_students_to_quiz_builder_when_logged_in(): void
@@ -34,6 +34,18 @@ class HomepageExperienceTest extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('Build Quiz')
+            ->assertDontSee('Get Started');
+    }
+
+
+    public function test_homepage_cta_points_admins_to_admin_dashboard_when_logged_in(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee('Open Admin Dashboard')
             ->assertDontSee('Get Started');
     }
 
