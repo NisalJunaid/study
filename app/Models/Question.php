@@ -15,6 +15,7 @@ class Question extends Model
 
     public const TYPE_MCQ = 'mcq';
     public const TYPE_THEORY = 'theory';
+    public const TYPE_STRUCTURED_RESPONSE = 'structured_response';
 
     protected $fillable = [
         'subject_id',
@@ -35,6 +36,11 @@ class Question extends Model
         'is_published' => 'boolean',
     ];
 
+    public static function theoryLikeTypes(): array
+    {
+        return [self::TYPE_THEORY, self::TYPE_STRUCTURED_RESPONSE];
+    }
+
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
@@ -53,6 +59,11 @@ class Question extends Model
     public function theoryMeta(): HasOne
     {
         return $this->hasOne(TheoryQuestionMeta::class);
+    }
+
+    public function structuredParts(): HasMany
+    {
+        return $this->hasMany(StructuredQuestionPart::class)->orderBy('sort_order')->orderBy('id');
     }
 
     public function quizQuestions(): HasMany
@@ -85,6 +96,15 @@ class Question extends Model
         return $query->where('type', self::TYPE_MCQ);
     }
 
+    public function scopeTheory($query)
+    {
+        return $query->where('type', self::TYPE_THEORY);
+    }
+
+    public function scopeTheoryLike($query)
+    {
+        return $query->whereIn('type', self::theoryLikeTypes());
+    }
 
     public function scopeAvailableForStudents($query)
     {
@@ -96,10 +116,5 @@ class Question extends Model
                     ->whereNull('topic_id')
                     ->orWhereHas('topic', fn ($topicQuery) => $topicQuery->active());
             });
-    }
-
-    public function scopeTheory($query)
-    {
-        return $query->where('type', self::TYPE_THEORY);
     }
 }

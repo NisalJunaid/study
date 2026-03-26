@@ -4,6 +4,7 @@ namespace App\Actions\Student;
 
 use App\Events\QuizGradingProgressUpdated;
 use App\Models\Quiz;
+use App\Models\Question;
 use App\Models\StudentAnswer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -43,7 +44,7 @@ class SubmitQuizAction
 
             foreach ($quiz->quizQuestions as $quizQuestion) {
                 $snapshot = $quizQuestion->question_snapshot ?? [];
-                if (($snapshot['type'] ?? null) !== 'theory') {
+                if (! in_array(($snapshot['type'] ?? null), Question::theoryLikeTypes(), true)) {
                     continue;
                 }
 

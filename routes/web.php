@@ -126,6 +126,7 @@ Route::prefix('admin')
         Route::patch('questions/{question}/toggle-publish', [QuestionController::class, 'togglePublish'])->name('questions.toggle-publish');
         Route::resource('imports', ImportController::class)->only(['index', 'store', 'show']);
         Route::post('imports/{import}/confirm', [ImportController::class, 'confirm'])->name('imports.confirm');
+        Route::get('imports/sample/download', [ImportController::class, 'sample'])->name('imports.sample');
         Route::get('/theory-reviews', [TheoryReviewController::class, 'index'])->name('theory-reviews.index');
         Route::get('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'show'])->name('theory-reviews.show');
         Route::put('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'update'])->name('theory-reviews.update');

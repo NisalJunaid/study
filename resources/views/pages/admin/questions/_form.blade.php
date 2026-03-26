@@ -53,6 +53,7 @@
                 <select name="type" required data-question-type>
                     <option value="mcq" @selected($selectedType === 'mcq')>MCQ</option>
                     <option value="theory" @selected($selectedType === 'theory')>Theory</option>
+                    <option value="structured_response" @selected($selectedType === 'structured_response')>Structured Response</option>
                 </select>
                 @error('type')<small class="field-error">{{ $message }}</small>@enderror
             </label>
@@ -138,6 +139,8 @@
 
     @include('pages.admin.questions._theory-rubric')
 
+    @include('pages.admin.questions._structured-parts')
+
     <div class="actions-row sticky-form-actions">
         <a href="{{ route('admin.questions.index') }}" class="btn">Cancel</a>
         <button type="submit" class="btn btn-primary">{{ $isEdit ? 'Update Question' : 'Create Question' }}</button>
@@ -171,13 +174,17 @@
         const typeField = document.querySelector('[data-question-type]');
         const mcqFields = document.getElementById('mcq-fields');
         const theoryFields = document.getElementById('theory-fields');
+        const structuredFields = document.getElementById('structured-fields');
         const subjectField = document.querySelector('[data-subject-select]');
         const topicField = document.querySelector('[data-topic-select]');
 
         const syncMode = () => {
             const isMcq = typeField.value === 'mcq';
+            const isTheory = typeField.value === 'theory';
+            const isStructured = typeField.value === 'structured_response';
             mcqFields.style.display = isMcq ? 'grid' : 'none';
-            theoryFields.style.display = isMcq ? 'none' : 'grid';
+            theoryFields.style.display = isTheory ? 'grid' : 'none';
+            structuredFields.style.display = isStructured ? 'grid' : 'none';
         };
 
         const syncTopics = () => {
@@ -198,6 +205,7 @@
 
         const optionsList = document.getElementById('mcq-options-list');
         const template = document.getElementById('mcq-option-template');
+        const structuredList = document.getElementById('structured-parts-list');
 
         const reindexOptions = () => {
             Array.from(optionsList.querySelectorAll('[data-mcq-option-row]')).forEach((row, index) => {
@@ -225,6 +233,21 @@
             });
         };
 
+        const reindexStructured = () => {
+            Array.from(structuredList.querySelectorAll('[data-structured-part-row]')).forEach((row, index) => {
+                row.querySelector('[data-structured-label]').name = `structured_parts[${index}][part_label]`;
+                row.querySelector('[data-structured-score]').name = `structured_parts[${index}][max_score]`;
+                row.querySelector('[data-structured-prompt]').name = `structured_parts[${index}][prompt_text]`;
+                row.querySelectorAll('textarea')[1].name = `structured_parts[${index}][sample_answer]`;
+                row.querySelectorAll('textarea')[2].name = `structured_parts[${index}][marking_notes]`;
+            });
+
+            const rows = structuredList.querySelectorAll('[data-structured-part-row]');
+            rows.forEach((row) => {
+                row.querySelector('[data-remove-structured-part]').disabled = rows.length <= 1;
+            });
+        };
+
         document.addEventListener('click', (event) => {
             if (event.target.matches('[data-add-mcq-option]')) {
                 const fragment = template.content.cloneNode(true);
@@ -238,6 +261,49 @@
                 reindexOptions();
                 enforceMinimumOptionCount();
             }
+
+            if (event.target.matches('[data-add-structured-part]')) {
+                const count = structuredList.querySelectorAll('[data-structured-part-row]').length;
+                const row = document.createElement('div');
+                row.className = 'card card-soft stack-sm';
+                row.setAttribute('data-structured-part-row', '1');
+                row.innerHTML = `
+                    <div class="grid-3">
+                        <label class="field">
+                            <span>Label</span>
+                            <input type="text" maxlength="20" value="${String.fromCharCode(97 + count)}" data-structured-label required>
+                        </label>
+                        <label class="field">
+                            <span>Marks</span>
+                            <input type="number" min="0.25" step="0.25" value="1" data-structured-score required>
+                        </label>
+                    </div>
+                    <label class="field">
+                        <span>Part prompt</span>
+                        <textarea rows="3" data-structured-prompt required></textarea>
+                    </label>
+                    <div class="grid-2">
+                        <label class="field">
+                            <span>Sample answer</span>
+                            <textarea rows="3"></textarea>
+                        </label>
+                        <label class="field">
+                            <span>Marking notes (optional)</span>
+                            <textarea rows="3"></textarea>
+                        </label>
+                    </div>
+                    <div class="actions-row" style="justify-content:flex-end;">
+                        <button type="button" class="btn btn-danger" data-remove-structured-part>Remove part</button>
+                    </div>
+                `;
+                structuredList.appendChild(row);
+                reindexStructured();
+            }
+
+            if (event.target.matches('[data-remove-structured-part]')) {
+                event.target.closest('[data-structured-part-row]')?.remove();
+                reindexStructured();
+            }
         });
 
         typeField.addEventListener('change', syncMode);
@@ -247,5 +313,6 @@
         syncTopics();
         reindexOptions();
         enforceMinimumOptionCount();
+        reindexStructured();
     })();
 </script>

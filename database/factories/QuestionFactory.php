@@ -45,4 +45,11 @@ class QuestionFactory extends Factory
             'type' => Question::TYPE_THEORY,
         ]);
     }
+
+    public function structuredResponse(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => Question::TYPE_STRUCTURED_RESPONSE,
+        ]);
+    }
 }

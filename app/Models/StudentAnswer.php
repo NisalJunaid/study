@@ -22,6 +22,7 @@ class StudentAnswer extends Model
         'user_id',
         'selected_option_id',
         'answer_text',
+        'answer_json',
         'is_correct',
         'score',
         'feedback',
@@ -39,6 +40,7 @@ class StudentAnswer extends Model
     protected $casts = [
         'is_correct' => 'boolean',
         'score' => 'decimal:2',
+        'answer_json' => 'array',
         'ai_result_json' => 'array',
         'question_started_at' => 'datetime',
         'answered_at' => 'datetime',

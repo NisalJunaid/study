@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\Student\FinalizeQuizGradingAction;
 use App\Events\TheoryAnswerGraded;
+use App\Models\Question;
 use App\Models\StudentAnswer;
 use App\Services\AI\TheoryGraderService;
 use App\Support\DTOs\TheoryGradeResult;
@@ -41,7 +42,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
             ->whereIn('id', $this->studentAnswerIds)
             ->get()
             ->filter(fn (StudentAnswer $answer) => $answer->quizQuestion?->quiz_id === $this->quizId)
-            ->filter(fn (StudentAnswer $answer) => ($answer->quizQuestion->question_snapshot['type'] ?? null) === 'theory')
+            ->filter(fn (StudentAnswer $answer) => in_array(($answer->quizQuestion->question_snapshot['type'] ?? null), Question::theoryLikeTypes(), true))
             ->values();
 
         if ($answers->isEmpty()) {
@@ -54,12 +55,15 @@ class GradeTheoryAnswerJob implements ShouldQueue
             ])->save();
         });
 
-        $gradeItems = $answers->mapWithKeys(function (StudentAnswer $answer): array {
-            $snapshot = $answer->quizQuestion->question_snapshot ?? [];
-            $theoryMeta = $snapshot['theory_meta'] ?? [];
+        $gradeItems = [];
 
-            return [
-                (string) $answer->id => [
+        foreach ($answers as $answer) {
+            $snapshot = $answer->quizQuestion->question_snapshot ?? [];
+            $type = $snapshot['type'] ?? null;
+
+            if ($type === Question::TYPE_THEORY) {
+                $theoryMeta = $snapshot['theory_meta'] ?? [];
+                $gradeItems[(string) $answer->id] = [
                     'question' => (string) ($snapshot['question_text'] ?? ''),
                     'student_answer' => (string) ($answer->answer_text ?? ''),
                     'sample_answer' => (string) ($theoryMeta['sample_answer'] ?? ''),
@@ -67,14 +71,43 @@ class GradeTheoryAnswerJob implements ShouldQueue
                     'keywords' => is_array($theoryMeta['keywords'] ?? null) ? $theoryMeta['keywords'] : [],
                     'acceptable_phrases' => is_array($theoryMeta['acceptable_phrases'] ?? null) ? $theoryMeta['acceptable_phrases'] : [],
                     'max_score' => (float) ($theoryMeta['max_score'] ?? $answer->quizQuestion->max_score),
-                ],
-            ];
-        })->all();
+                ];
+                continue;
+            }
+
+            foreach ($snapshot['structured_parts'] ?? [] as $part) {
+                $partId = (string) ($part['id'] ?? '');
+                if ($partId === '') {
+                    continue;
+                }
+
+                $studentPartAnswer = (string) data_get($answer->answer_json ?? [], $partId, '');
+                $itemKey = $answer->id.'::'.$partId;
+                $gradeItems[$itemKey] = [
+                    'question' => (string) ($snapshot['question_text'] ?? '')."\nPart ".($part['part_label'] ?? '').": ".($part['prompt_text'] ?? ''),
+                    'student_answer' => $studentPartAnswer,
+                    'sample_answer' => (string) ($part['sample_answer'] ?? ''),
+                    'grading_notes' => (string) ($part['marking_notes'] ?? ''),
+                    'keywords' => [],
+                    'acceptable_phrases' => [],
+                    'max_score' => (float) ($part['max_score'] ?? 0),
+                ];
+            }
+        }
 
         try {
             $results = $theoryGraderService->gradeBatch($gradeItems);
 
             foreach ($answers as $answer) {
+                $snapshot = $answer->quizQuestion->question_snapshot ?? [];
+                $type = $snapshot['type'] ?? null;
+
+                if ($type === Question::TYPE_STRUCTURED_RESPONSE) {
+                    $this->persistStructuredResult($answer, $snapshot, $results);
+                    TheoryAnswerGraded::dispatch($answer->id);
+                    continue;
+                }
+
                 $result = $results[(string) $answer->id] ?? null;
 
                 if (! $result instanceof TheoryGradeResult) {
@@ -112,6 +145,74 @@ class GradeTheoryAnswerJob implements ShouldQueue
         if ($quiz) {
             $finalizeQuizGradingAction->execute($quiz);
         }
+    }
+
+    private function persistStructuredResult(StudentAnswer $answer, array $snapshot, array $results): void
+    {
+        $parts = collect($snapshot['structured_parts'] ?? []);
+        $partGrades = [];
+        $total = 0.0;
+        $flagManualReview = false;
+        $hasMissingPartResult = false;
+
+        foreach ($parts as $part) {
+            $partId = (string) ($part['id'] ?? '');
+            if ($partId === '') {
+                continue;
+            }
+
+            $result = $results[$answer->id.'::'.$partId] ?? null;
+
+            if (! $result instanceof TheoryGradeResult) {
+                $hasMissingPartResult = true;
+                continue;
+            }
+
+            $total += $result->score;
+            $flagManualReview = $flagManualReview || $result->shouldFlagForReview;
+            $partGrades[$partId] = [
+                'part_label' => $part['part_label'] ?? '',
+                'score' => $result->score,
+                'max_score' => (float) ($part['max_score'] ?? 0),
+                'feedback' => $result->feedback,
+                'verdict' => $result->verdict,
+                'confidence' => $result->confidence,
+            ];
+        }
+
+        if ($hasMissingPartResult) {
+            $this->markManualReview(
+                $answer,
+                'One or more structured parts could not be graded automatically; manual review is required.',
+                ['error' => 'Missing structured subpart result.']
+            );
+
+            return;
+        }
+
+        DB::transaction(function () use ($answer, $partGrades, $total, $flagManualReview): void {
+            $maxScore = (float) $answer->quizQuestion->max_score;
+            $boundedScore = max(0, min($total, $maxScore));
+            $isCorrect = $boundedScore >= $maxScore && $maxScore > 0;
+
+            $answer->forceFill([
+                'is_correct' => $isCorrect,
+                'score' => $boundedScore,
+                'feedback' => 'Structured response graded part-by-part.',
+                'grading_status' => $flagManualReview ? StudentAnswer::STATUS_MANUAL_REVIEW : StudentAnswer::STATUS_GRADED,
+                'ai_result_json' => [
+                    'kind' => 'structured_response',
+                    'parts' => $partGrades,
+                ],
+                'graded_at' => now(),
+            ])->save();
+
+            $answer->quizQuestion->forceFill([
+                'awarded_score' => $boundedScore,
+                'is_correct' => $isCorrect,
+                'requires_manual_review' => $flagManualReview,
+            ])->save();
+        });
     }
 
     private function persistGradedResult(StudentAnswer $answer, TheoryGradeResult $result): void

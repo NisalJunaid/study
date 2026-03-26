@@ -93,6 +93,9 @@
                     $yourAnswerText = $answer->answer_text;
                 }
 
+                $structuredPartGrades = collect($answer?->ai_result_json['parts'] ?? []);
+                $structuredParts = collect($snapshot['structured_parts'] ?? []);
+
                 $visualStatus = 'partial';
                 if (in_array($status, [\App\Models\StudentAnswer::STATUS_PENDING, \App\Models\StudentAnswer::STATUS_PROCESSING, \App\Models\StudentAnswer::STATUS_MANUAL_REVIEW], true)) {
                     $visualStatus = 'partial';
@@ -105,17 +108,53 @@
                 }
             @endphp
 
-            <x-student.question-result-card
-                :question-number="$quizQuestion->order_no"
-                :question-text="$snapshot['question_text'] ?? ''"
-                :answer-text="$yourAnswerText"
-                :feedback-text="$feedbackText"
-                :score-text="$scoreValue !== null ? number_format((float) $scoreValue, 2) : 'Pending'"
-                :max-score="number_format($maxScore, 2)"
-                :status="$visualStatus"
-                :answer-id="$answer?->id"
-                :is-pending="in_array($status, [\App\Models\StudentAnswer::STATUS_PENDING, \App\Models\StudentAnswer::STATUS_PROCESSING], true)"
-            />
+            @if(($snapshot['type'] ?? null) === \App\Models\Question::TYPE_STRUCTURED_RESPONSE)
+                <article class="card question-result-card result-card-{{ $visualStatus }}" @if($answer?->id) data-answer-id="{{ $answer->id }}" @endif>
+                    <div class="row-between result-question-top">
+                        <div class="row-wrap">
+                            <strong class="result-question-label">Question {{ $quizQuestion->order_no }}</strong>
+                            <x-student.score-badge :status="$visualStatus" />
+                        </div>
+                        <p class="result-question-score mb-0"><span class="js-answer-score-text">{{ $scoreValue !== null ? number_format((float) $scoreValue, 2) : 'Pending' }}</span>/{{ number_format($maxScore, 2) }}</p>
+                    </div>
+
+                    <p class="result-question-text mb-0">{{ $snapshot['question_text'] ?? '' }}</p>
+
+                    <div class="stack-sm">
+                        @foreach($structuredParts as $part)
+                            @php
+                                $partId = (string) ($part['id'] ?? '');
+                                $partGrade = $structuredPartGrades->get($partId, []);
+                                $partAnswer = data_get($answer?->answer_json ?? [], $partId);
+                            @endphp
+                            <div class="card card-soft stack-sm">
+                                <div class="row-between">
+                                    <strong>({{ $part['part_label'] ?? '?' }}) {{ $part['prompt_text'] ?? '' }}</strong>
+                                    <span class="pill">{{ number_format((float) data_get($partGrade, 'score', 0), 2) }}/{{ number_format((float) ($part['max_score'] ?? 0), 2) }}</span>
+                                </div>
+                                <p class="mb-0" style="white-space: pre-wrap;"><strong>Your answer:</strong> {{ $partAnswer ?: 'No answer.' }}</p>
+                                @if(data_get($partGrade, 'feedback'))
+                                    <p class="mb-0 muted">Feedback: {{ data_get($partGrade, 'feedback') }}</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <x-student.feedback-block :text="$feedbackText" :pending="in_array($status, [\App\Models\StudentAnswer::STATUS_PENDING, \App\Models\StudentAnswer::STATUS_PROCESSING], true)" />
+                </article>
+            @else
+                <x-student.question-result-card
+                    :question-number="$quizQuestion->order_no"
+                    :question-text="$snapshot['question_text'] ?? ''"
+                    :answer-text="$yourAnswerText"
+                    :feedback-text="$feedbackText"
+                    :score-text="$scoreValue !== null ? number_format((float) $scoreValue, 2) : 'Pending'"
+                    :max-score="number_format($maxScore, 2)"
+                    :status="$visualStatus"
+                    :answer-id="$answer?->id"
+                    :is-pending="in_array($status, [\App\Models\StudentAnswer::STATUS_PENDING, \App\Models\StudentAnswer::STATUS_PROCESSING], true)"
+                />
+            @endif
         @endforeach
     </section>
 </div>

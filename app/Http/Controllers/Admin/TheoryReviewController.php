@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Admin\OverrideTheoryGradeAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\OverrideTheoryReviewRequest;
+use App\Models\Question;
 use App\Models\StudentAnswer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -24,7 +25,10 @@ class TheoryReviewController extends Controller
                 'quizQuestion:id,quiz_id,order_no,max_score,requires_manual_review',
                 'quizQuestion.quiz:id,status,submitted_at',
             ])
-            ->whereHas('quizQuestion', fn ($builder) => $builder->whereJsonContains('question_snapshot->type', 'theory'))
+            ->whereHas('quizQuestion', fn ($builder) => $builder->where(function ($query): void {
+                $query->whereJsonContains('question_snapshot->type', Question::TYPE_THEORY)
+                    ->orWhereJsonContains('question_snapshot->type', Question::TYPE_STRUCTURED_RESPONSE);
+            }))
             ->orderByDesc('updated_at');
 
         if ($status !== '') {
@@ -95,7 +99,7 @@ class TheoryReviewController extends Controller
             'quizQuestion.quiz:id,user_id,status,total_possible_score,total_awarded_score,submitted_at,graded_at',
         ]);
 
-        abort_unless(($review->quizQuestion->question_snapshot['type'] ?? null) === 'theory', 404);
+        abort_unless(in_array(($review->quizQuestion->question_snapshot['type'] ?? null), Question::theoryLikeTypes(), true), 404);
 
         return $review;
     }

@@ -26,17 +26,13 @@ class QuestionImportService
         'difficulty',
         'marks',
         'is_published',
-        'option_a',
-        'option_b',
-        'option_c',
-        'option_d',
-        'option_e',
-        'correct_option',
-        'explanation',
-        'sample_answer',
-        'grading_notes',
-        'keywords',
-        'acceptable_phrases',
+    ];
+
+    public const SAMPLE_HEADERS = [
+        'subject', 'topic', 'type', 'question_text', 'difficulty', 'marks', 'is_published',
+        'option_a', 'option_b', 'option_c', 'option_d', 'option_e', 'correct_option', 'explanation',
+        'sample_answer', 'grading_notes', 'keywords', 'acceptable_phrases',
+        'question_group_key', 'part_label', 'part_prompt', 'part_marks', 'part_sample_answer', 'part_marking_notes',
     ];
 
     public function __construct(
@@ -61,6 +57,24 @@ class QuestionImportService
 
             return $import->refresh();
         });
+    }
+
+    public function sampleRows(string $template): array
+    {
+        if ($template === 'structured_response') {
+            return [
+                self::SAMPLE_HEADERS,
+                ['English', 'Essay Writing', 'structured_response', 'Read the passage and answer all parts.', 'medium', '6', '1', '', '', '', '', '', '', '', '', '', '', '', 'SR-1001', 'a', 'Identify two persuasive techniques used in paragraph 1.', '2', 'Technique one and technique two with evidence.', 'Award 1 mark per correctly identified technique with quote.'],
+                ['English', 'Essay Writing', 'structured_response', 'Read the passage and answer all parts.', 'medium', '6', '1', '', '', '', '', '', '', '', '', '', '', '', 'SR-1001', 'b', 'Explain how tone changes in paragraph 3.', '2', 'Tone shifts from neutral to urgent.', 'Require explanation of shift and textual support.'],
+                ['English', 'Essay Writing', 'structured_response', 'Read the passage and answer all parts.', 'medium', '6', '1', '', '', '', '', '', '', '', '', '', '', '', 'SR-1001', 'c', 'State the writer’s main conclusion.', '2', 'Conclusion argues for regular reading practice.', 'Accept paraphrased equivalent statements.'],
+            ];
+        }
+
+        return [
+            self::SAMPLE_HEADERS,
+            ['Mathematics', 'Algebra', 'mcq', 'What is 2x when x = 3?', 'easy', '1', '1', '3', '5', '6', '8', '', 'C', '2 multiplied by 3 equals 6', '', '', '', '', '', '', '', '', '', ''],
+            ['English', 'Essay Writing', 'theory', 'Explain why punctuation is important in writing.', 'medium', '3', '1', '', '', '', '', '', '', '', 'Punctuation helps clarify meaning, structure sentences, and guide pauses.', 'Expect meaning, clarity, and sentence structure.', 'clarity|meaning|structure', 'guides pauses|separates ideas', '', '', '', '', '', ''],
+        ];
     }
 
     public function validateImportRows(Import $import): void
@@ -213,8 +227,8 @@ class QuestionImportService
         $errors = [];
 
         $type = Str::lower($row['type'] ?? '');
-        if (! in_array($type, [Question::TYPE_MCQ, Question::TYPE_THEORY], true)) {
-            $errors['type'][] = 'Type must be mcq or theory.';
+        if (! in_array($type, [Question::TYPE_MCQ, Question::TYPE_THEORY, Question::TYPE_STRUCTURED_RESPONSE], true)) {
+            $errors['type'][] = 'Type must be mcq, theory, or structured_response.';
         }
 
         if (($row['question_text'] ?? '') === '') {
@@ -279,9 +293,21 @@ class QuestionImportService
             }
         }
 
-        if ($type === Question::TYPE_THEORY) {
-            if (trim((string) ($row['sample_answer'] ?? '')) === '') {
-                $errors['sample_answer'][] = 'Theory rows require sample_answer.';
+        if ($type === Question::TYPE_THEORY && trim((string) ($row['sample_answer'] ?? '')) === '') {
+            $errors['sample_answer'][] = 'Theory rows require sample_answer.';
+        }
+
+        if ($type === Question::TYPE_STRUCTURED_RESPONSE) {
+            if (trim((string) ($row['part_label'] ?? '')) === '') {
+                $errors['part_label'][] = 'Structured rows require part_label.';
+            }
+
+            if (trim((string) ($row['part_prompt'] ?? '')) === '') {
+                $errors['part_prompt'][] = 'Structured rows require part_prompt.';
+            }
+
+            if (! is_numeric($row['part_marks'] ?? null) || (float) $row['part_marks'] <= 0) {
+                $errors['part_marks'][] = 'Structured rows require part_marks > 0.';
             }
         }
 
@@ -339,7 +365,46 @@ class QuestionImportService
             $payload['acceptable_phrases'] = $this->normalizePipeString((string) ($raw['acceptable_phrases'] ?? ''));
         }
 
+        if ($type === Question::TYPE_STRUCTURED_RESPONSE) {
+            $groupKey = $this->structuredGroupKey($raw);
+            $groupRows = $row->import
+                ->importRows()
+                ->where('status', ImportRow::STATUS_VALID)
+                ->get()
+                ->filter(fn (ImportRow $candidate) => $this->structuredGroupKey($candidate->raw_payload ?? []) === $groupKey)
+                ->values();
+
+            $parts = $groupRows->map(function (ImportRow $groupRow): array {
+                $groupRaw = $groupRow->raw_payload ?? [];
+
+                return [
+                    'part_label' => trim((string) ($groupRaw['part_label'] ?? '')),
+                    'prompt_text' => trim((string) ($groupRaw['part_prompt'] ?? '')),
+                    'max_score' => (float) ($groupRaw['part_marks'] ?? 0),
+                    'sample_answer' => $this->normalizeNullableString((string) ($groupRaw['part_sample_answer'] ?? '')),
+                    'marking_notes' => $this->normalizeNullableString((string) ($groupRaw['part_marking_notes'] ?? '')),
+                ];
+            })->all();
+
+            $payload['structured_parts'] = $parts;
+            $payload['marks'] = array_sum(array_map(fn ($part) => (float) ($part['max_score'] ?? 0), $parts));
+        }
+
         return $payload;
+    }
+
+    private function structuredGroupKey(array $raw): string
+    {
+        $customKey = trim((string) ($raw['question_group_key'] ?? ''));
+
+        if ($customKey !== '') {
+            return Str::lower($customKey);
+        }
+
+        return Str::lower(trim((string) ($raw['subject'] ?? '')))
+            .'|'.Str::lower(trim((string) ($raw['topic'] ?? '')))
+            .'|'.Str::lower(trim((string) ($raw['type'] ?? '')))
+            .'|'.Str::lower(trim((string) ($raw['question_text'] ?? '')));
     }
 
     private function findSubjectByName(string $subjectName): ?Subject

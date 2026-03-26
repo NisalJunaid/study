@@ -4,6 +4,7 @@ namespace App\Actions\Student;
 
 use App\Jobs\GradeTheoryAnswerJob;
 use App\Models\Quiz;
+use App\Models\Question;
 use App\Models\StudentAnswer;
 
 class QueueTheoryGradingAction
@@ -17,7 +18,7 @@ class QueueTheoryGradingAction
         foreach ($quiz->quizQuestions as $quizQuestion) {
             $snapshot = $quizQuestion->question_snapshot ?? [];
 
-            if (($snapshot['type'] ?? null) !== 'theory') {
+            if (! in_array(($snapshot['type'] ?? null), Question::theoryLikeTypes(), true)) {
                 continue;
             }
 
