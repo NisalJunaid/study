@@ -31,6 +31,11 @@ class User extends Authenticatable
         'password',
         'role',
         'onboarding_intent',
+        'id_document_number',
+        'nationality',
+        'contact_number',
+        'id_document_path',
+        'id_document_original_name',
     ];
 
     /**
