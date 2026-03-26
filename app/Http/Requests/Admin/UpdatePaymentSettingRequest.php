@@ -18,6 +18,7 @@ class UpdatePaymentSettingRequest extends FormRequest
             'bank_account_number' => ['required', 'string', 'max:64'],
             'bank_name' => ['nullable', 'string', 'max:255'],
             'currency' => ['required', 'string', 'max:8'],
+            'registration_fee' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             'payment_instructions' => ['nullable', 'string', 'max:2000'],
         ];
     }

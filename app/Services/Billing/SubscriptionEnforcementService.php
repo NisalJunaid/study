@@ -61,6 +61,17 @@ class SubscriptionEnforcementService
             ->get();
 
         foreach ($subscriptions as $subscription) {
+            $hasRenewalPending = SubscriptionPayment::query()
+                ->where('user_id', $subscription->user_id)
+                ->where('subscription_plan_id', $subscription->subscription_plan_id)
+                ->where('status', SubscriptionPayment::STATUS_PENDING)
+                ->whereDate('billing_period_start', $today->copy()->startOfMonth()->toDateString())
+                ->exists();
+
+            if ($hasRenewalPending) {
+                continue;
+            }
+
             $subscription->update([
                 'status' => UserSubscription::STATUS_SUSPENDED,
                 'billing_status' => UserSubscription::BILLING_SUSPENDED,

@@ -7,6 +7,7 @@ use App\Http\Requests\Student\StoreSubscriptionPaymentRequest;
 use App\Models\PaymentSetting;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
+use App\Services\Billing\BillingEligibilityService;
 use App\Services\Billing\QuizAccessService;
 use App\Services\Billing\SubscriptionPaymentService;
 use App\Support\OverlayMessage;
@@ -16,7 +17,11 @@ use Illuminate\Http\Request;
 
 class BillingController extends Controller
 {
-    public function subscription(Request $request, QuizAccessService $quizAccessService): View
+    public function subscription(
+        Request $request,
+        QuizAccessService $quizAccessService,
+        BillingEligibilityService $billingEligibilityService
+    ): View
     {
         $user = $request->user();
         $plans = SubscriptionPlan::query()
@@ -30,6 +35,11 @@ class BillingController extends Controller
             $selectedType = SubscriptionPlan::TYPE_MONTHLY;
         }
 
+        $planStates = [];
+        foreach ($plans as $plan) {
+            $planStates[$plan->id] = $billingEligibilityService->describePlanState($user, $plan);
+        }
+
         return view('pages.student.billing.subscription', [
             'plans' => $plans,
             'subscription' => $user->subscriptions()->with('plan')->latest()->first(),
@@ -38,22 +48,30 @@ class BillingController extends Controller
             'trialRemaining' => $user->hasTrialRemaining(),
             'temporaryQuotaRemaining' => $user->temporaryQuizQuotaRemaining(),
             'selectedType' => $selectedType,
+            'planStates' => $planStates,
         ]);
     }
 
-    public function selectPlan(Request $request): RedirectResponse
+    public function selectPlan(Request $request, BillingEligibilityService $billingEligibilityService): RedirectResponse
     {
         $data = $request->validate([
             'subscription_plan_id' => ['required', 'integer', 'exists:subscription_plans,id'],
         ]);
 
         $plan = SubscriptionPlan::query()->active()->findOrFail((int) $data['subscription_plan_id']);
+        $state = $billingEligibilityService->describePlanState($request->user(), $plan);
+        if (! $state['can_select']) {
+            return redirect()->route('student.billing.subscription')->withErrors([
+                'subscription_plan_id' => $state['message'],
+            ]);
+        }
+
         $request->session()->put('billing.selected_plan_id', $plan->id);
 
         return redirect()->route('student.billing.payment');
     }
 
-    public function payment(Request $request): View|RedirectResponse
+    public function payment(Request $request, BillingEligibilityService $billingEligibilityService): View|RedirectResponse
     {
         $user = $request->user();
         $planId = (int) $request->session()->get('billing.selected_plan_id', 0);
@@ -74,23 +92,19 @@ class BillingController extends Controller
                 ));
         }
 
-        $discount = $plan->discounts->sortByDesc('amount')->first();
-        $basePrice = (float) $plan->price;
-        $discountAmount = 0.0;
-
-        if ($discount) {
-            $discountAmount = $discount->type === 'percentage'
-                ? round($basePrice * ((float) $discount->amount / 100), 2)
-                : min($basePrice, (float) $discount->amount);
+        $state = $billingEligibilityService->describePlanState($user, $plan);
+        if (! $state['can_select']) {
+            return redirect()
+                ->route('student.billing.subscription')
+                ->withErrors(['subscription_plan_id' => $state['message']]);
         }
 
         return view('pages.student.billing.payment', [
             'plan' => $plan,
             'setting' => PaymentSetting::current(),
-            'discount' => $discount,
-            'basePrice' => $basePrice,
-            'discountAmount' => $discountAmount,
-            'amountDue' => max(0, $basePrice - $discountAmount),
+            'breakdown' => $state['pricing'],
+            'period' => $state['period'],
+            'state' => $state,
             'isSuspended' => (bool) optional($user->subscriptions()->latest()->first())->isSuspended(),
         ]);
     }
@@ -104,12 +118,14 @@ class BillingController extends Controller
         $plan = SubscriptionPlan::query()
             ->active()
             ->findOrFail((int) $request->integer('subscription_plan_id'));
+        $state = $subscriptionPaymentService->ensureUserCanSubmit($user, $plan);
 
         $payment = $subscriptionPaymentService->submitPayment(
             user: $user,
             plan: $plan,
             slip: $request->file('slip'),
             discountCode: $request->string('discount_code')->toString() ?: null,
+            eligibilityState: $state,
         );
 
         if ($request->filled('paid_at')) {

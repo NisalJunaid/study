@@ -8,19 +8,43 @@ use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Models\UserSubscription;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 
 class SubscriptionPaymentService
 {
-    public function __construct(private readonly BillingCycleService $billingCycleService)
+    public function __construct(
+        private readonly BillingCycleService $billingCycleService,
+        private readonly BillingEligibilityService $billingEligibilityService
+    )
     {
     }
 
-    public function submitPayment(User $user, SubscriptionPlan $plan, UploadedFile $slip, ?string $discountCode = null): SubscriptionPayment
+    public function ensureUserCanSubmit(User $user, SubscriptionPlan $plan): array
     {
-        return DB::transaction(function () use ($user, $plan, $slip, $discountCode): SubscriptionPayment {
+        $state = $this->billingEligibilityService->describePlanState($user, $plan);
+        if (! $state['can_select']) {
+            throw ValidationException::withMessages([
+                'subscription_plan_id' => $state['message'],
+            ]);
+        }
+
+        return $state;
+    }
+
+    public function submitPayment(
+        User $user,
+        SubscriptionPlan $plan,
+        UploadedFile $slip,
+        ?string $discountCode = null,
+        ?array $eligibilityState = null
+    ): SubscriptionPayment
+    {
+        return DB::transaction(function () use ($user, $plan, $slip, $discountCode, $eligibilityState): SubscriptionPayment {
+            $state = $eligibilityState ?? $this->ensureUserCanSubmit($user, $plan);
             $discount = $this->resolveDiscount($plan, $discountCode);
-            $amount = $this->calculateAmount($plan, $discount);
+            $pricing = $state['pricing'];
+            $amount = (float) $pricing['total_due'];
             $subscription = $user->subscriptions()->latest()->first();
 
             if (! $subscription) {
@@ -47,14 +71,11 @@ class SubscriptionPaymentService
                 'user_subscription_id' => $subscription->id,
                 'amount' => $amount,
                 'currency' => $plan->currency,
+                'billing_period_start' => $state['period']['start']->toDateString(),
+                'billing_period_end' => $state['period']['end']->toDateString(),
                 'discount_id' => $discount?->id,
-                'discount_snapshot' => $discount ? [
-                    'id' => $discount->id,
-                    'name' => $discount->name,
-                    'code' => $discount->code,
-                    'type' => $discount->type,
-                    'amount' => (float) $discount->amount,
-                ] : null,
+                'discount_snapshot' => $pricing['discount_snapshot'],
+                'pricing_snapshot' => $pricing,
                 'status' => SubscriptionPayment::STATUS_PENDING,
                 'payment_method' => 'bank_transfer',
                 'slip_path' => $storedPath,
@@ -135,18 +156,4 @@ class SubscriptionPaymentService
         return $query->orderByDesc('amount')->first();
     }
 
-    private function calculateAmount(SubscriptionPlan $plan, ?PlanDiscount $discount): float
-    {
-        $base = (float) $plan->price;
-
-        if (! $discount) {
-            return $base;
-        }
-
-        if ($discount->type === PlanDiscount::TYPE_PERCENTAGE) {
-            return max(0, round($base - ($base * ((float) $discount->amount / 100)), 2));
-        }
-
-        return max(0, round($base - (float) $discount->amount, 2));
-    }
 }

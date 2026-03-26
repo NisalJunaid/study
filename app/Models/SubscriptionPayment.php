@@ -22,8 +22,11 @@ class SubscriptionPayment extends Model
         'user_subscription_id',
         'amount',
         'currency',
+        'billing_period_start',
+        'billing_period_end',
         'discount_id',
         'discount_snapshot',
+        'pricing_snapshot',
         'payment_method',
         'status',
         'slip_path',
@@ -42,7 +45,10 @@ class SubscriptionPayment extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'billing_period_start' => 'date',
+        'billing_period_end' => 'date',
         'discount_snapshot' => 'array',
+        'pricing_snapshot' => 'array',
         'metadata' => 'array',
         'paid_at' => 'datetime',
         'submitted_at' => 'datetime',
