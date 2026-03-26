@@ -14,10 +14,14 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use JsonException;
 use Throwable;
 
 class QuestionImportService
 {
+    private const FORMAT_CSV = 'csv';
+    private const FORMAT_JSON = 'json';
+
     private const REQUIRED_COLUMNS = [
         'subject',
         'topic',
@@ -34,6 +38,8 @@ class QuestionImportService
         'sample_answer', 'grading_notes', 'keywords', 'acceptable_phrases',
         'question_group_key', 'part_label', 'part_prompt', 'part_marks', 'part_sample_answer', 'part_marking_notes',
     ];
+
+    private const JSON_ROOT_KEY = 'questions';
 
     public function __construct(
         private readonly UpsertQuestionAction $upsertQuestionAction,
@@ -77,6 +83,29 @@ class QuestionImportService
         ];
     }
 
+    public function sampleJson(string $template = 'all'): array
+    {
+        $samples = $this->jsonQuestionSamples();
+
+        return [
+            self::JSON_ROOT_KEY => match ($template) {
+                'mcq' => [$samples['mcq']],
+                'theory' => [$samples['theory']],
+                'structured_response' => [$samples['structured_response']],
+                default => array_values($samples),
+            },
+        ];
+    }
+
+    public function sampleJsonStrings(): array
+    {
+        return [
+            'mcq' => json_encode($this->sampleJson('mcq'), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+            'theory' => json_encode($this->sampleJson('theory'), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+            'structured_response' => json_encode($this->sampleJson('structured_response'), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+        ];
+    }
+
     public function validateImportRows(Import $import): void
     {
         $import->forceFill([
@@ -91,64 +120,15 @@ class QuestionImportService
 
         $import->importRows()->delete();
 
-        $resolvedPath = Storage::path($import->file_path);
-        $file = new \SplFileObject($resolvedPath);
-        $file->setFlags(\SplFileObject::READ_CSV | \SplFileObject::SKIP_EMPTY | \SplFileObject::DROP_NEW_LINE);
+        $format = $this->detectFileFormat($import->file_name);
 
-        $headerRow = $file->fgetcsv();
-        $headers = collect($headerRow ?: [])->map(fn ($value) => Str::of((string) $value)->trim()->lower()->toString())->all();
-
-        $missingHeaders = array_values(array_diff(self::REQUIRED_COLUMNS, $headers));
-
-        if ($missingHeaders !== []) {
-            $import->forceFill([
-                'status' => Import::STATUS_FAILED,
-                'error_summary' => 'Missing required CSV columns: '.implode(', ', $missingHeaders),
-            ])->save();
-            ImportProgressUpdated::dispatch($import->id);
+        if ($format === self::FORMAT_JSON) {
+            $this->validateJsonImportRows($import);
 
             return;
         }
 
-        $totalRows = 0;
-        $validRows = 0;
-
-        foreach ($file as $lineIndex => $rowValues) {
-            if (! is_array($rowValues) || $this->isEmptyCsvRow($rowValues)) {
-                continue;
-            }
-
-            $totalRows++;
-            $rowNumber = $lineIndex + 1;
-
-            $normalized = [];
-            foreach ($headers as $idx => $header) {
-                $normalized[$header] = isset($rowValues[$idx]) ? trim((string) $rowValues[$idx]) : '';
-            }
-
-            $errors = $this->validateRow($normalized, $import);
-            $status = $errors === [] ? ImportRow::STATUS_VALID : ImportRow::STATUS_INVALID;
-
-            if ($status === ImportRow::STATUS_VALID) {
-                $validRows++;
-            }
-
-            $import->importRows()->create([
-                'row_number' => $rowNumber,
-                'raw_payload' => $normalized,
-                'validation_errors' => $errors === [] ? null : $errors,
-                'status' => $status,
-            ]);
-        }
-
-        $import->forceFill([
-            'status' => $validRows > 0 ? Import::STATUS_READY : Import::STATUS_FAILED,
-            'total_rows' => $totalRows,
-            'valid_rows' => $validRows,
-            'failed_rows' => max(0, $totalRows - $validRows),
-            'error_summary' => $totalRows === 0 ? 'The uploaded CSV has no data rows.' : null,
-        ])->save();
-        ImportProgressUpdated::dispatch($import->id);
+        $this->validateCsvImportRows($import);
     }
 
     public function processImport(Import $import, User $admin): void
@@ -312,6 +292,339 @@ class QuestionImportService
         }
 
         return $errors;
+    }
+
+    private function validateCsvImportRows(Import $import): void
+    {
+        $resolvedPath = Storage::path($import->file_path);
+        $file = new \SplFileObject($resolvedPath);
+        $file->setFlags(\SplFileObject::READ_CSV | \SplFileObject::SKIP_EMPTY | \SplFileObject::DROP_NEW_LINE);
+
+        $headerRow = $file->fgetcsv();
+        $headers = collect($headerRow ?: [])->map(fn ($value) => Str::of((string) $value)->trim()->lower()->toString())->all();
+
+        $missingHeaders = array_values(array_diff(self::REQUIRED_COLUMNS, $headers));
+        if ($missingHeaders !== []) {
+            $this->markImportAsFailed($import, 'Missing required CSV columns: '.implode(', ', $missingHeaders));
+
+            return;
+        }
+
+        $rowCandidates = [];
+        foreach ($file as $lineIndex => $rowValues) {
+            if (! is_array($rowValues) || $this->isEmptyCsvRow($rowValues)) {
+                continue;
+            }
+
+            $normalized = [];
+            foreach ($headers as $idx => $header) {
+                $normalized[$header] = isset($rowValues[$idx]) ? trim((string) $rowValues[$idx]) : '';
+            }
+
+            $rowCandidates[] = [
+                'row_number' => $lineIndex + 1,
+                'payload' => $normalized,
+            ];
+        }
+
+        $this->persistValidatedRows(
+            import: $import,
+            rowCandidates: $rowCandidates,
+            emptyMessage: 'The uploaded CSV has no data rows.',
+        );
+    }
+
+    private function validateJsonImportRows(Import $import): void
+    {
+        $resolvedPath = Storage::path($import->file_path);
+        $rawJson = file_get_contents($resolvedPath);
+
+        try {
+            $decoded = json_decode((string) $rawJson, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            $this->markImportAsFailed($import, 'Malformed JSON: '.$exception->getMessage());
+
+            return;
+        }
+
+        if (! is_array($decoded) || ! isset($decoded[self::JSON_ROOT_KEY]) || ! is_array($decoded[self::JSON_ROOT_KEY])) {
+            $this->markImportAsFailed($import, 'JSON must be an object with a "questions" array.');
+
+            return;
+        }
+
+        $rowCandidates = [];
+        $rowNumber = 1;
+
+        foreach ($decoded[self::JSON_ROOT_KEY] as $questionIndex => $questionPayload) {
+            $questionNumber = $questionIndex + 1;
+
+            if (! is_array($questionPayload)) {
+                $rowCandidates[] = [
+                    'row_number' => $rowNumber++,
+                    'payload' => ['type' => '', 'question_text' => '', 'subject' => '', 'topic' => ''],
+                    'pre_errors' => ['question' => ["Question #{$questionNumber} must be an object."]],
+                ];
+                continue;
+            }
+
+            $normalizedRows = $this->normalizeJsonQuestionRows($questionPayload, $questionNumber);
+            foreach ($normalizedRows as $normalizedRow) {
+                $rowCandidates[] = [
+                    'row_number' => $rowNumber++,
+                    'payload' => $normalizedRow['payload'],
+                    'pre_errors' => $normalizedRow['pre_errors'] ?? [],
+                ];
+            }
+        }
+
+        $this->persistValidatedRows(
+            import: $import,
+            rowCandidates: $rowCandidates,
+            emptyMessage: 'The uploaded JSON has no question records.',
+        );
+    }
+
+    private function persistValidatedRows(Import $import, array $rowCandidates, string $emptyMessage): void
+    {
+        $totalRows = 0;
+        $validRows = 0;
+
+        foreach ($rowCandidates as $candidate) {
+            $payload = $candidate['payload'];
+            $errors = $candidate['pre_errors'] ?? [];
+
+            $validationErrors = $this->validateRow($payload, $import);
+            foreach ($validationErrors as $field => $messages) {
+                $errors[$field] = array_values(array_unique(array_merge($errors[$field] ?? [], $messages)));
+            }
+
+            $status = $errors === [] ? ImportRow::STATUS_VALID : ImportRow::STATUS_INVALID;
+
+            $import->importRows()->create([
+                'row_number' => $candidate['row_number'],
+                'raw_payload' => $payload,
+                'validation_errors' => $errors === [] ? null : $errors,
+                'status' => $status,
+            ]);
+
+            $totalRows++;
+            if ($status === ImportRow::STATUS_VALID) {
+                $validRows++;
+            }
+        }
+
+        $import->forceFill([
+            'status' => $validRows > 0 ? Import::STATUS_READY : Import::STATUS_FAILED,
+            'total_rows' => $totalRows,
+            'valid_rows' => $validRows,
+            'failed_rows' => max(0, $totalRows - $validRows),
+            'error_summary' => $totalRows === 0 ? $emptyMessage : null,
+        ])->save();
+        ImportProgressUpdated::dispatch($import->id);
+    }
+
+    private function normalizeJsonQuestionRows(array $questionPayload, int $questionNumber): array
+    {
+        $base = [
+            'subject' => trim((string) ($questionPayload['subject'] ?? '')),
+            'topic' => trim((string) ($questionPayload['topic'] ?? '')),
+            'type' => Str::lower(trim((string) ($questionPayload['type'] ?? ''))),
+            'question_text' => trim((string) ($questionPayload['question_text'] ?? '')),
+            'difficulty' => trim((string) ($questionPayload['difficulty'] ?? '')),
+            'marks' => (string) ($questionPayload['marks'] ?? ''),
+            'is_published' => $this->normalizeJsonBooleanString($questionPayload['is_published'] ?? null),
+            'explanation' => trim((string) ($questionPayload['explanation'] ?? '')),
+            'sample_answer' => trim((string) ($questionPayload['sample_answer'] ?? '')),
+            'grading_notes' => trim((string) ($questionPayload['grading_notes'] ?? '')),
+            'keywords' => $this->normalizeJsonList($questionPayload['keywords'] ?? ''),
+            'acceptable_phrases' => $this->normalizeJsonList($questionPayload['acceptable_phrases'] ?? ''),
+            'question_group_key' => trim((string) ($questionPayload['question_group_key'] ?? "json-{$questionNumber}")),
+        ];
+
+        if ($base['type'] === Question::TYPE_MCQ) {
+            $options = $this->normalizeJsonMcqOptions($questionPayload['options'] ?? []);
+            foreach (['a', 'b', 'c', 'd', 'e'] as $key) {
+                $base['option_'.$key] = $options[$key] ?? '';
+            }
+            $base['correct_option'] = Str::lower(trim((string) ($questionPayload['correct_option'] ?? $questionPayload['correct_option_key'] ?? '')));
+        }
+
+        if ($base['type'] === Question::TYPE_STRUCTURED_RESPONSE) {
+            $parts = $questionPayload['structured_parts'] ?? null;
+            if (! is_array($parts) || $parts === []) {
+                return [[
+                    'payload' => array_merge($base, [
+                        'part_label' => '',
+                        'part_prompt' => '',
+                        'part_marks' => '',
+                        'part_sample_answer' => '',
+                        'part_marking_notes' => '',
+                    ]),
+                    'pre_errors' => ['structured_parts' => ['Structured response questions require a non-empty structured_parts array.']],
+                ]];
+            }
+
+            return collect($parts)->map(function ($part) use ($base): array {
+                $partData = is_array($part) ? $part : [];
+
+                return [
+                    'payload' => array_merge($base, [
+                        'part_label' => trim((string) ($partData['label'] ?? $partData['part_label'] ?? '')),
+                        'part_prompt' => trim((string) ($partData['prompt_text'] ?? $partData['part_prompt'] ?? '')),
+                        'part_marks' => (string) ($partData['max_score'] ?? $partData['part_marks'] ?? ''),
+                        'part_sample_answer' => trim((string) ($partData['sample_answer'] ?? $partData['part_sample_answer'] ?? '')),
+                        'part_marking_notes' => trim((string) ($partData['marking_notes'] ?? $partData['part_marking_notes'] ?? '')),
+                    ]),
+                ];
+            })->all();
+        }
+
+        return [[
+            'payload' => array_merge($base, [
+                'option_a' => $base['option_a'] ?? '',
+                'option_b' => $base['option_b'] ?? '',
+                'option_c' => $base['option_c'] ?? '',
+                'option_d' => $base['option_d'] ?? '',
+                'option_e' => $base['option_e'] ?? '',
+                'correct_option' => $base['correct_option'] ?? '',
+                'part_label' => '',
+                'part_prompt' => '',
+                'part_marks' => '',
+                'part_sample_answer' => '',
+                'part_marking_notes' => '',
+            ]),
+        ]];
+    }
+
+    private function normalizeJsonMcqOptions(mixed $options): array
+    {
+        if (! is_array($options)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($options as $index => $option) {
+            if (is_array($option)) {
+                $optionKey = Str::lower(trim((string) ($option['option_key'] ?? $option['key'] ?? '')));
+                $optionText = trim((string) ($option['option_text'] ?? $option['text'] ?? ''));
+            } else {
+                $optionKey = chr(ord('a') + $index);
+                $optionText = trim((string) $option);
+            }
+
+            if (in_array($optionKey, ['a', 'b', 'c', 'd', 'e'], true)) {
+                $normalized[$optionKey] = $optionText;
+            }
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeJsonList(mixed $value): string
+    {
+        if (is_array($value)) {
+            return collect($value)->map(fn ($item) => trim((string) $item))->filter()->implode('|');
+        }
+
+        return trim((string) $value);
+    }
+
+    private function normalizeJsonBooleanString(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        return trim((string) ($value ?? '0'));
+    }
+
+    private function detectFileFormat(string $fileName): string
+    {
+        return Str::lower((string) pathinfo($fileName, PATHINFO_EXTENSION)) === self::FORMAT_JSON
+            ? self::FORMAT_JSON
+            : self::FORMAT_CSV;
+    }
+
+    private function markImportAsFailed(Import $import, string $errorSummary): void
+    {
+        $import->forceFill([
+            'status' => Import::STATUS_FAILED,
+            'error_summary' => $errorSummary,
+            'total_rows' => 0,
+            'valid_rows' => 0,
+            'failed_rows' => 0,
+        ])->save();
+        ImportProgressUpdated::dispatch($import->id);
+    }
+
+    private function jsonQuestionSamples(): array
+    {
+        return [
+            'mcq' => [
+                'type' => 'mcq',
+                'subject' => 'Mathematics',
+                'topic' => 'Algebra',
+                'difficulty' => 'easy',
+                'marks' => 1,
+                'question_text' => 'What is 2x when x = 3?',
+                'explanation' => '2 multiplied by 3 equals 6.',
+                'is_published' => true,
+                'options' => [
+                    ['option_key' => 'A', 'option_text' => '3'],
+                    ['option_key' => 'B', 'option_text' => '5'],
+                    ['option_key' => 'C', 'option_text' => '6'],
+                    ['option_key' => 'D', 'option_text' => '8'],
+                ],
+                'correct_option' => 'C',
+            ],
+            'theory' => [
+                'type' => 'theory',
+                'subject' => 'English',
+                'topic' => 'Essay Writing',
+                'difficulty' => 'medium',
+                'marks' => 3,
+                'question_text' => 'Explain why punctuation is important in writing.',
+                'is_published' => true,
+                'sample_answer' => 'Punctuation clarifies meaning, structures sentences, and guides pauses for readers.',
+                'grading_notes' => 'Award for references to clarity, meaning, and sentence flow.',
+                'keywords' => ['clarity', 'meaning', 'structure'],
+                'acceptable_phrases' => ['guides pauses', 'separates ideas'],
+            ],
+            'structured_response' => [
+                'type' => 'structured_response',
+                'subject' => 'English',
+                'topic' => 'Essay Writing',
+                'difficulty' => 'medium',
+                'marks' => 6,
+                'question_text' => 'Read the passage and answer all parts.',
+                'is_published' => true,
+                'question_group_key' => 'SR-1001',
+                'structured_parts' => [
+                    [
+                        'label' => 'a',
+                        'prompt_text' => 'Identify two persuasive techniques used in paragraph 1.',
+                        'max_score' => 2,
+                        'sample_answer' => 'Technique one and technique two with evidence.',
+                        'marking_notes' => 'Award 1 mark per correctly identified technique with quote.',
+                    ],
+                    [
+                        'label' => 'b',
+                        'prompt_text' => 'Explain how tone changes in paragraph 3.',
+                        'max_score' => 2,
+                        'sample_answer' => 'Tone shifts from neutral to urgent.',
+                        'marking_notes' => 'Require explanation of shift and textual support.',
+                    ],
+                    [
+                        'label' => 'c',
+                        'prompt_text' => 'State the writer’s main conclusion.',
+                        'max_score' => 2,
+                        'sample_answer' => 'Conclusion argues for regular reading practice.',
+                        'marking_notes' => 'Accept paraphrased equivalent statements.',
+                    ],
+                ],
+            ],
+        ];
     }
 
     private function resolveQuestionForUpdate(array $payload): ?Question

@@ -12,11 +12,12 @@ use App\Services\Import\QuestionImportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ImportController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, QuestionImportService $questionImportService): View
     {
         $this->authorize('viewAny', Import::class);
 
@@ -27,21 +28,26 @@ class ImportController extends Controller
 
         return view('pages.admin.imports.index', [
             'imports' => $imports,
+            'jsonSamples' => $questionImportService->sampleJsonStrings(),
         ]);
     }
 
     public function store(StoreQuestionImportRequest $request, QuestionImportService $questionImportService): RedirectResponse
     {
+        /** @var UploadedFile $file */
+        $file = $request->importFile();
         $import = $questionImportService->createImportFromUpload(
-            $request->file('csv_file'),
+            $file,
             $request->user(),
             $request->boolean('allow_create_subjects'),
             $request->boolean('allow_create_topics'),
         );
 
+        $format = strtolower((string) pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION)) === 'json' ? 'JSON' : 'CSV';
+
         return redirect()
             ->route('admin.imports.show', $import)
-            ->with('success', 'CSV uploaded and validated. Review the preview before importing.');
+            ->with('success', "{$format} uploaded and validated. Review the preview before importing.");
     }
 
     public function show(Import $import): View
@@ -99,10 +105,26 @@ class ImportController extends Controller
         $this->authorize('viewAny', Import::class);
 
         $template = (string) $request->query('template', 'general');
+        $format = strtolower((string) $request->query('format', 'csv'));
+
+        if ($format === 'json') {
+            $payload = $questionImportService->sampleJson($template);
+            $filename = match ($template) {
+                'mcq' => 'mcq-question-sample.json',
+                'theory' => 'theory-question-sample.json',
+                'structured_response' => 'structured-response-question-sample.json',
+                default => 'question-import-sample.json',
+            };
+
+            return response()->streamDownload(function () use ($payload): void {
+                echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
+            }, $filename, [
+                'Content-Type' => 'application/json',
+            ]);
+        }
+
         $rows = $questionImportService->sampleRows($template);
-        $filename = $template === 'structured_response'
-            ? 'structured-response-sample.csv'
-            : 'question-import-sample.csv';
+        $filename = $template === 'structured_response' ? 'structured-response-sample.csv' : 'question-import-sample.csv';
 
         return response()->streamDownload(function () use ($rows): void {
             $stream = fopen('php://output', 'w');
