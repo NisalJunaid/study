@@ -166,11 +166,11 @@ class StudentProgressAnalyticsService
             ->groupBy(fn (Quiz $quiz) => optional($quiz->submitted_at)->copy()->startOfWeek()->format('Y-m-d'))
             ->map(fn (Collection $group) => $group->count());
 
-        foreach ($quizCountsByWeek as $weekStart => $count) {
-            if ($weekBuckets->has($weekStart)) {
-                $weekBuckets[$weekStart]['count'] = (int) $count;
-            }
-        }
+        $weekBuckets = $weekBuckets->map(function (array $bucket, string $weekStart) use ($quizCountsByWeek): array {
+            $bucket['count'] = (int) $quizCountsByWeek->get($weekStart, 0);
+
+            return $bucket;
+        });
 
         $quizzesByPeriod = [
             'labels' => $weekBuckets->pluck('label')->values()->all(),
