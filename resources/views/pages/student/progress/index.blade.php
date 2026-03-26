@@ -8,28 +8,28 @@
             :value="$summary['total_quizzes']"
         />
         <x-student.metric-card
-            title="Completed quizzes"
+            title="Completed"
             :value="$summary['completed_quizzes']"
         />
         <x-student.metric-card
-            title="In progress"
+            title="Active"
             :value="$summary['in_progress_quizzes']"
         />
         <x-student.metric-card
-            title="Average score"
-            :value="$summary['average_score_percentage'] !== null ? number_format((float) $summary['average_score_percentage'], 1).'%' : 'Not enough data'"
+            title="Avg score"
+            :value="$summary['average_score_percentage'] !== null ? number_format((float) $summary['average_score_percentage'], 1).'%' : '—'"
         />
     </section>
 
     <section class="card stack-md section-surface-primary">
         <div class="row-between">
-            <h2 class="section-heading">Performance by subject</h2>
+            <h2 class="section-heading">Subject performance</h2>
             <span class="pill">{{ $subjectPerformance->count() }} subjects</span>
         </div>
 
         @if($subjectPerformance->isEmpty())
             <div class="empty-state">
-                <h4>No subject performance yet</h4>
+                <h4>No performance yet</h4>
             </div>
         @else
             <div class="stack-md">
@@ -43,7 +43,7 @@
                                 $subjectColor = \App\Models\Subject::normalizeColor($subject->color);
                             @endphp
                             <strong class="row-wrap"><span class="subject-color-dot" style="--subject-accent: {{ $subjectColor }};" aria-hidden="true"></span>{{ $subject->name }}</strong>
-                            <span class="muted">{{ $average !== null ? number_format($average, 1).'%' : 'Pending' }} · {{ $subject->attempts }} attempt(s)</span>
+                            <span class="muted">{{ $average !== null ? number_format($average, 1).'%' : 'Pending' }} · {{ $subject->attempts }} attempts</span>
                         </div>
                         <div class="progress-track">
                             <div class="progress-fill" style="width: {{ $average !== null ? min(100, max(0, $average)) : 0 }}%; background: linear-gradient(90deg, {{ \App\Models\Subject::colorToRgba($subjectColor, 0.7) }}, {{ $subjectColor }});"></div>
@@ -57,13 +57,13 @@
     <section class="card-grid-progress">
         <article class="card stack-md section-surface-secondary">
             <div class="row-between">
-                <h2 class="section-heading">Weak topics</h2>
-                <span class="pill pill-muted">Lowest averages</span>
+                <h2 class="section-heading">Needs focus</h2>
+                <span class="pill pill-muted">Lowest scores</span>
             </div>
 
             @if($weakTopics->isEmpty())
                 <div class="empty-state">
-                    <h4>No weak topics yet</h4>
+                    <h4>No topics yet</h4>
                 </div>
             @else
                 <div class="stack-sm">
@@ -71,7 +71,7 @@
                         <div class="row-between card-soft" style="padding:.75rem;border-radius:.75rem;">
                             <div>
                                 <strong>{{ $topic->name }}</strong>
-                                <p class="muted" style="margin:.2rem 0 0">{{ $topic->attempts }} graded answer(s)</p>
+                                <p class="muted" style="margin:.2rem 0 0">{{ $topic->attempts }} graded answers</p>
                             </div>
                             <strong>{{ number_format((float) $topic->average_score, 1) }}%</strong>
                         </div>
@@ -82,13 +82,13 @@
 
         <article class="card stack-md section-surface-tertiary">
             <div class="row-between">
-                <h2 class="section-heading">Recent activity</h2>
+                <h2 class="section-heading">Recent</h2>
                 <span class="pill">Last 8</span>
             </div>
 
             @if($recentActivity->isEmpty())
                 <div class="empty-state">
-                    <h4>No recent submissions</h4>
+                    <h4>No submissions</h4>
                 </div>
             @else
                 <div class="stack-sm">

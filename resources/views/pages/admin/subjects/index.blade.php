@@ -1,12 +1,12 @@
-@extends('layouts.admin', ['heading' => 'Manage Subjects'])
+@extends('layouts.admin', ['heading' => 'Subjects'])
 
 @section('content')
 <x-admin.flash />
 
 <div class="card stack-md">
     <div class="row-between">
-        <h3 class="h2">Subject Directory</h3>
-        <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary">+ New Subject</a>
+        <h3 class="h2">All subjects</h3>
+        <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary">New subject</a>
     </div>
 
     <form method="GET" class="filter-row-wide">
@@ -22,14 +22,14 @@
             <option value="active" @selected($filters['status'] === 'active')>Active</option>
             <option value="inactive" @selected($filters['status'] === 'inactive')>Inactive</option>
         </select>
-        <button type="submit" class="btn">Filter</button>
+        <button type="submit" class="btn">Apply</button>
         <a href="{{ route('admin.subjects.index') }}" class="btn">Reset</a>
     </form>
 
     @if($subjects->count() === 0)
         <div class="empty-state">
             <h4>No subjects found</h4>
-            <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary">Create Subject</a>
+            <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary">New subject</a>
         </div>
     @else
         <div class="table-wrap">

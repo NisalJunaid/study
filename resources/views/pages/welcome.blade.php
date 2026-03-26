@@ -31,7 +31,7 @@
         <header class="landing-surface row-between" style="align-items:flex-start;">
             <div class="stack-sm">
                 <span class="pill">Focus Lab</span>
-                <h1 class="h0">Structured O'Level & A'Level revision.</h1>
+                <h1 class="h0">Focused O'Level & A'Level prep.</h1>
             </div>
             <div class="actions-inline">
                 <a href="{{ $primaryCtaRoute }}" class="btn btn-primary">{{ $primaryCtaLabel }}</a>
@@ -41,7 +41,7 @@
 
         <section class="landing-hero">
             <article class="landing-surface stack-md">
-                <h2 class="h1">Guided quiz practice</h2>
+                <h2 class="h1">Smart quiz prep</h2>
                 <div class="actions-inline" style="justify-content:flex-start;">
                     <a href="{{ $primaryCtaRoute }}" class="btn btn-primary">{{ $primaryCtaLabel }}</a>
                     <a href="{{ $secondaryCtaRoute }}" class="btn">{{ $secondaryCtaLabel }}</a>
@@ -58,7 +58,7 @@
         </section>
 
         <section class="landing-surface stack-sm">
-            <h2 class="h1">How Focus Lab works</h2>
+            <h2 class="h1">How it works</h2>
             <div class="landing-steps">
                 <article class="landing-step"><p class="pill">Step 1</p><h3 class="h3">Choose level</h3></article>
                 <article class="landing-step"><p class="pill">Step 2</p><h3 class="h3">Build quiz</h3></article>
@@ -69,7 +69,7 @@
 
         <section class="landing-grid-2">
             <article class="landing-surface stack-sm">
-                <h2 class="h1">For learners</h2>
+                <h2 class="h1">For students</h2>
                 <div class="stack-sm">
                     <div class="summary-tile"><p class="mb-0">Subject and topic-based practice</p></div>
                     <div class="summary-tile"><p class="mb-0">MCQ, theory, and mixed quizzes</p></div>
@@ -88,7 +88,7 @@
         </section>
 
         <section class="landing-surface stack-sm">
-            <h2 class="h1">Start free, then subscribe</h2>
+            <h2 class="h1">Start now</h2>
             <div class="actions-inline" style="justify-content:flex-start;">
                 <a href="{{ $primaryCtaRoute }}" class="btn btn-primary">{{ $primaryCtaLabel }}</a>
                 <a href="{{ $secondaryCtaRoute }}" class="btn">{{ $secondaryCtaLabel }}</a>
@@ -96,7 +96,7 @@
         </section>
 
         <footer class="landing-surface landing-footer">
-            <p class="mb-0">© {{ now()->year }} Focus Lab • Study support for O'Level and A'Level learners.</p>
+            <p class="mb-0">© {{ now()->year }} Focus Lab • O'Level & A'Level study support.</p>
             <div class="actions-inline">
                 <a class="btn btn-ghost" href="{{ route('home') }}">Home</a>
                 <a class="btn btn-ghost" href="{{ $secondaryCtaRoute }}">Account</a>

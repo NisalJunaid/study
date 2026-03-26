@@ -1,4 +1,4 @@
-@extends('layouts.student', ['heading' => 'Build Your Quiz'])
+@extends('layouts.student', ['heading' => 'Build Quiz'])
 
 @section('content')
 @php
@@ -15,31 +15,31 @@
 <div class="stack-lg" id="guided-quiz-setup" data-multi-mode-initial="{{ $isMultiMode ? '1' : '0' }}" data-initial-step="{{ $initialStep }}">
     @if(($billingAccess['allowed'] ?? false) === false)
         <section class="card stack-sm section-surface-secondary">
-            <strong>Quiz access is currently limited.</strong>
-            <p class="mb-0">{{ $billingAccess['message'] ?? 'Please open billing to continue.' }}</p>
-            <a class="btn mt-2" href="{{ route('student.billing.subscription') }}">Open Billing</a>
+            <strong>Quiz access is limited.</strong>
+            <p class="mb-0">{{ $billingAccess['message'] ?? 'Open billing to continue.' }}</p>
+            <a class="btn mt-2" href="{{ route('student.billing.subscription') }}">Open billing</a>
         </section>
     @elseif(($billingAccess['access_type'] ?? null) === \App\Services\Billing\QuizAccessService::ACCESS_FREE_TRIAL)
         <section class="card stack-sm section-surface-secondary">
-            <strong>Free trial available:</strong> You can start one quiz with up to 10 questions.
+            <strong>Free trial:</strong> You can start one quiz with up to 10 questions.
         </section>
     @elseif(($billingAccess['access_type'] ?? null) === \App\Services\Billing\QuizAccessService::ACCESS_TEMPORARY_PENDING_PAYMENT)
         <section class="card stack-sm section-surface-secondary">
-            <strong>Payment submitted — temporary access unlocked.</strong>
+            <strong>Payment received — access active.</strong>
             <p class="mb-0">{{ $billingAccess['message'] }}</p>
         </section>
     @endif
 
     <x-guided.stepper
-        :steps="['Select level(s)', 'Select subject(s)', 'Choose topics', 'Configure settings', 'Review & start']"
+        :steps="['Levels', 'Subjects', 'Topics', 'Settings', 'Review']"
         :current="$initialStep"
-        label="Quiz setup progress"
+        label="Setup progress"
     />
 
     @if($subjects->isEmpty())
         <section class="empty-state card">
-            <h4>No subjects available right now</h4>
-            <a class="btn" href="{{ route('student.levels.index') }}">Back to levels</a>
+            <h4>No subjects available</h4>
+            <a class="btn" href="{{ route('student.levels.index') }}">Back</a>
         </section>
     @else
         <form class="card stack-lg quiz-panel guided-form" method="POST" action="{{ route('student.quiz.store') }}" id="guided-quiz-form">
@@ -47,10 +47,10 @@
             <input type="hidden" name="guided_step" value="{{ $initialStep }}" data-guided-current-step-input>
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="1">
-                <h2 class="section-heading">Step 1: Select level(s)</h2>
+                <h2 class="section-heading">Step 1: Levels</h2>
 
                 <label class="toggle-row" style="gap:.55rem; max-width:fit-content;">
-                    <span class="text-sm text-strong">Multi-level mode</span>
+                    <span class="text-sm text-strong">Multi-level</span>
                     <span class="switch">
                         <input type="checkbox" id="multi-level-mode" @checked(count($selectedLevelValues) > 1)>
                         <span class="switch-track"></span>
@@ -81,10 +81,10 @@
             <section class="stack-sm section-block guided-step-pane" data-guided-step="2" hidden>
                 <div class="row-between">
                     <div>
-                        <h2 class="section-heading">Step 2: Select subject(s)</h2>
+                        <h2 class="section-heading">Step 2: Subjects</h2>
                     </div>
                     <label class="toggle-row" style="gap:.55rem">
-                        <span class="text-sm text-strong">Multi-subject mode</span>
+                        <span class="text-sm text-strong">Multi-subject</span>
                         <span class="switch">
                             <input type="checkbox" id="multi-subject-mode" name="multi_subject_mode" value="1" @checked($isMultiMode)>
                             <span class="switch-track"></span>
@@ -115,7 +115,7 @@
                                 <span class="select-title row-wrap"><span class="subject-color-dot" aria-hidden="true"></span>{{ $subject->name }}</span>
                                 <span class="pill">{{ \App\Models\Subject::levelLabel($subject->level) }}</span>
                             </div>
-                            <span class="muted text-sm">{{ $subject->available_questions_count }} question(s)</span>
+                            <span class="muted text-sm">{{ $subject->available_questions_count }} questions</span>
                         </label>
                     @endforeach
                 </div>
@@ -125,10 +125,10 @@
             </section>
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="3" hidden>
-                <h2 class="section-heading">Step 3: Select topics (optional)</h2>
+                <h2 class="section-heading">Step 3: Topics (optional)</h2>
                 <label class="field input-field">
-                    <span>Search topics across selected subjects</span>
-                    <input type="search" class="field-control input-control" id="shared-topic-search" placeholder="Search topics..." autocomplete="off">
+                    <span>Search topics</span>
+                    <input type="search" class="field-control input-control" id="shared-topic-search" placeholder="Search" autocomplete="off">
                 </label>
 
                 <div class="stack-md" id="topic-groups">
@@ -141,7 +141,7 @@
                             </div>
 
                             @if($subject->topics->isEmpty())
-                                <p class="muted text-sm mb-0">No active topics yet for this subject.</p>
+                                <p class="muted text-sm mb-0">No active topics.</p>
                             @else
                                 <div class="topic-chip-grid topic-scroll-list" data-topic-list>
                                     @foreach($subject->topics as $topic)
@@ -152,7 +152,7 @@
                                         </label>
                                     @endforeach
                                 </div>
-                                <small class="muted text-xs" data-topic-empty-message style="display:none;">No topics match your search.</small>
+                                <small class="muted text-xs" data-topic-empty-message style="display:none;">No matches.</small>
                             @endif
                         </article>
                     @endforeach
@@ -162,7 +162,7 @@
             </section>
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="4" hidden>
-                <h2 class="section-heading">Step 4: Configure quiz settings</h2>
+                <h2 class="section-heading">Step 4: Settings</h2>
                 <div class="grid-3">
                     <label class="field input-field">
                         <span>Mode</span>
@@ -175,16 +175,16 @@
                     </label>
 
                     <label class="field input-field">
-                        <span>Question count</span>
+                        <span>Questions</span>
                         <input type="number" class="input-control" min="1" max="100" name="question_count" value="{{ old('question_count', $defaultQuestionCount) }}" required>
-                        <small class="muted text-xs">Default is 50. Free trial is capped at 10 questions.</small>
+                        <small class="muted text-xs">Default: 50. Trial cap: 10.</small>
                         @error('question_count') <small class="field-error">{{ $message }}</small> @enderror
                     </label>
 
                     <label class="field input-field">
                         <span>Difficulty</span>
                         <select name="difficulty" class="input-control">
-                            <option value="">Mixed / All</option>
+                            <option value="">All</option>
                             @foreach($difficulties as $difficulty)
                                 <option value="{{ $difficulty }}" @selected($selectedDifficulty === $difficulty)>{{ ucfirst($difficulty) }}</option>
                             @endforeach
@@ -196,14 +196,14 @@
             </section>
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="5" hidden>
-                <h2 class="section-heading">Step 5: Review and start</h2>
+                <h2 class="section-heading">Step 5: Review</h2>
                 <div class="guided-summary" data-quiz-summary></div>
             </section>
 
             <div class="actions-row row-between">
                 <button type="button" class="btn" data-guided-prev hidden disabled>Back</button>
                 <div class="row-wrap">
-                    <button type="button" class="btn btn-primary" data-guided-next>Next</button>
+                    <button type="button" class="btn btn-primary" data-guided-next>Continue</button>
                     <button type="submit" class="btn btn-primary" data-guided-submit hidden disabled>Start Quiz</button>
                 </div>
             </div>
