@@ -35,6 +35,7 @@
             <option value="">All types</option>
             <option value="mcq" @selected($filters['type'] === 'mcq')>MCQ</option>
             <option value="theory" @selected($filters['type'] === 'theory')>Theory</option>
+            <option value="structured_response" @selected($filters['type'] === 'structured_response')>Structured Response</option>
         </select>
 
         <select name="difficulty">
@@ -83,6 +84,9 @@
                             @endif
                             @if($question->type === 'theory')
                                 <div class="muted text-sm">Rubric set</div>
+                            @endif
+                            @if($question->type === 'structured_response')
+                                <div class="muted text-sm">{{ $question->structuredParts->count() }} structured part(s)</div>
                             @endif
                         </td>
                         <td>

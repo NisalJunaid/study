@@ -19,7 +19,7 @@ class SubjectController extends Controller
                 'topics as active_topics_count' => fn ($query) => $query->active(),
                 'questions as available_questions_count' => fn ($query) => $query->availableForStudents(),
                 'questions as mcq_questions_count' => fn ($query) => $query->availableForStudents()->mcq(),
-                'questions as theory_questions_count' => fn ($query) => $query->availableForStudents()->theory(),
+                'questions as theory_questions_count' => fn ($query) => $query->availableForStudents()->theoryLike(),
             ])
             ->orderBy('sort_order')
             ->orderBy('name')

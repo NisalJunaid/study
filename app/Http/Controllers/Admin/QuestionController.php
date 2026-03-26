@@ -26,6 +26,7 @@ class QuestionController extends Controller
                 'topic:id,name',
                 'mcqOptions:id,question_id,option_key,is_correct',
                 'theoryMeta:id,question_id,max_score',
+                'structuredParts:id,question_id,part_label,max_score',
             ]);
 
         if ($search = trim((string) $request->string('q'))) {
@@ -115,6 +116,7 @@ class QuestionController extends Controller
         $question->load([
             'mcqOptions' => fn ($query) => $query->orderBy('sort_order')->orderBy('id'),
             'theoryMeta',
+            'structuredParts',
         ]);
 
         return view('pages.admin.questions.edit', [

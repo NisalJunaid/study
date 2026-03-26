@@ -12,6 +12,7 @@ use App\Services\Import\QuestionImportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ImportController extends Controller
 {
@@ -91,5 +92,26 @@ class ImportController extends Controller
         return redirect()
             ->route('admin.imports.show', $import)
             ->with('success', 'Import started. This page updates live as progress events arrive.');
+    }
+
+    public function sample(Request $request, QuestionImportService $questionImportService): StreamedResponse
+    {
+        $this->authorize('viewAny', Import::class);
+
+        $template = (string) $request->query('template', 'general');
+        $rows = $questionImportService->sampleRows($template);
+        $filename = $template === 'structured_response'
+            ? 'structured-response-sample.csv'
+            : 'question-import-sample.csv';
+
+        return response()->streamDownload(function () use ($rows): void {
+            $stream = fopen('php://output', 'w');
+            foreach ($rows as $row) {
+                fputcsv($stream, $row);
+            }
+            fclose($stream);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }

@@ -9,6 +9,15 @@
             </div>
         </div>
 
+
+        <div class="card card-soft stack-sm" style="margin-bottom: 1rem;">
+            <p class="muted mb-0">Download template CSV files before preparing bulk uploads.</p>
+            <div class="actions-inline">
+                <a class="btn" href="{{ route('admin.imports.sample', ['template' => 'general']) }}">Download General Sample CSV</a>
+                <a class="btn" href="{{ route('admin.imports.sample', ['template' => 'structured_response']) }}">Download Structured Response Sample CSV</a>
+            </div>
+        </div>
+
         <form method="POST" action="{{ route('admin.imports.store') }}" enctype="multipart/form-data" class="stack-md">
             @csrf
 

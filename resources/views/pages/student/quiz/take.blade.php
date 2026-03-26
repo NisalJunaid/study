@@ -24,9 +24,16 @@
                 'option_key' => $option['option_key'],
                 'option_text' => $option['option_text'],
             ])->values()->all(),
+            'structured_parts' => collect($snapshot['structured_parts'] ?? [])->map(fn ($part) => [
+                'id' => $part['id'],
+                'part_label' => $part['part_label'],
+                'prompt_text' => $part['prompt_text'],
+                'max_score' => $part['max_score'],
+            ])->values()->all(),
             'answer' => [
                 'selected_option_id' => $answer?->selected_option_id,
                 'answer_text' => $answer?->answer_text,
+                'answer_json' => $answer?->answer_json ?? [],
                 'question_started_at' => optional($answer?->question_started_at)->toIso8601String(),
                 'answered_at' => optional($answer?->answered_at)->toIso8601String(),
                 'answer_duration_seconds' => $answer?->answer_duration_seconds,

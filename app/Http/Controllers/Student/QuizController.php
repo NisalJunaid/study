@@ -128,7 +128,7 @@ class QuizController extends Controller
             'subject:id,name',
             'quizQuestions' => fn ($query) => $query
                 ->orderBy('order_no')
-                ->with('studentAnswer:id,quiz_question_id,selected_option_id,answer_text,grading_status,updated_at,question_started_at,answered_at,ideal_time_seconds,answer_duration_seconds,answered_on_time'),
+                ->with('studentAnswer:id,quiz_question_id,selected_option_id,answer_text,answer_json,grading_status,updated_at,question_started_at,answered_at,ideal_time_seconds,answer_duration_seconds,answered_on_time'),
         ]);
 
         return view('pages.student.quiz.take', [
@@ -186,7 +186,7 @@ class QuizController extends Controller
             'quizQuestions' => fn ($query) => $query
                 ->orderBy('order_no')
                 ->with([
-                    'studentAnswer:id,quiz_question_id,selected_option_id,answer_text,is_correct,score,feedback,grading_status,ai_result_json,graded_at,question_started_at,answered_at,ideal_time_seconds,answer_duration_seconds,answered_on_time',
+                    'studentAnswer:id,quiz_question_id,selected_option_id,answer_text,answer_json,is_correct,score,feedback,grading_status,ai_result_json,graded_at,question_started_at,answered_at,ideal_time_seconds,answer_duration_seconds,answered_on_time',
                     'studentAnswer.selectedOption:id,option_key,option_text',
                 ]),
         ]);

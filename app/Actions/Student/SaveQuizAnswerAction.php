@@ -2,6 +2,7 @@
 
 namespace App\Actions\Student;
 
+use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\QuizQuestion;
 use App\Models\StudentAnswer;
@@ -36,14 +37,20 @@ class SaveQuizAnswerAction
             'answered_on_time' => $payload['answered_on_time'] ?? null,
         ];
 
-        if ($questionType === 'mcq') {
+        if ($questionType === Question::TYPE_MCQ) {
             $answerAttributes['selected_option_id'] = $payload['selected_option_id'] ?? null;
             $answerAttributes['answer_text'] = null;
+            $answerAttributes['answer_json'] = null;
+        } elseif ($questionType === Question::TYPE_STRUCTURED_RESPONSE) {
+            $answerAttributes['selected_option_id'] = null;
+            $answerAttributes['answer_text'] = null;
+            $answerAttributes['answer_json'] = $this->normalizeStructuredAnswers($payload['structured_answers'] ?? []);
         } else {
             $answerAttributes['answer_text'] = isset($payload['answer_text'])
                 ? trim((string) $payload['answer_text'])
                 : null;
             $answerAttributes['selected_option_id'] = null;
+            $answerAttributes['answer_json'] = null;
         }
 
         $answerAttributes['grading_status'] = StudentAnswer::STATUS_PENDING;
@@ -53,5 +60,12 @@ class SaveQuizAnswerAction
             ->firstOrFail()
             ->studentAnswer()
             ->updateOrCreate([], $answerAttributes);
+    }
+
+    private function normalizeStructuredAnswers(array $input): array
+    {
+        return collect($input)
+            ->mapWithKeys(fn ($value, $key) => [(string) $key => trim((string) $value)])
+            ->all();
     }
 }

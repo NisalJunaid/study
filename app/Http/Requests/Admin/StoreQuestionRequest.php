@@ -24,7 +24,7 @@ class StoreQuestionRequest extends FormRequest
                 'integer',
                 Rule::exists('topics', 'id')->where(fn ($query) => $query->where('subject_id', $this->integer('subject_id'))),
             ],
-            'type' => ['required', Rule::in([Question::TYPE_MCQ, Question::TYPE_THEORY])],
+            'type' => ['required', Rule::in([Question::TYPE_MCQ, Question::TYPE_THEORY, Question::TYPE_STRUCTURED_RESPONSE])],
             'question_text' => ['required', 'string'],
             'question_image' => ['nullable', 'image', 'max:2048'],
             'remove_image' => ['nullable', 'boolean'],
@@ -42,6 +42,13 @@ class StoreQuestionRequest extends FormRequest
             'grading_notes' => ['nullable', 'string'],
             'keywords' => ['nullable', 'string'],
             'acceptable_phrases' => ['nullable', 'string'],
+
+            'structured_parts' => ['required_if:type,'.Question::TYPE_STRUCTURED_RESPONSE, 'array', 'min:1'],
+            'structured_parts.*.part_label' => ['required_if:type,'.Question::TYPE_STRUCTURED_RESPONSE, 'string', 'max:20'],
+            'structured_parts.*.prompt_text' => ['required_if:type,'.Question::TYPE_STRUCTURED_RESPONSE, 'string'],
+            'structured_parts.*.max_score' => ['required_if:type,'.Question::TYPE_STRUCTURED_RESPONSE, 'numeric', 'min:0.25'],
+            'structured_parts.*.sample_answer' => ['nullable', 'string'],
+            'structured_parts.*.marking_notes' => ['nullable', 'string'],
         ];
     }
 
@@ -50,6 +57,10 @@ class StoreQuestionRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             if ($this->input('type') === Question::TYPE_MCQ) {
                 $this->validateMcq($validator);
+            }
+
+            if ($this->input('type') === Question::TYPE_STRUCTURED_RESPONSE) {
+                $this->validateStructuredParts($validator);
             }
 
             if ($this->filled('topic_id')) {
@@ -81,6 +92,32 @@ class StoreQuestionRequest extends FormRequest
 
         if ($correctOptionKey === '' || ! $optionKeys->contains($correctOptionKey)) {
             $validator->errors()->add('correct_option_key', 'Choose a valid correct option key from the options list.');
+        }
+    }
+
+    protected function validateStructuredParts(Validator $validator): void
+    {
+        $parts = collect($this->input('structured_parts', []));
+        $labels = $parts
+            ->pluck('part_label')
+            ->map(fn ($value) => strtolower(trim((string) $value)))
+            ->filter();
+
+        if ($labels->isEmpty()) {
+            $validator->errors()->add('structured_parts', 'Add at least one structured part.');
+        }
+
+        if ($labels->unique()->count() !== $labels->count()) {
+            $validator->errors()->add('structured_parts', 'Each structured part label must be unique.');
+        }
+
+        $totalMarks = $parts
+            ->pluck('max_score')
+            ->filter(fn ($value) => is_numeric($value))
+            ->sum(fn ($value) => (float) $value);
+
+        if ($totalMarks > 0 && abs($totalMarks - (float) $this->input('marks')) > 0.01) {
+            $validator->errors()->add('marks', 'Total question marks must equal the sum of structured part marks.');
         }
     }
 }

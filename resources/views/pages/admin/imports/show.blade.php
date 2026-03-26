@@ -35,6 +35,7 @@
             <div class="muted">Import strategy</div>
             <ul style="margin:0; padding-left:1.2rem;">
                 <li>Upsert by <strong>subject + topic + type + exact question text</strong>.</li>
+                <li>Structured response rows are grouped by <strong>question_group_key</strong> (or fallback to question text).</li>
                 <li>Missing subjects: {{ $import->allow_create_subjects ? 'auto-create enabled' : 'auto-create disabled' }}.</li>
                 <li>Missing topics: {{ $import->allow_create_topics ? 'auto-create enabled' : 'auto-create disabled' }}.</li>
             </ul>

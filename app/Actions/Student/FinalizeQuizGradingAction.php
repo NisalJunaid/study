@@ -4,6 +4,7 @@ namespace App\Actions\Student;
 
 use App\Events\QuizGradingProgressUpdated;
 use App\Models\Quiz;
+use App\Models\Question;
 use App\Models\StudentAnswer;
 
 class FinalizeQuizGradingAction
@@ -18,7 +19,7 @@ class FinalizeQuizGradingAction
         $quiz->loadMissing('quizQuestions.studentAnswer');
 
         $pendingTheoryAnswers = $quiz->quizQuestions
-            ->filter(fn ($quizQuestion) => ($quizQuestion->question_snapshot['type'] ?? null) === 'theory')
+            ->filter(fn ($quizQuestion) => in_array(($quizQuestion->question_snapshot['type'] ?? null), Question::theoryLikeTypes(), true))
             ->pluck('studentAnswer')
             ->filter(fn ($answer) => $answer && in_array(
                 $answer->grading_status,

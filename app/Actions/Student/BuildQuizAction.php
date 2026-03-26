@@ -19,8 +19,8 @@ class BuildQuizAction
 
         return match ($mode) {
             Quiz::MODE_MCQ => $countByType[Question::TYPE_MCQ],
-            Quiz::MODE_THEORY => $countByType[Question::TYPE_THEORY],
-            Quiz::MODE_MIXED => $countByType[Question::TYPE_MCQ] + $countByType[Question::TYPE_THEORY],
+            Quiz::MODE_THEORY => $countByType['theory_bucket'],
+            Quiz::MODE_MIXED => $countByType[Question::TYPE_MCQ] + $countByType['theory_bucket'],
             default => 0,
         };
     }
@@ -31,8 +31,8 @@ class BuildQuizAction
 
         return [
             Quiz::MODE_MCQ => $countByType[Question::TYPE_MCQ],
-            Quiz::MODE_THEORY => $countByType[Question::TYPE_THEORY],
-            Quiz::MODE_MIXED => $countByType[Question::TYPE_MCQ] + $countByType[Question::TYPE_THEORY],
+            Quiz::MODE_THEORY => $countByType['theory_bucket'],
+            Quiz::MODE_MIXED => $countByType[Question::TYPE_MCQ] + $countByType['theory_bucket'],
         ];
     }
 
@@ -102,7 +102,7 @@ class BuildQuizAction
                         'order_no' => $index + 1,
                         'question_snapshot' => $this->snapshotFor($question),
                         'max_score' => $question->marks,
-                        'requires_manual_review' => $question->type === Question::TYPE_THEORY,
+                        'requires_manual_review' => in_array($question->type, Question::theoryLikeTypes(), true),
                     ]);
                 });
 
@@ -114,7 +114,7 @@ class BuildQuizAction
     {
         if ($mode === Quiz::MODE_MCQ || $mode === Quiz::MODE_THEORY) {
             return $this->baseQuestionQuery($subjectIds, $topicIds, $difficulty)
-                ->ofType($mode)
+                ->when($mode === Quiz::MODE_THEORY, fn ($query) => $query->theoryLike(), fn ($query) => $query->ofType($mode))
                 ->inRandomOrder()
                 ->limit($questionCount)
                 ->get();
@@ -126,7 +126,7 @@ class BuildQuizAction
         $targetTheory = $questionCount - $targetMcq;
 
         $mcqTake = min($counts[Question::TYPE_MCQ], $targetMcq);
-        $theoryTake = min($counts[Question::TYPE_THEORY], $targetTheory);
+        $theoryTake = min($counts['theory_bucket'], $targetTheory);
 
         $remaining = $questionCount - ($mcqTake + $theoryTake);
 
@@ -138,7 +138,7 @@ class BuildQuizAction
         }
 
         if ($remaining > 0) {
-            $theorySpare = max(0, $counts[Question::TYPE_THEORY] - $theoryTake);
+            $theorySpare = max(0, $counts['theory_bucket'] - $theoryTake);
             $theoryTake += min($theorySpare, $remaining);
         }
 
@@ -152,7 +152,7 @@ class BuildQuizAction
 
         $theoryQuestions = $theoryTake > 0
             ? $this->baseQuestionQuery($subjectIds, $topicIds, $difficulty)
-                ->theory()
+                ->theoryLike()
                 ->inRandomOrder()
                 ->limit($theoryTake)
                 ->get()
@@ -172,6 +172,7 @@ class BuildQuizAction
             ->with([
                 'mcqOptions' => fn ($builder) => $builder->orderBy('sort_order')->orderBy('id'),
                 'theoryMeta:id,question_id,sample_answer,grading_notes,keywords,acceptable_phrases,max_score',
+                'structuredParts:id,question_id,part_label,prompt_text,max_score,sample_answer,marking_notes,sort_order',
                 'topic:id,name,subject_id',
                 'subject:id,name',
             ]);
@@ -206,9 +207,14 @@ class BuildQuizAction
             ->groupBy('type')
             ->pluck('aggregate', 'type');
 
+        $theory = (int) ($rows[Question::TYPE_THEORY] ?? 0);
+        $structured = (int) ($rows[Question::TYPE_STRUCTURED_RESPONSE] ?? 0);
+
         return [
             Question::TYPE_MCQ => (int) ($rows[Question::TYPE_MCQ] ?? 0),
-            Question::TYPE_THEORY => (int) ($rows[Question::TYPE_THEORY] ?? 0),
+            Question::TYPE_THEORY => $theory,
+            Question::TYPE_STRUCTURED_RESPONSE => $structured,
+            'theory_bucket' => $theory + $structured,
         ];
     }
 
@@ -266,13 +272,27 @@ class BuildQuizAction
                 'max_score' => (float) $question->theoryMeta->max_score,
             ];
         }
+        if ($question->type === Question::TYPE_STRUCTURED_RESPONSE) {
+            $snapshot['structured_parts'] = $question->structuredParts
+                ->map(fn ($part) => [
+                    'id' => $part->id,
+                    'part_label' => $part->part_label,
+                    'prompt_text' => $part->prompt_text,
+                    'max_score' => (float) $part->max_score,
+                    'sample_answer' => $part->sample_answer,
+                    'marking_notes' => $part->marking_notes,
+                    'sort_order' => $part->sort_order,
+                ])
+                ->values()
+                ->all();
+        }
 
         return $snapshot;
     }
 
     private function idealTimeSecondsFor(Question $question): int
     {
-        $base = $question->type === Question::TYPE_THEORY ? 180 : 60;
+        $base = in_array($question->type, Question::theoryLikeTypes(), true) ? 180 : 60;
         $difficultyBoost = match ($question->difficulty) {
             'hard' => 60,
             'medium' => 30,

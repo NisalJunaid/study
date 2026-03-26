@@ -4,6 +4,7 @@
 @php
     $snapshot = $review->quizQuestion->question_snapshot ?? [];
     $theoryMeta = $snapshot['theory_meta'] ?? [];
+    $isStructured = ($snapshot['type'] ?? null) === \App\Models\Question::TYPE_STRUCTURED_RESPONSE;
 @endphp
 
 <div class="stack-lg">
@@ -16,8 +17,19 @@
         <p class="muted" style="margin:0">Student: {{ $review->user?->name }} ({{ $review->user?->email }})</p>
         <p class="muted" style="margin:0">Quiz #{{ $review->quizQuestion->quiz_id }} · Question {{ $review->quizQuestion->order_no }}</p>
         <p style="margin:0"><strong>Question:</strong> {{ $snapshot['question_text'] ?? '' }}</p>
-        <p style="white-space:pre-wrap;margin:0"><strong>Student Answer:</strong> {{ $review->answer_text ?: 'No answer provided.' }}</p>
-        <p style="white-space:pre-wrap;margin:0"><strong>Sample Answer:</strong> {{ $theoryMeta['sample_answer'] ?? 'N/A' }}</p>
+        @if($isStructured)
+            @foreach(($snapshot['structured_parts'] ?? []) as $part)
+                @php
+                    $partId = (string) ($part['id'] ?? '');
+                    $partAnswer = data_get($review->answer_json ?? [], $partId);
+                @endphp
+                <p style="white-space:pre-wrap;margin:0"><strong>Part ({{ $part['part_label'] ?? '?' }}):</strong> {{ $part['prompt_text'] ?? '' }}</p>
+                <p style="white-space:pre-wrap;margin:0 0 .5rem 0;"><strong>Student Answer:</strong> {{ $partAnswer ?: 'No answer provided.' }}</p>
+            @endforeach
+        @else
+            <p style="white-space:pre-wrap;margin:0"><strong>Student Answer:</strong> {{ $review->answer_text ?: 'No answer provided.' }}</p>
+            <p style="white-space:pre-wrap;margin:0"><strong>Sample Answer:</strong> {{ $theoryMeta['sample_answer'] ?? 'N/A' }}</p>
+        @endif
     </section>
 
     <section class="card stack-md">

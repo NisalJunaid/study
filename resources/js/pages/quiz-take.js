@@ -33,6 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedOption = (question) => Number(question.answer?.selected_option_id || 0);
     const typedAnswer = (question) => (question.answer?.answer_text || '').trim();
 
+    const structuredAnswers = (question) => {
+        if (!question.answer) question.answer = {};
+        if (!question.answer.answer_json || typeof question.answer.answer_json !== 'object') {
+            question.answer.answer_json = {};
+        }
+
+        return question.answer.answer_json;
+    };
+
     const ensureStartedAt = (question) => {
         if (!question.answer) question.answer = {};
         if (!question.answer.question_started_at) question.answer.question_started_at = nowIso();
@@ -142,6 +151,29 @@ document.addEventListener('DOMContentLoaded', () => {
         question.answer.ideal_time_seconds = payload.ideal_time_seconds;
     };
 
+    const buildStructuredPartsHtml = (question, locked) => {
+        const answers = structuredAnswers(question);
+
+        return (question.structured_parts || []).map((part) => {
+            const disabled = locked ? 'disabled' : '';
+            const value = sanitize(answers[String(part.id)] || '');
+
+            return `
+                <div class="card card-soft stack-sm">
+                    <div class="row-between">
+                        <strong>(${sanitize(part.part_label)})</strong>
+                        <span class="pill">${Number(part.max_score || 0).toFixed(2)} marks</span>
+                    </div>
+                    <p class="mb-0" style="white-space:pre-wrap;">${sanitize(part.prompt_text || '')}</p>
+                    <label class="field" style="margin:0">
+                        <span>Your answer</span>
+                        <textarea rows="4" data-structured-answer-id="${part.id}" placeholder="Answer this part..." ${disabled}>${value}</textarea>
+                    </label>
+                </div>
+            `;
+        }).join('');
+    };
+
     const buildQuestionBody = (question) => {
         const locked = quizLocked || question.locked;
         const progressLabel = `${state.currentIndex + 1}/${questions.length}`;
@@ -165,6 +197,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }).join('');
             html += `<div class="stack-sm">${optionsHtml}</div>`;
+        } else if (question.type === 'structured_response') {
+            html += `<div class="stack-md">${buildStructuredPartsHtml(question, locked)}</div>`;
         } else {
             const disabled = locked ? 'disabled' : '';
             html += `
@@ -211,6 +245,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (question.type === 'structured_response' && !question.locked && !quizLocked) {
+            els.panel.querySelectorAll('[data-structured-answer-id]').forEach((input) => {
+                input.addEventListener('input', (event) => {
+                    const answers = structuredAnswers(question);
+                    answers[String(event.target.dataset.structuredAnswerId)] = event.target.value;
+                });
+            });
+        }
+
         const nextButton = document.getElementById('next-question');
         nextButton?.addEventListener('click', async () => {
             if (state.busy || quizLocked) return;
@@ -251,6 +294,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 payload.selected_option_id = optionId;
+            } else if (activeQuestion.type === 'structured_response') {
+                const answers = structuredAnswers(activeQuestion);
+                const unansweredPart = (activeQuestion.structured_parts || []).find((part) => !String(answers[String(part.id)] || '').trim());
+
+                if (unansweredPart) {
+                    overlay?.show({
+                        title: 'Answer needed',
+                        message: `Complete part (${unansweredPart.part_label}) before continuing.`,
+                        variant: 'warning',
+                        primary_label: 'Okay',
+                    });
+                    return;
+                }
+
+                payload.structured_answers = answers;
             } else {
                 const answerText = typedAnswer(activeQuestion);
                 if (!answerText) {
