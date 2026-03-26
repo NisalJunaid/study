@@ -2276,3 +2276,397 @@ body.overlay-open {
         align-items: stretch;
     }
 }
+
+/* Public homepage */
+.focus-home-page {
+    min-height: 100vh;
+    margin: 0;
+    position: relative;
+    padding: clamp(0.8rem, 2vw, 1.4rem);
+}
+
+.focus-home-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(circle at 15% 0%, rgba(129, 140, 248, 0.18), transparent 35%),
+        radial-gradient(circle at 85% 20%, rgba(56, 189, 248, 0.14), transparent 38%),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg) 85%, white) 0%, var(--bg) 100%);
+}
+
+.focus-home-shell {
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    display: grid;
+    gap: clamp(2rem, 4vw, 3.6rem);
+}
+
+.focus-home-nav-wrap {
+    position: sticky;
+    top: 0.55rem;
+    z-index: 20;
+}
+
+.focus-home-nav {
+    background: var(--surface-glass-strong);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-soft);
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+}
+
+.focus-home-brand { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 800; }
+.focus-home-brand-badge {
+    width: 1.65rem;
+    height: 1.65rem;
+    display: grid;
+    place-items: center;
+    border-radius: 0.5rem;
+    font-size: 0.82rem;
+    color: #fff;
+    background: linear-gradient(160deg, #6366f1, #8b5cf6);
+}
+
+.focus-home-links { display: inline-flex; align-items: center; gap: 1.3rem; }
+.focus-home-links a { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
+.focus-home-links a:hover { color: var(--text); }
+
+.focus-home-actions { display: inline-flex; align-items: center; gap: 0.65rem; }
+.focus-home-login-link { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
+.focus-home-login-link:hover { color: var(--text); }
+
+.focus-home-theme-toggle {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.7rem;
+    cursor: pointer;
+}
+
+.focus-home-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.5rem;
+    padding: 0.56rem 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 700;
+    font-size: 0.92rem;
+}
+.focus-home-btn-primary {
+    color: #fff;
+    border-color: #4338ca;
+    background: linear-gradient(135deg, #4338ca, #6366f1);
+    box-shadow: 0 10px 24px rgba(67, 56, 202, 0.22);
+}
+
+.focus-home-menu-toggle {
+    display: none;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    padding: 0.5rem 0.8rem;
+    border-radius: 0.65rem;
+}
+
+.focus-home-hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(1.2rem, 2.8vw, 2.6rem);
+    align-items: center;
+    padding-top: clamp(1rem, 3vw, 2.3rem);
+}
+
+.focus-home-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--border) 85%, #fff 15%);
+    background: color-mix(in srgb, var(--surface) 75%, #fff 25%);
+    padding: 0.35rem 0.72rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.focus-home-hero-copy h1 {
+    margin: 0.85rem 0 0;
+    font-size: clamp(2rem, 5.4vw, 4.05rem);
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+}
+
+.focus-home-hero-copy h1 span {
+    display: block;
+    background: linear-gradient(120deg, #4f46e5, #8b5cf6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.focus-home-hero-copy p {
+    margin: 1rem 0 0;
+    max-width: 48ch;
+    color: var(--muted);
+    font-size: 1.02rem;
+}
+
+.focus-home-hero-actions { margin-top: 1.35rem; display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+.focus-home-trust-strip { margin-top: 1.05rem; display: inline-flex; align-items: center; gap: 0.75rem; }
+.focus-home-trust-strip p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+
+.focus-home-avatars { display: inline-flex; }
+.focus-home-avatars span {
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 999px;
+    border: 2px solid var(--surface);
+    background: linear-gradient(145deg, #67e8f9, #6366f1);
+    margin-left: -0.38rem;
+}
+.focus-home-avatars span:first-child { margin-left: 0; }
+
+.focus-home-hero-preview {
+    position: relative;
+    background: color-mix(in srgb, var(--surface) 88%, #fff 12%);
+    border-radius: 1.15rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-soft);
+}
+
+.focus-home-preview-window {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.95rem;
+    padding: 1rem;
+    display: grid;
+    gap: 0.8rem;
+}
+
+.focus-home-preview-top {
+    display: flex;
+    align-items: center;
+    gap: 0.32rem;
+}
+.focus-home-preview-top span {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: #cbd5e1;
+}
+.focus-home-preview-top small { margin-left: auto; color: var(--muted); font-size: 0.75rem; }
+.focus-home-preview-step { margin: 0; color: #6366f1; font-weight: 700; font-size: 0.8rem; }
+.focus-home-preview-progress { height: 0.36rem; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
+.focus-home-preview-progress span { display: block; width: 54%; height: 100%; background: linear-gradient(90deg, #4f46e5, #6366f1); }
+.focus-home-preview-window h2 { margin: 0; font-size: 1.08rem; }
+
+.focus-home-preview-option {
+    border: 1px solid var(--border);
+    border-radius: 0.78rem;
+    padding: 0.62rem 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    background: var(--surface);
+}
+.focus-home-preview-option strong { display: block; font-size: 0.9rem; }
+.focus-home-preview-option small { color: var(--muted); font-size: 0.73rem; }
+.focus-home-preview-option span {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+}
+.focus-home-preview-option.is-active {
+    border-color: #818cf8;
+    background: color-mix(in srgb, var(--primary-soft) 72%, #fff 28%);
+}
+.focus-home-preview-option.is-active span {
+    border-color: #6366f1;
+    background: #6366f1;
+    color: #fff;
+}
+
+.focus-home-preview-cta {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 2.35rem;
+    border-radius: 0.7rem;
+    font-weight: 700;
+    color: #fff;
+    background: #0f172a;
+}
+
+.focus-home-preview-score {
+    position: absolute;
+    top: -0.72rem;
+    right: -0.5rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border);
+    background: var(--surface-glass-strong);
+    box-shadow: var(--shadow-soft);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+.focus-home-preview-score small { display: block; color: var(--muted); font-weight: 600; margin-top: 0.1rem; }
+
+.focus-home-features {
+    background: var(--surface-glass-strong);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-soft);
+    padding: clamp(1.3rem, 4vw, 2.5rem);
+    text-align: center;
+}
+
+.focus-home-section-label {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #6366f1;
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+.focus-home-features h2 {
+    margin: 0.45rem 0 0;
+    font-size: clamp(1.7rem, 3.6vw, 2.55rem);
+    letter-spacing: -0.02em;
+}
+
+.focus-home-section-copy {
+    margin: 0.8rem auto 0;
+    max-width: 62ch;
+    color: var(--muted);
+}
+
+.focus-home-feature-grid {
+    margin-top: 1.55rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    text-align: left;
+}
+
+.focus-home-feature-card {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 0.95rem;
+    padding: 1.1rem;
+    box-shadow: var(--shadow-soft);
+}
+.focus-home-feature-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.6rem;
+    display: inline-grid;
+    place-items: center;
+    font-size: 0.9rem;
+    margin-bottom: 0.7rem;
+    background: color-mix(in srgb, var(--primary-soft) 70%, #fff 30%);
+    color: #4f46e5;
+}
+.focus-home-feature-card h3 { margin: 0; font-size: 1.1rem; }
+.focus-home-feature-card p { margin: 0.6rem 0 0; color: var(--muted); font-size: 0.92rem; }
+
+.focus-home-footer {
+    background: #0b1430;
+    color: #dbe4ff;
+    border-radius: 1.1rem;
+    border: 1px solid color-mix(in srgb, #0b1430 80%, #1f2a44 20%);
+    padding: clamp(1.2rem, 3.5vw, 2rem);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.35rem;
+}
+
+.focus-home-footer .focus-home-brand,
+.focus-home-footer h4 { color: #f8fbff; }
+.focus-home-footer p,
+.focus-home-footer small,
+.focus-home-footer a { color: #bfd0f6; }
+.focus-home-footer small { display: block; margin-top: 1.2rem; font-size: 0.8rem; }
+
+.focus-home-footer-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+    gap: 1.2rem;
+}
+.focus-home-footer-links h4 { margin: 0; font-size: 0.92rem; }
+.focus-home-footer-links a {
+    display: block;
+    margin-top: 0.42rem;
+    font-size: 0.88rem;
+}
+.focus-home-footer-links a:hover { color: #ffffff; }
+
+@media (max-width: 960px) {
+    .focus-home-links { display: none; }
+    .focus-home-menu-toggle { display: inline-flex; }
+    .focus-home-nav { flex-wrap: wrap; }
+    .focus-home-actions { margin-left: auto; }
+
+    .focus-home-links.is-open {
+        display: grid;
+        width: 100%;
+        gap: 0.35rem;
+        border-top: 1px solid var(--border);
+        padding-top: 0.7rem;
+    }
+
+    .focus-home-hero { grid-template-columns: 1fr; }
+    .focus-home-preview-score { right: 0.6rem; }
+    .focus-home-feature-grid { grid-template-columns: 1fr; }
+    .focus-home-footer { flex-direction: column; }
+}
+
+@media (max-width: 640px) {
+    .focus-home-actions {
+        width: 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .focus-home-btn,
+    .focus-home-login-link {
+        font-size: 0.85rem;
+    }
+
+    .focus-home-hero-copy h1 {
+        font-size: clamp(1.85rem, 12vw, 2.6rem);
+    }
+}
+
+:root[data-theme="dark"] .focus-home-bg {
+    background: radial-gradient(circle at 15% 0%, rgba(79, 70, 229, 0.2), transparent 35%),
+        radial-gradient(circle at 85% 20%, rgba(14, 165, 233, 0.16), transparent 38%),
+        linear-gradient(180deg, #020617 0%, #020617 100%);
+}
+
+:root[data-theme="dark"] .focus-home-preview-cta {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+}
+
+:root[data-theme="dark"] .focus-home-footer {
+    background: #030712;
+    border-color: #1f2937;
+}
