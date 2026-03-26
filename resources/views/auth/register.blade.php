@@ -44,10 +44,28 @@
             </button>
         </div>
 
-        <form method="POST" action="{{ route('register') }}" enctype="multipart/form-data" data-onboarding-form>
+        @php
+            $stepFieldMap = [
+                1 => ['name', 'email', 'password', 'id_document_number', 'nationality', 'contact_number', 'id_document'],
+                2 => ['subscription_plan_id'],
+                3 => ['slip'],
+            ];
+
+            $initialStep = 1;
+            foreach ($stepFieldMap as $step => $fields) {
+                foreach ($fields as $field) {
+                    if ($errors->has($field)) {
+                        $initialStep = $step;
+                        break 2;
+                    }
+                }
+            }
+        @endphp
+
+        <form method="POST" action="{{ route('register') }}" enctype="multipart/form-data" data-onboarding-form data-initial-step="{{ $initialStep }}">
             @csrf
 
-            <section class="stack-md" data-step="1">
+            <section class="stack-md" data-step="1" data-step-panel>
                 <h2 class="h2">Personal Details</h2>
                 <div class="onboarding-grid-2">
                     <label class="input-field">
@@ -103,7 +121,7 @@
                 </label>
             </section>
 
-            <section class="stack-md" data-step="2" hidden>
+            <section class="stack-md" data-step="2" data-step-panel hidden>
                 <h2 class="h2">Plan Selection</h2>
                 <div class="onboarding-plan-grid" data-plan-grid>
                     @foreach($plans as $plan)
@@ -141,7 +159,7 @@
                 @error('subscription_plan_id') <small class="field-error">{{ $message }}</small> @enderror
             </section>
 
-            <section class="stack-md" data-step="3" hidden>
+            <section class="stack-md" data-step="3" data-step-panel hidden>
                 <h2 class="h2">Billing & Payment</h2>
 
                 <article class="card stack-sm onboarding-billing-summary">
