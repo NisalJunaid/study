@@ -11,16 +11,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextButton = root.querySelector('[data-next-step]');
     const prevButton = root.querySelector('[data-prev-step]');
     const submitButton = root.querySelector('[data-submit-step]');
+    const initialStep = Number(form?.dataset.initialStep || 1);
     let currentStep = 1;
 
     const activateStep = (step) => {
         currentStep = Math.min(steps.length, Math.max(1, step));
         steps.forEach((section, index) => {
-            section.hidden = index + 1 !== currentStep;
+            const isCurrent = index + 1 === currentStep;
+            section.hidden = !isCurrent;
+            section.setAttribute('aria-hidden', isCurrent ? 'false' : 'true');
         });
 
         indicators.forEach((node, index) => {
-            node.classList.toggle('active', index + 1 === currentStep);
+            const isCurrent = index + 1 === currentStep;
+            node.classList.toggle('active', isCurrent);
+            node.setAttribute('aria-current', isCurrent ? 'step' : 'false');
         });
 
         if (progressBar) {
@@ -46,12 +51,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         }
 
+        const handledRadioGroups = new Set();
         const fields = Array.from(section.querySelectorAll('input,select,textarea'));
         for (const field of fields) {
+            if (field.disabled) {
+                continue;
+            }
+
             if (field.type === 'radio') {
-                const grouped = section.querySelectorAll(`input[type="radio"][name="${field.name}"]`);
+                if (handledRadioGroups.has(field.name)) {
+                    continue;
+                }
+
+                handledRadioGroups.add(field.name);
+                const grouped = Array.from(section.querySelectorAll('input[type="radio"]'))
+                    .filter((radio) => radio.name === field.name);
                 if (field.required && !Array.from(grouped).some((item) => item.checked)) {
-                    field.reportValidity();
+                    const firstRadio = grouped[0];
+                    firstRadio?.focus();
+                    firstRadio?.reportValidity();
                     return false;
                 }
                 continue;
@@ -86,6 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     form?.addEventListener('submit', (event) => {
+        if (currentStep < steps.length) {
+            event.preventDefault();
+            if (validateStep(currentStep)) {
+                activateStep(currentStep + 1);
+            }
+            return;
+        }
+
         if (!validateStep(currentStep)) {
             event.preventDefault();
         }
@@ -210,5 +236,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    activateStep(root.querySelector('.field-error') ? 1 : 1);
+    activateStep(initialStep);
 });

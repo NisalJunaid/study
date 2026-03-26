@@ -2193,6 +2193,10 @@ body.overlay-open {
     gap: 0.8rem;
 }
 
+[data-step-panel][hidden] {
+    display: none !important;
+}
+
 .plan-card {
     position: relative;
 }
