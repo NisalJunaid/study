@@ -55,72 +55,73 @@
     </section>
 
     @if($showPlanFlow)
-        <x-guided.stepper
-            :steps="['Choose plan type', 'Select plan', 'Review & continue']"
-            :current="1"
-            label="Payment initiation"
-        />
-
-        <form method="POST" action="{{ route('student.billing.subscription.select-plan') }}" class="card stack-lg" data-guided-subscription-form>
+        <form method="POST" action="{{ route('student.billing.subscription.select-plan') }}" class="card stack-lg" data-plan-selection-form>
             @csrf
 
-            <section class="guided-step-pane stack-md" data-guided-step="1">
-                <h2 class="h2">Step 1: Choose a billing cycle</h2>
-                <div class="plan-toggle" role="tablist" aria-label="Billing cycle">
-                    <button type="button" class="btn plan-toggle-btn" data-plan-toggle="monthly" aria-selected="{{ $selectedType === 'monthly' ? 'true' : 'false' }}">Monthly</button>
-                    <button type="button" class="btn plan-toggle-btn" data-plan-toggle="annual" aria-selected="{{ $selectedType === 'annual' ? 'true' : 'false' }}">Annual</button>
-                </div>
+            <section class="stack-sm">
+                <h2 class="h2">{{ $isChangePlanFlow ? 'Change your plan' : 'Choose your plan' }}</h2>
+                <p class="muted mb-0">
+                    {{ $isChangePlanFlow
+                        ? 'Your active plan is shown below. Select another available monthly or annual plan to switch.'
+                        : 'Select the plan you want to pay for. Monthly and annual options are shown together.' }}
+                </p>
             </section>
 
-            <section class="guided-step-pane stack-md" data-guided-step="2" hidden>
-                <h2 class="h2">Step 2: Select your plan</h2>
-                <div class="grid-2" data-plan-grid>
-                    @foreach($plans as $plan)
-                        @php
-                            $topDiscount = $plan->discounts->sortByDesc('amount')->first();
-                            $state = $planStates[$plan->id] ?? null;
-                        @endphp
-                        <label class="card plan-card" data-plan-type="{{ $plan->type }}" style="cursor:pointer;">
-                            <input type="radio" name="subscription_plan_id" value="{{ $plan->id }}" data-plan-picker @disabled(!($state['can_select'] ?? false))>
-                            <div class="stack-sm mt-2">
+            <section class="grid-2" data-plan-grid>
+                @foreach($plans as $plan)
+                    @php
+                        $topDiscount = $plan->discounts->sortByDesc('amount')->first();
+                        $state = $planStates[$plan->id] ?? null;
+                        $isCurrentActivePlan = $activePlanId !== null && $activePlanId === (int) $plan->id;
+                        $isSelectable = (bool) ($state['can_select'] ?? false) && ! $isCurrentActivePlan;
+                        $planCardClass = $isCurrentActivePlan ? 'plan-card-current' : ($isSelectable ? 'plan-card-selectable' : 'plan-card-disabled');
+                    @endphp
+                    <label class="card plan-card {{ $planCardClass }}" style="cursor: {{ $isSelectable ? 'pointer' : 'default' }};">
+                        <input
+                            type="radio"
+                            name="subscription_plan_id"
+                            value="{{ $plan->id }}"
+                            data-plan-picker
+                            @checked(old('subscription_plan_id') == $plan->id || ($isChangePlanFlow && $isCurrentActivePlan))
+                            @disabled(! $isSelectable)
+                        >
+                        <div class="stack-sm mt-2">
+                            <div class="row-between">
                                 <h3 class="h3">{{ $plan->name }}</h3>
-                                <p class="muted mb-0">{{ $plan->description ?: 'Reliable access with full question bank support.' }}</p>
-                                <p class="plan-price mb-0">{{ $plan->currency }} {{ number_format((float)$plan->price, 2) }}</p>
-                                @if($state)
-                                    <p class="mb-0 text-sm"><strong>Total due:</strong> {{ $state['pricing']['currency'] }} {{ number_format((float) $state['pricing']['total_due'], 2) }}</p>
-                                    @if($state['pricing']['is_prorated'])
-                                        <p class="mb-0 text-sm muted">Prorated for remaining days this month.</p>
-                                    @endif
-                                    @if(($state['pricing']['registration_fee'] ?? 0) > 0)
-                                        <p class="mb-0 text-sm muted">Includes one-time registration fee.</p>
-                                    @endif
-                                    <p class="mb-0 text-sm {{ $state['can_select'] ? 'text-success' : 'muted' }}">{{ $state['message'] }}</p>
-                                @endif
-                                @if($topDiscount)
-                                    <p class="pill mb-0">{{ $topDiscount->name }}: {{ $topDiscount->type === 'percentage' ? $topDiscount->amount.'%' : $plan->currency.' '.number_format((float)$topDiscount->amount, 2) }} off</p>
-                                @endif
+                                <span class="pill">{{ ucfirst($plan->type) }}</span>
                             </div>
-                        </label>
-                    @endforeach
-                </div>
-                @error('subscription_plan_id') <small class="field-error">{{ $message }}</small> @enderror
-                <small class="field-error" data-step-error="2" hidden></small>
+                            <p class="muted mb-0">{{ $plan->description ?: 'Reliable access with full question bank support.' }}</p>
+                            <p class="plan-price mb-0">{{ $plan->currency }} {{ number_format((float)$plan->price, 2) }}</p>
+
+                            @if($state)
+                                <p class="mb-0 text-sm"><strong>Total due:</strong> {{ $state['pricing']['currency'] }} {{ number_format((float) $state['pricing']['total_due'], 2) }}</p>
+                                @if($state['pricing']['is_prorated'])
+                                    <p class="mb-0 text-sm muted">Prorated for remaining days this month.</p>
+                                @endif
+                                @if(($state['pricing']['registration_fee'] ?? 0) > 0)
+                                    <p class="mb-0 text-sm muted">Includes one-time registration fee.</p>
+                                @endif
+                            @endif
+
+                            @if($isCurrentActivePlan)
+                                <p class="mb-0 text-sm text-success"><strong>Currently Active</strong></p>
+                            @elseif($state)
+                                <p class="mb-0 text-sm {{ $isSelectable ? 'text-success' : 'muted' }}">{{ $state['message'] }}</p>
+                            @endif
+
+                            @if($topDiscount)
+                                <p class="pill mb-0">{{ $topDiscount->name }}: {{ $topDiscount->type === 'percentage' ? $topDiscount->amount.'%' : $plan->currency.' '.number_format((float)$topDiscount->amount, 2) }} off</p>
+                            @endif
+                        </div>
+                    </label>
+                @endforeach
             </section>
 
-            <section class="guided-step-pane stack-sm" data-guided-step="3" hidden>
-                <h2 class="h2">Step 3: Review and continue</h2>
-                <p class="muted mb-0">You will upload your payment slip on the next screen.</p>
-                <div class="guided-summary" data-subscription-summary>
-                    <p class="mb-0 muted">Select a plan to continue.</p>
-                </div>
-            </section>
+            @error('subscription_plan_id') <small class="field-error">{{ $message }}</small> @enderror
 
-            <div class="actions-row row-between">
-                <button type="button" class="btn" data-guided-prev>Back</button>
-                <div class="row-wrap">
-                    <button type="button" class="btn btn-primary" data-guided-next>Next</button>
-                    <button type="submit" class="btn btn-primary" data-guided-submit>Continue to payment</button>
-                </div>
+            <div class="row-wrap" style="justify-content:space-between;">
+                <a class="btn" href="{{ route('student.billing.subscription') }}">Back</a>
+                <button type="submit" class="btn btn-primary">Continue to payment</button>
             </div>
         </form>
     @endif

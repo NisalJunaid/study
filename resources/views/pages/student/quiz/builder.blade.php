@@ -8,7 +8,8 @@
     $selectedTopicIds = collect(old('topic_ids', []))->map(fn ($id) => (string) $id)->all();
     $selectedDifficulty = old('difficulty', '');
     $isMultiMode = (bool) old('multi_subject_mode', $multiSubjectMode ?? false);
-    $initialStep = $errors->any() ? 1 : 1;
+    $initialStep = (int) old('guided_step', 1);
+    $initialStep = $initialStep < 1 ? 1 : min(5, $initialStep);
 @endphp
 
 <div class="stack-lg" id="guided-quiz-setup" data-multi-mode-initial="{{ $isMultiMode ? '1' : '0' }}" data-initial-step="{{ $initialStep }}">
@@ -207,10 +208,10 @@
             </section>
 
             <div class="actions-row row-between">
-                <button type="button" class="btn" data-guided-prev>Back</button>
+                <button type="button" class="btn" data-guided-prev hidden disabled>Back</button>
                 <div class="row-wrap">
                     <button type="button" class="btn btn-primary" data-guided-next>Next</button>
-                    <button type="submit" class="btn btn-primary" data-guided-submit>Start Quiz</button>
+                    <button type="submit" class="btn btn-primary" data-guided-submit hidden disabled>Start Quiz</button>
                 </div>
             </div>
         </form>

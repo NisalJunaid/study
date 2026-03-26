@@ -40,7 +40,41 @@ class StudentQuizTakingFlowTest extends TestCase
             ->assertSee('Multi-level mode')
             ->assertSee('data-guided-prev', false)
             ->assertSee('data-guided-next', false)
-            ->assertSee('data-guided-submit', false);
+            ->assertSee('data-guided-submit', false)
+            ->assertSee('data-guided-prev hidden disabled', false)
+            ->assertSee('data-guided-submit hidden disabled', false);
+    }
+
+    public function test_quiz_builder_submission_creates_quiz_and_redirects_to_take_page(): void
+    {
+        $student = User::factory()->create(['role' => User::ROLE_STUDENT]);
+        $subject = Subject::factory()->create(['is_active' => true]);
+        Question::factory()->count(5)->create([
+            'subject_id' => $subject->id,
+            'topic_id' => null,
+            'type' => Question::TYPE_MCQ,
+            'is_published' => true,
+        ]);
+
+        $response = $this->actingAs($student)
+            ->post(route('student.quiz.store'), [
+                'guided_step' => 5,
+                'levels' => [$subject->level],
+                'multi_subject_mode' => false,
+                'subject_id' => $subject->id,
+                'mode' => Quiz::MODE_MCQ,
+                'question_count' => 3,
+            ]);
+
+        $quiz = Quiz::query()->latest('id')->firstOrFail();
+        $response->assertRedirect(route('student.quiz.take', $quiz));
+
+        $this->assertDatabaseHas('quizzes', [
+            'user_id' => $student->id,
+            'mode' => Quiz::MODE_MCQ,
+            'status' => Quiz::STATUS_IN_PROGRESS,
+            'total_questions' => 3,
+        ]);
     }
 
     public function test_student_can_autosave_answer_and_submit_quiz_with_mcq_and_theory(): void

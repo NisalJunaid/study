@@ -50,7 +50,7 @@ class BillingSubscriptionFlowTest extends TestCase
             ->assertDontSee('Continue to payment');
     }
 
-    public function test_payment_guided_steps_are_only_shown_after_payment_initiation(): void
+    public function test_payment_page_is_only_available_after_plan_selection(): void
     {
         $this->travelTo(Carbon::parse('2026-03-10 10:00:00'));
         $student = User::factory()->student()->create();
@@ -72,8 +72,8 @@ class BillingSubscriptionFlowTest extends TestCase
         $this->actingAs($student)
             ->get(route('student.billing.subscription', ['start_payment' => 1]))
             ->assertOk()
-            ->assertSee('Payment initiation')
-            ->assertSee('Step 3: Review and continue');
+            ->assertSee('Choose your plan')
+            ->assertSee('Continue to payment');
 
         $this->actingAs($student)
             ->post(route('student.billing.subscription.select-plan'), [
@@ -84,8 +84,8 @@ class BillingSubscriptionFlowTest extends TestCase
         $this->actingAs($student)
             ->get(route('student.billing.payment'))
             ->assertOk()
-            ->assertSee('Payment progress')
-            ->assertSee('Step 4: Confirm submission');
+            ->assertSee('Current due amount')
+            ->assertDontSee('Payment progress');
     }
 
     public function test_new_user_gets_single_free_quiz_limited_to_ten_questions(): void
@@ -333,18 +333,39 @@ class BillingSubscriptionFlowTest extends TestCase
     }
 
 
-    public function test_subscription_page_renders_monthly_and_annual_toggle_controls(): void
+    public function test_change_plan_flow_shows_active_plan_as_non_selectable_and_other_plans(): void
     {
         $student = User::factory()->student()->create();
-        SubscriptionPlan::query()->create($this->monthlyPlanData());
-        SubscriptionPlan::query()->create($this->annualPlanData());
+        $monthly = SubscriptionPlan::query()->create($this->monthlyPlanData());
+        $annual = SubscriptionPlan::query()->create($this->annualPlanData());
+
+        UserSubscription::query()->create([
+            'user_id' => $student->id,
+            'subscription_plan_id' => $monthly->id,
+            'status' => UserSubscription::STATUS_ACTIVE,
+            'billing_status' => UserSubscription::BILLING_ACTIVE,
+            'expires_at' => now()->addMonth(),
+        ]);
 
         $this->actingAs($student)
-            ->get(route('student.billing.subscription', ['start_payment' => 1]))
+            ->get(route('student.billing.subscription', ['start_payment' => 1, 'change_plan' => 1]))
             ->assertOk()
             ->assertSee('Monthly')
             ->assertSee('Annual')
+            ->assertSee('Currently Active')
             ->assertSee('Continue to payment');
+
+        $this->actingAs($student)
+            ->post(route('student.billing.subscription.select-plan'), [
+                'subscription_plan_id' => $monthly->id,
+            ])
+            ->assertSessionHasErrors('subscription_plan_id');
+
+        $this->actingAs($student)
+            ->post(route('student.billing.subscription.select-plan'), [
+                'subscription_plan_id' => $annual->id,
+            ])
+            ->assertRedirect(route('student.billing.payment'));
     }
 
     public function test_selected_plan_is_used_on_payment_page_with_bank_details(): void
@@ -370,9 +391,11 @@ class BillingSubscriptionFlowTest extends TestCase
         $this->actingAs($student)
             ->get(route('student.billing.payment'))
             ->assertOk()
-            ->assertSee('Amount due')
+            ->assertSee('Current due amount')
             ->assertSee('1234567890')
-            ->assertSee('Prorated plan amount');
+            ->assertSee('Prorated plan amount')
+            ->assertSee('data-copy-account', false)
+            ->assertSee('data-slip-preview', false);
     }
 
     public function test_suspended_user_is_redirected_to_billing_routes_only(): void

@@ -44,10 +44,11 @@ class BillingController extends Controller
         $subscription = $user->subscriptions()->with('plan')->latest()->first();
         $latestPayment = $user->payments()->with('plan')->latest('submitted_at')->first();
         $showPlanFlow = $request->boolean('start_payment');
+        $isChangePlanFlow = $request->boolean('change_plan');
         if (
             $subscription
             && $subscription->status === UserSubscription::STATUS_ACTIVE
-            && ! $request->boolean('change_plan')
+            && ! $isChangePlanFlow
         ) {
             $showPlanFlow = false;
         }
@@ -63,6 +64,10 @@ class BillingController extends Controller
             'planStates' => $planStates,
             'latestPayment' => $latestPayment,
             'showPlanFlow' => $showPlanFlow,
+            'isChangePlanFlow' => $isChangePlanFlow,
+            'activePlanId' => ($subscription && $subscription->status === UserSubscription::STATUS_ACTIVE)
+                ? (int) $subscription->subscription_plan_id
+                : null,
         ]);
     }
 
