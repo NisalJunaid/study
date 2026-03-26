@@ -18,6 +18,7 @@ export const initGuidedFlow = ({
 
     const prevButtons = Array.from(root.querySelectorAll('[data-guided-prev]'));
     const nextButtons = Array.from(root.querySelectorAll('[data-guided-next]'));
+    const submitButtons = Array.from(root.querySelectorAll('[data-guided-submit]'));
     const stepInput = root.querySelector('[data-guided-current-step-input]');
     const tracker = Array.from(root.querySelectorAll('[data-guided-step-list] [data-step-index]'));
 
@@ -49,6 +50,7 @@ export const initGuidedFlow = ({
         if (stepInput) stepInput.value = String(currentStep);
 
         prevButtons.forEach((btn) => {
+            btn.hidden = currentStep === 1;
             btn.disabled = currentStep === 1;
         });
 
@@ -56,6 +58,11 @@ export const initGuidedFlow = ({
             const isFinal = currentStep === totalSteps;
             btn.hidden = isFinal;
             btn.disabled = false;
+        });
+
+        submitButtons.forEach((btn) => {
+            btn.hidden = currentStep !== totalSteps;
+            btn.disabled = currentStep !== totalSteps;
         });
 
         const progress = root.querySelector('[role="progressbar"]');

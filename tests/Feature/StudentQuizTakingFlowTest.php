@@ -29,14 +29,18 @@ class StudentQuizTakingFlowTest extends TestCase
     public function test_quiz_builder_uses_guided_multi_step_copy(): void
     {
         $student = User::factory()->create(['role' => User::ROLE_STUDENT]);
-        $subject = Subject::factory()->create(['is_active' => true]);
+        Subject::factory()->create(['is_active' => true]);
 
         $this->actingAs($student)
             ->get(route('student.quiz.setup'))
             ->assertOk()
             ->assertSee('Quiz setup progress')
             ->assertSee('Step 5: Review and start')
-            ->assertSee('Step 1: Select level(s)');
+            ->assertSee('Step 1: Select level(s)')
+            ->assertSee('Multi-level mode')
+            ->assertSee('data-guided-prev', false)
+            ->assertSee('data-guided-next', false)
+            ->assertSee('data-guided-submit', false);
     }
 
     public function test_student_can_autosave_answer_and_submit_quiz_with_mcq_and_theory(): void

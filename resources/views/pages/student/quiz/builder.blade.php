@@ -210,7 +210,7 @@
                 <button type="button" class="btn" data-guided-prev>Back</button>
                 <div class="row-wrap">
                     <button type="button" class="btn btn-primary" data-guided-next>Next</button>
-                    <button type="submit" class="btn btn-primary">Start Quiz</button>
+                    <button type="submit" class="btn btn-primary" data-guided-submit>Start Quiz</button>
                 </div>
             </div>
         </form>

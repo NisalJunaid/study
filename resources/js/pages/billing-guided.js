@@ -3,7 +3,6 @@ import { initGuidedFlow } from './guided-flow.js';
 document.addEventListener('DOMContentLoaded', () => {
     const subscriptionRoot = document.getElementById('guided-billing-subscription');
     if (subscriptionRoot) {
-        const planGrid = subscriptionRoot.querySelector('[data-plan-grid]');
         const cards = Array.from(subscriptionRoot.querySelectorAll('[data-plan-type]'));
         const toggleButtons = Array.from(subscriptionRoot.querySelectorAll('[data-plan-toggle]'));
         const summary = subscriptionRoot.querySelector('[data-subscription-summary]');
@@ -61,8 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
             initialStep: Number.parseInt(subscriptionRoot.dataset.initialStep || '1', 10),
             validateStep: (step) => {
                 clearStepError(step);
-                if (step === 3 && !selectedPlan()) {
-                    showStepError(3, 'Please select an available plan before continuing.');
+                if (step === 2 && !selectedPlan()) {
+                    showStepError(2, 'Please select an available plan before continuing.');
                     return false;
                 }
                 return true;

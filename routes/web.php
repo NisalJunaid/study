@@ -22,13 +22,7 @@ use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    if (! auth()->check()) {
-        return view('pages.welcome');
-    }
-
-    return auth()->user()->isAdmin()
-        ? redirect()->route('admin.dashboard')
-        : redirect()->route('student.levels.index');
+    return view('pages.welcome');
 })->name('home');
 
 Route::middleware(['auth', 'suspension.guard'])->group(function () {
@@ -39,7 +33,7 @@ Route::middleware(['auth', 'suspension.guard'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:student', 'suspension.guard'])->group(function () {
-    Route::get('/dashboard', fn () => redirect()->route('student.levels.index'))->name('student.dashboard');
+    Route::get('/dashboard', fn () => redirect()->route('student.quiz.setup'))->name('student.dashboard');
     Route::get('/levels', [StudentLevelController::class, 'index'])->name('student.levels.index');
     Route::get('/levels/{level}/subjects', [StudentSubjectController::class, 'indexByLevel'])->name('student.levels.subjects.index');
     Route::get('/subjects', fn () => redirect()->route('student.levels.index'))->name('student.subjects.index');
