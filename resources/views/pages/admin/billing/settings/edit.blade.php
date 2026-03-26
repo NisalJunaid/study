@@ -32,6 +32,12 @@
         </label>
 
         <label class="field">
+            <span>One-time registration fee</span>
+            <input class="field-control" name="registration_fee" type="number" min="0" step="0.01" value="{{ old('registration_fee', $setting->registration_fee) }}" required>
+            @error('registration_fee') <small class="field-error">{{ $message }}</small> @enderror
+        </label>
+
+        <label class="field">
             <span>Payment instructions (optional)</span>
             <textarea class="field-control" name="payment_instructions" rows="4">{{ old('payment_instructions', $setting->payment_instructions) }}</textarea>
             @error('payment_instructions') <small class="field-error">{{ $message }}</small> @enderror

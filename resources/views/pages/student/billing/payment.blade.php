@@ -6,11 +6,18 @@
         <div class="stack-sm">
             <h2 class="h2">Selected plan</h2>
             <p class="mb-0"><strong>{{ $plan->name }}</strong> ({{ ucfirst($plan->type) }})</p>
-            <p class="mb-0">Base price: {{ $plan->currency }} {{ number_format($basePrice, 2) }}</p>
-            @if($discount)
-                <p class="mb-0">Discount: -{{ $plan->currency }} {{ number_format($discountAmount, 2) }} ({{ $discount->name }})</p>
+            <p class="mb-0">Billing period: {{ \Illuminate\Support\Carbon::parse($breakdown['period_start'])->format('M d, Y') }} - {{ \Illuminate\Support\Carbon::parse($breakdown['period_end'])->format('M d, Y') }}</p>
+            <p class="mb-0">Base monthly/annual rate: {{ $breakdown['currency'] }} {{ number_format((float) $breakdown['base_plan_amount'], 2) }}</p>
+            @if($breakdown['is_prorated'])
+                <p class="mb-0">Prorated plan amount: {{ $breakdown['currency'] }} {{ number_format((float) $breakdown['prorated_plan_amount'], 2) }}</p>
             @endif
-            <p class="h2 mb-0">Amount due: {{ $plan->currency }} {{ number_format($amountDue, 2) }}</p>
+            @if((float) $breakdown['discount_amount'] > 0)
+                <p class="mb-0">Discount: -{{ $breakdown['currency'] }} {{ number_format((float) $breakdown['discount_amount'], 2) }}</p>
+            @endif
+            @if((float) $breakdown['registration_fee'] > 0)
+                <p class="mb-0">One-time registration fee: {{ $breakdown['currency'] }} {{ number_format((float) $breakdown['registration_fee'], 2) }}</p>
+            @endif
+            <p class="h2 mb-0">Amount due: {{ $breakdown['currency'] }} {{ number_format((float) $breakdown['total_due'], 2) }}</p>
         </div>
 
         <div class="stack-sm">
@@ -33,9 +40,6 @@
         <form class="stack-md" method="POST" action="{{ route('student.billing.payments.store') }}" enctype="multipart/form-data" data-slip-form>
             @csrf
             <input type="hidden" name="subscription_plan_id" value="{{ $plan->id }}">
-            @if($discount)
-                <input type="hidden" name="discount_code" value="{{ $discount->code }}">
-            @endif
 
             <label class="field">
                 <span>Bank transfer slip (JPG, PNG, PDF, max 4MB)</span>

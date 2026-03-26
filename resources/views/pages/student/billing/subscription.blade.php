@@ -12,6 +12,12 @@
             @endif
             @if($subscription)
                 <p class="mb-0"><strong>Subscription state:</strong> {{ ucfirst(str_replace('_', ' ', $subscription->status)) }}</p>
+                @if($subscription->plan)
+                    <p class="mb-0"><strong>Current plan:</strong> {{ $subscription->plan->name }} ({{ ucfirst($subscription->plan->type) }})</p>
+                @endif
+                @if($subscription->expires_at)
+                    <p class="mb-0"><strong>Current access ends:</strong> {{ $subscription->expires_at->format('M d, Y') }}</p>
+                @endif
             @endif
         </div>
     </section>
@@ -34,11 +40,27 @@
                     <div class="stack-sm">
                         <h3 class="h3">{{ $plan->name }}</h3>
                         <p class="muted mb-0">{{ $plan->description ?: 'Reliable access with full question bank support.' }}</p>
+                        @php($state = $planStates[$plan->id] ?? null)
                         <p class="plan-price mb-0">{{ $plan->currency }} {{ number_format((float)$plan->price, 2) }}</p>
+                        @if($state)
+                            <p class="mb-0 text-sm"><strong>Billing period:</strong> {{ \Illuminate\Support\Carbon::parse($state['period']['start'])->format('M d, Y') }} - {{ \Illuminate\Support\Carbon::parse($state['period']['end'])->format('M d, Y') }}</p>
+                            <p class="mb-0 text-sm"><strong>Total due:</strong> {{ $state['pricing']['currency'] }} {{ number_format((float) $state['pricing']['total_due'], 2) }}</p>
+                            @if($state['pricing']['is_prorated'])
+                                <p class="mb-0 text-sm muted">Prorated for remaining days this month.</p>
+                            @endif
+                            @if(($state['pricing']['registration_fee'] ?? 0) > 0)
+                                <p class="mb-0 text-sm muted">Includes one-time registration fee.</p>
+                            @endif
+                            <p class="mb-0 text-sm {{ $state['can_select'] ? 'text-success' : 'muted' }}">{{ $state['message'] }}</p>
+                        @endif
                         @if($topDiscount)
                             <p class="pill mb-0">{{ $topDiscount->name }}: {{ $topDiscount->type === 'percentage' ? $topDiscount->amount.'%' : $plan->currency.' '.number_format((float)$topDiscount->amount, 2) }} off</p>
                         @endif
-                        <button class="btn btn-primary" type="submit">Continue to payment</button>
+                        @if($state && $state['can_select'])
+                            <button class="btn btn-primary" type="submit">Continue to payment</button>
+                        @else
+                            <button class="btn" type="button" disabled>Not available now</button>
+                        @endif
                     </div>
                 </form>
             @endforeach

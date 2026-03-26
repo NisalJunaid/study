@@ -11,6 +11,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\Subject;
 use App\Models\User;
 use App\Models\UserSubscription;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -68,6 +69,7 @@ class BillingSubscriptionFlowTest extends TestCase
     public function test_payment_slip_upload_grants_temporary_access(): void
     {
         Storage::fake('local');
+        $this->travelTo(Carbon::parse('2026-03-10 10:00:00'));
 
         $student = User::factory()->student()->create();
         $plan = SubscriptionPlan::query()->create($this->monthlyPlanData());
@@ -84,6 +86,10 @@ class BillingSubscriptionFlowTest extends TestCase
 
         $this->assertNotNull($payment);
         $this->assertTrue($payment->temporaryAccessStillValid());
+        $this->assertSame('2026-03-01', $payment->billing_period_start?->toDateString());
+        $this->assertSame('2026-03-31', $payment->billing_period_end?->toDateString());
+        $this->assertSame(7.33, (float) $payment->pricing_snapshot['prorated_plan_amount']);
+        $this->assertSame(7.33, (float) $payment->amount);
         $this->assertDatabaseHas('user_subscriptions', [
             'user_id' => $student->id,
             'status' => UserSubscription::STATUS_PENDING_VERIFICATION,
@@ -230,6 +236,7 @@ class BillingSubscriptionFlowTest extends TestCase
 
     public function test_monthly_rule_suspends_after_third_if_unpaid(): void
     {
+        $this->travelTo(Carbon::parse('2026-04-04 08:00:00'));
         $student = User::factory()->student()->create();
         $plan = SubscriptionPlan::query()->create($this->monthlyPlanData());
 
@@ -238,10 +245,9 @@ class BillingSubscriptionFlowTest extends TestCase
             'subscription_plan_id' => $plan->id,
             'status' => UserSubscription::STATUS_ACTIVE,
             'billing_status' => UserSubscription::BILLING_ACTIVE,
-            'expires_at' => now()->subDay(),
+            'expires_at' => Carbon::parse('2026-04-03 23:59:59'),
         ]);
 
-        $this->travelTo(now()->startOfMonth()->addDays(4));
         $this->artisan('subscriptions:enforce')->assertSuccessful();
 
         $this->assertDatabaseHas('user_subscriptions', ['status' => UserSubscription::STATUS_SUSPENDED]);
@@ -283,6 +289,7 @@ class BillingSubscriptionFlowTest extends TestCase
 
     public function test_selected_plan_is_used_on_payment_page_with_bank_details(): void
     {
+        $this->travelTo(Carbon::parse('2026-03-10 10:00:00'));
         $student = User::factory()->student()->create();
         $plan = SubscriptionPlan::query()->create($this->monthlyPlanData());
 
@@ -305,7 +312,7 @@ class BillingSubscriptionFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Amount due')
             ->assertSee('1234567890')
-            ->assertSee((string) $plan->price);
+            ->assertSee('Prorated plan amount');
     }
 
     public function test_suspended_user_is_redirected_to_billing_routes_only(): void
@@ -341,6 +348,7 @@ class BillingSubscriptionFlowTest extends TestCase
                 'bank_account_number' => '4444333322',
                 'bank_name' => 'Scholars Bank',
                 'currency' => 'USD',
+                'registration_fee' => 12,
                 'payment_instructions' => 'Reference your email in transfer note.',
             ])
             ->assertRedirect(route('admin.billing.settings.edit'));
@@ -348,7 +356,111 @@ class BillingSubscriptionFlowTest extends TestCase
         $this->assertDatabaseHas('payment_settings', [
             'bank_account_number' => '4444333322',
             'bank_name' => 'Scholars Bank',
+            'registration_fee' => 12,
         ]);
+    }
+
+    public function test_active_monthly_before_24th_cannot_pay_monthly_again(): void
+    {
+        $this->travelTo(Carbon::parse('2026-03-20 09:00:00'));
+        $student = User::factory()->student()->create();
+        $plan = SubscriptionPlan::query()->create($this->monthlyPlanData());
+        UserSubscription::query()->create([
+            'user_id' => $student->id,
+            'subscription_plan_id' => $plan->id,
+            'status' => UserSubscription::STATUS_ACTIVE,
+            'billing_status' => UserSubscription::BILLING_ACTIVE,
+            'activated_at' => Carbon::parse('2026-03-01'),
+            'expires_at' => Carbon::parse('2026-04-03 23:59:59'),
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.billing.subscription'))
+            ->assertSee('Renewal opens on Mar 24, 2026.');
+    }
+
+    public function test_active_monthly_on_or_after_24th_can_initiate_next_month_payment(): void
+    {
+        $this->travelTo(Carbon::parse('2026-03-25 09:00:00'));
+        $student = User::factory()->student()->create();
+        $plan = SubscriptionPlan::query()->create($this->monthlyPlanData());
+        UserSubscription::query()->create([
+            'user_id' => $student->id,
+            'subscription_plan_id' => $plan->id,
+            'status' => UserSubscription::STATUS_ACTIVE,
+            'billing_status' => UserSubscription::BILLING_ACTIVE,
+            'expires_at' => Carbon::parse('2026-04-03 23:59:59'),
+        ]);
+
+        $this->actingAs($student)
+            ->post(route('student.billing.subscription.select-plan'), ['subscription_plan_id' => $plan->id])
+            ->assertRedirect(route('student.billing.payment'));
+
+        $this->actingAs($student)
+            ->get(route('student.billing.payment'))
+            ->assertSee('Apr 01, 2026 - Apr 30, 2026');
+    }
+
+    public function test_pending_verification_for_renewal_suppresses_duplicate_payment_option(): void
+    {
+        $this->travelTo(Carbon::parse('2026-03-25 09:00:00'));
+        $student = User::factory()->student()->create();
+        $plan = SubscriptionPlan::query()->create($this->monthlyPlanData());
+        $subscription = UserSubscription::query()->create([
+            'user_id' => $student->id,
+            'subscription_plan_id' => $plan->id,
+            'status' => UserSubscription::STATUS_ACTIVE,
+            'billing_status' => UserSubscription::BILLING_ACTIVE,
+            'expires_at' => Carbon::parse('2026-04-03 23:59:59'),
+        ]);
+        SubscriptionPayment::query()->create([
+            'user_id' => $student->id,
+            'subscription_plan_id' => $plan->id,
+            'user_subscription_id' => $subscription->id,
+            'amount' => 10,
+            'currency' => 'USD',
+            'billing_period_start' => '2026-04-01',
+            'billing_period_end' => '2026-04-30',
+            'payment_method' => 'bank_transfer',
+            'status' => SubscriptionPayment::STATUS_PENDING,
+            'slip_path' => 'billing/slips/a.jpg',
+            'slip_original_name' => 'a.jpg',
+            'submitted_at' => now(),
+            'temporary_access_expires_at' => now()->addDay(),
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.billing.subscription'))
+            ->assertSee('Payment is already pending verification for this billing period.')
+            ->assertSee('Not available now');
+    }
+
+    public function test_registration_fee_is_added_only_for_first_verified_payment(): void
+    {
+        Storage::fake('local');
+        $this->travelTo(Carbon::parse('2026-03-10 10:00:00'));
+        PaymentSetting::current()->update(['registration_fee' => 5]);
+        $student = User::factory()->student()->create();
+        $plan = SubscriptionPlan::query()->create($this->monthlyPlanData());
+
+        $this->actingAs($student)->post(route('student.billing.payments.store'), [
+            'subscription_plan_id' => $plan->id,
+            'slip' => UploadedFile::fake()->image('first.jpg'),
+        ]);
+
+        $firstPayment = SubscriptionPayment::query()->latest()->firstOrFail();
+        $this->assertSame(12.33, (float) $firstPayment->amount);
+        $this->assertSame(5.0, (float) $firstPayment->pricing_snapshot['registration_fee']);
+
+        $firstPayment->update(['status' => SubscriptionPayment::STATUS_VERIFIED]);
+
+        $this->actingAs($student)->post(route('student.billing.payments.store'), [
+            'subscription_plan_id' => $plan->id,
+            'slip' => UploadedFile::fake()->image('second.jpg'),
+        ]);
+
+        $secondPayment = SubscriptionPayment::query()->latest()->firstOrFail();
+        $this->assertSame(0.0, (float) $secondPayment->pricing_snapshot['registration_fee']);
     }
 
     public function test_admin_can_manage_plans_and_discounts(): void

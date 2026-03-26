@@ -14,7 +14,12 @@ class PaymentSetting extends Model
         'bank_account_number',
         'bank_name',
         'currency',
+        'registration_fee',
         'payment_instructions',
+    ];
+
+    protected $casts = [
+        'registration_fee' => 'decimal:2',
     ];
 
     public static function current(): self
@@ -24,6 +29,7 @@ class PaymentSetting extends Model
             'bank_account_number' => '0000000000',
             'bank_name' => 'Your Bank',
             'currency' => 'USD',
+            'registration_fee' => 0,
             'payment_instructions' => 'Transfer the exact amount and upload a clear slip for verification.',
         ]);
     }
