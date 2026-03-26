@@ -191,14 +191,18 @@
                 </label>
             </section>
 
-            <footer class="onboarding-actions">
-                <a href="{{ route('login') }}" class="btn">Login</a>
+            <footer class="onboarding-actions focus-auth-onboarding-actions">
                 <div class="row-wrap">
-                    <button type="button" class="btn" data-prev-step hidden>Previous</button>
+                    <button type="button" class="btn btn-ghost" data-prev-step hidden>Previous</button>
                     <button type="button" class="btn btn-primary" data-next-step>Next</button>
                     <button type="submit" class="btn btn-primary" data-submit-step hidden>Complete Registration</button>
                 </div>
             </footer>
+
+            <div class="focus-auth-secondary-action">
+                <p class="text-sm muted mb-0">Already have an account?</p>
+                <a href="{{ route('login') }}" class="focus-auth-secondary-link">Log in instead</a>
+            </div>
         </form>
     </section>
 @endsection

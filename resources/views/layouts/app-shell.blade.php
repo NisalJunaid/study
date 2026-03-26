@@ -60,20 +60,39 @@
         @endauth
     </header>
 
-    <div class="sidebar-overlay" data-nav-overlay></div>
+    <div class="sidebar-overlay" data-nav-overlay hidden></div>
 
     <aside class="sidebar" id="app-sidebar" data-sidebar>
-        <div class="sidebar-top row-between">
+        <div class="sidebar-top">
+            <div class="sidebar-brand-row">
+                <a class="sidebar-brand-link" href="{{ route('home') }}">
+                    <span class="focus-home-brand-badge">F</span>
+                    <span class="brand">Focus Lab</span>
+                </a>
+                <button class="mobile-nav-close" type="button" aria-label="Close navigation" data-nav-close>✕</button>
+            </div>
             <div>
-                <div class="brand">Focus Lab</div>
                 @if(!empty($navDescription))
                     <p class="muted mt-0">{{ $navDescription }}</p>
                 @endif
             </div>
-            <button class="mobile-nav-close" type="button" aria-label="Close navigation" data-nav-close>✕</button>
         </div>
 
         @yield('sidebar')
+
+        @auth
+            <div class="sidebar-account card">
+                <p class="text-sm muted mb-0">Account</p>
+                <div class="sidebar-account-actions">
+                    <a href="{{ route('profile.edit') }}" class="btn btn-ghost">Profile</a>
+                    <a href="{{ route('profile.settings') }}" class="btn btn-ghost">Settings</a>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-ghost">Sign out</button>
+                    </form>
+                </div>
+            </div>
+        @endauth
 
         <div class="sidebar-theme-toggle card" data-theme-control>
             <div>
@@ -191,11 +210,15 @@
 
         const closeNav = () => {
             shell.classList.remove('nav-open');
+            document.body.classList.remove('nav-lock');
+            overlay?.setAttribute('hidden', 'hidden');
             toggleButton?.setAttribute('aria-expanded', 'false');
         };
 
         const openNav = () => {
             shell.classList.add('nav-open');
+            document.body.classList.add('nav-lock');
+            overlay?.removeAttribute('hidden');
             toggleButton?.setAttribute('aria-expanded', 'true');
         };
 
@@ -235,6 +258,12 @@
                 closeNav();
                 userMenuToggle?.setAttribute('aria-expanded', 'false');
                 if (userMenuPanel) userMenuPanel.hidden = true;
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 1024) {
+                closeNav();
             }
         });
     })();

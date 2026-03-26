@@ -18,7 +18,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('login') }}" class="stack-md">
+        <form method="POST" action="{{ route('login') }}" class="stack-md focus-auth-main-form">
             @csrf
 
             <label class="input-field">
@@ -54,15 +54,20 @@
                 <span>Keep me signed in on this device</span>
             </label>
 
-            <div class="onboarding-actions focus-auth-actions">
-                <a href="{{ route('register') }}" class="btn">Create account</a>
-                <div class="row-wrap">
+            <div class="focus-auth-form-cta stack-sm">
+                <button type="submit" class="btn btn-primary w-full">Log in</button>
+
+                <div class="focus-auth-inline-links">
                     @if (Route::has('password.request'))
                         <a href="{{ route('password.request') }}" class="btn btn-ghost">Forgot password?</a>
                     @endif
-                    <button type="submit" class="btn btn-primary">Log in</button>
                 </div>
             </div>
         </form>
+
+        <footer class="focus-auth-secondary-action">
+            <p class="text-sm muted mb-0">Don't have an account?</p>
+            <a href="{{ route('register') }}" class="focus-auth-secondary-link">Create one here</a>
+        </footer>
     </div>
 @endsection
