@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        preview.classList.toggle('has-file', Boolean(file));
+
         if (!file) {
             fileName.textContent = 'No file selected yet.';
             if (image) {

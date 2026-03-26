@@ -1709,3 +1709,190 @@ body.overlay-open {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+.payment-form {
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+    border-color: #cfdcf2;
+    gap: 1.2rem;
+}
+
+.payment-section {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 0.95rem;
+    border: 1px solid transparent;
+}
+
+.payment-summary-card {
+    background: #f6f8ff;
+    border-color: #dbe4ff;
+}
+
+.payment-bank-card {
+    background: #f8fbff;
+    border-color: #d7e6f8;
+}
+
+.payment-heading-row {
+    align-items: center;
+    border-bottom: 1px solid #dbe4f0;
+    padding-bottom: 0.65rem;
+}
+
+.payment-summary-grid,
+.payment-bank-grid {
+    background: #fff;
+    border-style: solid;
+}
+
+.payment-total {
+    color: #312e81;
+}
+
+.payment-upload-field {
+    display: grid;
+    gap: 0.7rem;
+    border: 1px dashed #93c5fd;
+    border-radius: 0.95rem;
+    background: linear-gradient(180deg, #f8fbff, #eef6ff);
+    padding: 0.95rem;
+    cursor: pointer;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.payment-upload-field:hover {
+    border-color: #60a5fa;
+}
+
+.payment-upload-field:focus-within {
+    outline: 2px solid #6366f1;
+    outline-offset: 1px;
+    border-color: #6366f1;
+}
+
+.payment-upload-field.has-file {
+    background: linear-gradient(180deg, #eff6ff, #e2e8ff);
+    border-style: solid;
+}
+
+.payment-upload-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px;
+    height: 1px;
+}
+
+.payment-upload-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.payment-upload-field img {
+    max-width: min(100%, 480px);
+    max-height: 320px;
+    border-radius: 0.8rem;
+    border: 1px solid #bfdbfe;
+    background: #fff;
+}
+
+.payment-actions {
+    justify-content: space-between;
+    border-top: 1px solid #dbe4f0;
+    padding-top: 0.9rem;
+}
+
+.landing-page {
+    min-height: 100vh;
+    padding: clamp(1rem, 3vw, 2rem);
+}
+
+.landing-shell {
+    width: min(1160px, 100%);
+    margin: 0 auto;
+    display: grid;
+    gap: 1.35rem;
+}
+
+.landing-hero {
+    display: grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap: 1.2rem;
+    align-items: stretch;
+}
+
+.landing-surface {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #dbe4f0;
+    border-radius: 1.1rem;
+    box-shadow: var(--shadow-soft);
+    padding: clamp(1rem, 2vw, 1.4rem);
+}
+
+.landing-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.landing-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.landing-placeholder {
+    border: 1px dashed #94a3b8;
+    border-radius: 0.95rem;
+    background: repeating-linear-gradient(135deg, #f8fafc, #f8fafc 12px, #eff6ff 12px, #eff6ff 24px);
+    min-height: 180px;
+    display: grid;
+    place-items: center;
+    color: #475569;
+    font-weight: 600;
+    text-align: center;
+    padding: 1rem;
+}
+
+.landing-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.75rem;
+}
+
+.landing-step {
+    background: #f8fafc;
+    border: 1px solid #dbe4f0;
+    border-radius: 0.85rem;
+    padding: 0.85rem;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.landing-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    color: #475569;
+}
+
+@media (max-width: 920px) {
+    .landing-hero,
+    .landing-grid-2,
+    .landing-grid-3 {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-section {
+        padding: 0.85rem;
+    }
+
+    .payment-actions .btn {
+        width: 100%;
+    }
+}
