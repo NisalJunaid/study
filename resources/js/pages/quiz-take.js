@@ -63,11 +63,43 @@ document.addEventListener('DOMContentLoaded', () => {
         interactionTimer = window.setTimeout(send, 400);
     };
 
+    const knownStructuredPartIds = (question) => (question.structured_parts || [])
+        .map((part) => String(part?.id || '').trim())
+        .filter((id) => id !== '');
+
     const structuredAnswers = (question) => {
         if (!question.answer) question.answer = {};
-        if (!question.answer.answer_json || typeof question.answer.answer_json !== 'object') {
-            question.answer.answer_json = {};
+        const knownIds = knownStructuredPartIds(question);
+        const knownIdSet = new Set(knownIds);
+        const raw = question.answer.answer_json;
+        const normalized = {};
+
+        if (raw && typeof raw === 'object') {
+            knownIds.forEach((partId) => {
+                if (Object.prototype.hasOwnProperty.call(raw, partId)) {
+                    normalized[partId] = String(raw[partId] ?? '');
+                }
+            });
+
+            (question.structured_parts || []).forEach((part, index) => {
+                const partId = String(part?.id || '').trim();
+                if (!partId || Object.prototype.hasOwnProperty.call(normalized, partId)) return;
+
+                const partLabel = String(part?.part_label || '').trim();
+                if (partLabel && Object.prototype.hasOwnProperty.call(raw, partLabel)) {
+                    normalized[partId] = String(raw[partLabel] ?? '');
+                    return;
+                }
+
+                if (Array.isArray(raw) && raw[index] != null) {
+                    normalized[partId] = String(raw[index] ?? '');
+                }
+            });
         }
+
+        question.answer.answer_json = Object.fromEntries(
+            Object.entries(normalized).filter(([partId]) => knownIdSet.has(partId)),
+        );
 
         return question.answer.answer_json;
     };
@@ -281,8 +313,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (question.type === 'structured_response' && !question.locked && !quizLocked) {
             els.panel.querySelectorAll('[data-structured-answer-id]').forEach((input) => {
                 input.addEventListener('input', (event) => {
+                    const partId = String(event.target.dataset.structuredAnswerId || '').trim();
+                    const knownIdSet = new Set(knownStructuredPartIds(question));
+                    if (!partId || !knownIdSet.has(partId)) return;
+
                     const answers = structuredAnswers(question);
-                    answers[String(event.target.dataset.structuredAnswerId)] = event.target.value;
+                    answers[partId] = event.target.value;
                     reportInteraction();
                 });
             });
@@ -353,7 +389,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                payload.structured_answers = answers;
+                payload.structured_answers = (activeQuestion.structured_parts || []).reduce((carry, part) => {
+                    const partId = String(part?.id || '').trim();
+                    if (!partId) return carry;
+
+                    const value = String(answers[partId] ?? '').trim();
+                    if (value === '') return carry;
+
+                    carry[partId] = value;
+                    return carry;
+                }, {});
             } else {
                 const answerText = typedAnswer(activeQuestion);
                 if (!answerText) {
