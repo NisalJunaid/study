@@ -44,7 +44,7 @@ CSV;
         $file = UploadedFile::fake()->createWithContent('questions.csv', $csv);
 
         $response = $this->actingAs($admin)
-            ->post(route('admin.imports.store'), [
+            ->post(route('admin.imports.questions.store'), [
                 'csv_file' => $file,
                 'allow_create_subjects' => false,
                 'allow_create_topics' => false,
@@ -137,7 +137,7 @@ CSV;
 
         $file = UploadedFile::fake()->createWithContent('questions.json', $json);
 
-        $response = $this->actingAs($admin)->post(route('admin.imports.store'), [
+        $response = $this->actingAs($admin)->post(route('admin.imports.questions.store'), [
             'import_file' => $file,
             'allow_create_subjects' => false,
             'allow_create_topics' => false,
@@ -162,7 +162,7 @@ CSV;
 
         $file = UploadedFile::fake()->createWithContent('bad.json', '{"questions": [}');
 
-        $this->actingAs($admin)->post(route('admin.imports.store'), [
+        $this->actingAs($admin)->post(route('admin.imports.questions.store'), [
             'import_file' => $file,
         ]);
 
@@ -204,7 +204,7 @@ CSV;
 
         $file = UploadedFile::fake()->createWithContent('invalid.json', $json);
 
-        $this->actingAs($admin)->post(route('admin.imports.store'), [
+        $this->actingAs($admin)->post(route('admin.imports.questions.store'), [
             'import_file' => $file,
         ]);
 
@@ -223,7 +223,7 @@ CSV;
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
-        $response = $this->actingAs($admin)->get(route('admin.imports.sample', [
+        $response = $this->actingAs($admin)->get(route('admin.imports.questions.sample', [
             'format' => 'json',
             'template' => 'structured_response',
         ]));

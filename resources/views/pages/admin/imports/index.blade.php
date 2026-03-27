@@ -10,12 +10,7 @@
             </div>
 
             <div class="actions-inline">
-                @php
-                    $subjectSampleUrl = \Illuminate\Support\Facades\Route::has('admin.imports.subjects.sample')
-                        ? route('admin.imports.subjects.sample')
-                        : url('/admin/imports/sample/subjects-json');
-                @endphp
-                <a class="btn" href="{{ $subjectSampleUrl }}">Download Subject Sample JSON</a>
+                <a class="btn" href="{{ route('admin.imports.subjects.sample') }}">Download Subject Sample JSON</a>
             </div>
 
             <details>
@@ -45,12 +40,7 @@
             </div>
 
             <div class="actions-inline">
-                @php
-                    $topicSampleUrl = \Illuminate\Support\Facades\Route::has('admin.imports.topics.sample')
-                        ? route('admin.imports.topics.sample')
-                        : url('/admin/imports/sample/topics-json');
-                @endphp
-                <a class="btn" href="{{ $topicSampleUrl }}">Download Topic Sample JSON</a>
+                <a class="btn" href="{{ route('admin.imports.topics.sample') }}">Download Topic Sample JSON</a>
             </div>
 
             <details>
@@ -85,12 +75,12 @@
         <div class="card card-soft stack-sm" style="margin-bottom: 1rem;">
             <p class="muted mb-0">Import supports CSV and JSON. Use the templates below to match the expected schema.</p>
             <div class="actions-inline">
-                <a class="btn" href="{{ route('admin.imports.sample', ['template' => 'general']) }}">Download General Sample CSV</a>
-                <a class="btn" href="{{ route('admin.imports.sample', ['template' => 'structured_response']) }}">Download Structured Response Sample CSV</a>
-                <a class="btn" href="{{ route('admin.imports.sample', ['format' => 'json', 'template' => 'mcq']) }}">Download Sample MCQ JSON</a>
-                <a class="btn" href="{{ route('admin.imports.sample', ['format' => 'json', 'template' => 'theory']) }}">Download Sample Theory JSON</a>
-                <a class="btn" href="{{ route('admin.imports.sample', ['format' => 'json', 'template' => 'structured_response']) }}">Download Sample Structured Response JSON</a>
-                <a class="btn" href="{{ route('admin.imports.sample', ['format' => 'json', 'template' => 'all']) }}">Download Combined Sample JSON</a>
+                <a class="btn" href="{{ route('admin.imports.questions.sample', ['template' => 'general']) }}">Download General Sample CSV</a>
+                <a class="btn" href="{{ route('admin.imports.questions.sample', ['template' => 'structured_response']) }}">Download Structured Response Sample CSV</a>
+                <a class="btn" href="{{ route('admin.imports.questions.sample', ['format' => 'json', 'template' => 'mcq']) }}">Download Sample MCQ JSON</a>
+                <a class="btn" href="{{ route('admin.imports.questions.sample', ['format' => 'json', 'template' => 'theory']) }}">Download Sample Theory JSON</a>
+                <a class="btn" href="{{ route('admin.imports.questions.sample', ['format' => 'json', 'template' => 'structured_response']) }}">Download Sample Structured Response JSON</a>
+                <a class="btn" href="{{ route('admin.imports.questions.sample', ['format' => 'json', 'template' => 'all']) }}">Download Combined Sample JSON</a>
             </div>
         </div>
 
@@ -110,7 +100,7 @@
             </details>
         </div>
 
-        <form method="POST" action="{{ route('admin.imports.store') }}" enctype="multipart/form-data" class="stack-md">
+        <form method="POST" action="{{ route('admin.imports.questions.store') }}" enctype="multipart/form-data" class="stack-md">
             @csrf
 
             <div class="field">
