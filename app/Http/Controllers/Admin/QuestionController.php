@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Admin\UpsertQuestionAction;
 use App\Events\QuestionBankChanged;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BulkQuestionActionRequest;
 use App\Http\Requests\Admin\StoreQuestionRequest;
 use App\Http\Requests\Admin\UpdateQuestionRequest;
 use App\Models\Question;
@@ -82,6 +83,57 @@ class QuestionController extends Controller
             ],
             'difficulties' => ['easy', 'medium', 'hard'],
         ]);
+    }
+
+
+    public function bulkAction(BulkQuestionActionRequest $request): RedirectResponse
+    {
+        $validated = $request->validated();
+        $ids = array_values(array_unique(array_map('intval', $validated['ids'])));
+
+        if ($validated['action'] === 'delete') {
+            $deleted = Question::query()->whereIn('id', $ids)->delete();
+
+            if ($deleted > 0) {
+                QuestionBankChanged::dispatch('bulk_deleted');
+            }
+
+            return redirect()
+                ->route('admin.questions.index')
+                ->with('success', sprintf('%d question(s) deleted.', $deleted));
+        }
+
+        $updates = array_filter($validated['update'] ?? [], fn ($value) => $value !== null && $value !== '');
+
+        if ($updates === []) {
+            return redirect()
+                ->route('admin.questions.index')
+                ->with('error', 'Select at least one question field to update.');
+        }
+
+        if (isset($updates['subject_id']) && array_key_exists('topic_id', $updates) && $updates['topic_id']) {
+            $topicValid = Topic::query()
+                ->whereKey($updates['topic_id'])
+                ->where('subject_id', $updates['subject_id'])
+                ->exists();
+
+            if (! $topicValid) {
+                return redirect()
+                    ->route('admin.questions.index')
+                    ->with('error', 'Selected topic does not belong to the selected subject.');
+            }
+        }
+
+        $updates['updated_by'] = (int) $request->user()->id;
+        $updated = Question::query()->whereIn('id', $ids)->update($updates);
+
+        if ($updated > 0) {
+            QuestionBankChanged::dispatch('bulk_updated');
+        }
+
+        return redirect()
+            ->route('admin.questions.index')
+            ->with('success', sprintf('%d question(s) updated.', $updated));
     }
 
     public function create(): View

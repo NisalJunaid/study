@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\BillingPlanController;
 use App\Http\Controllers\Admin\PlanDiscountController;
 use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\DataManagementController;
 use App\Http\Controllers\Admin\PaymentSettingController;
 use App\Http\Controllers\Admin\SubscriptionPaymentController;
 use App\Http\Controllers\Admin\SubjectController;
@@ -67,6 +68,11 @@ Route::prefix('admin')
         Route::resource('topics', TopicController::class)->except('show');
         Route::resource('questions', QuestionController::class)->except('show');
         Route::patch('questions/{question}/toggle-publish', [QuestionController::class, 'togglePublish'])->name('questions.toggle-publish');
+        Route::get('data-management', [DataManagementController::class, 'index'])->name('data-management.index');
+        Route::post('data-management/wipe', [DataManagementController::class, 'wipe'])->name('data-management.wipe');
+        Route::post('subjects/bulk-action', [SubjectController::class, 'bulkAction'])->name('subjects.bulk-action');
+        Route::post('topics/bulk-action', [TopicController::class, 'bulkAction'])->name('topics.bulk-action');
+        Route::post('questions/bulk-action', [QuestionController::class, 'bulkAction'])->name('questions.bulk-action');
         Route::prefix('imports')->name('imports.')->controller(ImportController::class)->group(function (): void {
             Route::get('/', 'index')->name('index');
             Route::get('/{import}', 'show')->name('show');
