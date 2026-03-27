@@ -126,8 +126,12 @@ Route::prefix('admin')
         Route::resource('questions', QuestionController::class)->except('show');
         Route::patch('questions/{question}/toggle-publish', [QuestionController::class, 'togglePublish'])->name('questions.toggle-publish');
         Route::resource('imports', ImportController::class)->only(['index', 'store', 'show']);
+        Route::post('imports/subjects-json', [ImportController::class, 'storeSubjectsJson'])->name('imports.subjects.store');
+        Route::post('imports/topics-json', [ImportController::class, 'storeTopicsJson'])->name('imports.topics.store');
         Route::post('imports/{import}/confirm', [ImportController::class, 'confirm'])->name('imports.confirm');
         Route::get('imports/sample/download', [ImportController::class, 'sample'])->name('imports.sample');
+        Route::get('imports/sample/subjects-json', [ImportController::class, 'subjectSample'])->name('imports.subjects.sample');
+        Route::get('imports/sample/topics-json', [ImportController::class, 'topicSample'])->name('imports.topics.sample');
         Route::get('/theory-reviews', [TheoryReviewController::class, 'index'])->name('theory-reviews.index');
         Route::get('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'show'])->name('theory-reviews.show');
         Route::put('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'update'])->name('theory-reviews.update');

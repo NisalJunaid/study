@@ -2,6 +2,68 @@
 
 @section('content')
 <div class="stack-lg">
+    <div class="grid-2">
+        <div class="card quiz-panel stack-md">
+            <div>
+                <h3 class="h2" style="margin-bottom:.25rem;">Import Subjects (JSON)</h3>
+                <p class="muted mb-0">Upload a JSON array of subject objects. Existing subjects are matched by <code>slug</code> and updated.</p>
+            </div>
+
+            <div class="actions-inline">
+                <a class="btn" href="{{ route('admin.imports.subjects.sample') }}">Download Subject Sample JSON</a>
+            </div>
+
+            <details>
+                <summary class="text-strong">View Subject Sample JSON</summary>
+                <pre style="margin-top:.5rem; overflow:auto;">{{ $subjectJsonSample }}</pre>
+            </details>
+
+            <form method="POST" action="{{ route('admin.imports.subjects.store') }}" enctype="multipart/form-data" class="stack-sm">
+                @csrf
+                <div class="field">
+                    <span>Subject JSON File</span>
+                    <input type="file" name="subject_import_file" accept=".json,application/json,text/plain" required>
+                    <small class="muted">Accepted format: .json (max 5MB)</small>
+                    @error('subject_import_file') <span class="field-error">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="actions-row">
+                    <button class="btn btn-primary" type="submit">Import Subjects</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card quiz-panel stack-md">
+            <div>
+                <h3 class="h2" style="margin-bottom:.25rem;">Import Topics (JSON)</h3>
+                <p class="muted mb-0">Upload a JSON array of topic objects. Topics are resolved by <code>subject_slug</code> and matched by <code>subject_slug + slug</code>.</p>
+            </div>
+
+            <div class="actions-inline">
+                <a class="btn" href="{{ route('admin.imports.topics.sample') }}">Download Topic Sample JSON</a>
+            </div>
+
+            <details>
+                <summary class="text-strong">View Topic Sample JSON</summary>
+                <pre style="margin-top:.5rem; overflow:auto;">{{ $topicJsonSample }}</pre>
+            </details>
+
+            <form method="POST" action="{{ route('admin.imports.topics.store') }}" enctype="multipart/form-data" class="stack-sm">
+                @csrf
+                <div class="field">
+                    <span>Topic JSON File</span>
+                    <input type="file" name="topic_import_file" accept=".json,application/json,text/plain" required>
+                    <small class="muted">Accepted format: .json (max 5MB)</small>
+                    @error('topic_import_file') <span class="field-error">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="actions-row">
+                    <button class="btn btn-primary" type="submit">Import Topics</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card quiz-panel">
         <div class="row-between" style="margin-bottom: 1rem;">
             <div>
