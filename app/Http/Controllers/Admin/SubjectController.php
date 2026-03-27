@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BulkSubjectActionRequest;
 use App\Http\Requests\Admin\StoreSubjectRequest;
 use App\Http\Requests\Admin\UpdateSubjectRequest;
 use App\Models\Subject;
@@ -55,6 +56,39 @@ class SubjectController extends Controller
                 'level' => $request->string('level')->toString(),
             ],
         ]);
+    }
+
+
+    public function bulkAction(BulkSubjectActionRequest $request): RedirectResponse
+    {
+        $validated = $request->validated();
+        $ids = array_values(array_unique(array_map('intval', $validated['ids'])));
+
+        if ($validated['action'] === 'delete') {
+            $deleted = Subject::query()->whereIn('id', $ids)->delete();
+
+            return redirect()
+                ->route('admin.subjects.index')
+                ->with('success', sprintf('%d subject(s) deleted.', $deleted));
+        }
+
+        $updates = array_filter($validated['update'] ?? [], fn ($value) => $value !== null && $value !== '');
+
+        if ($updates === []) {
+            return redirect()
+                ->route('admin.subjects.index')
+                ->with('error', 'Select at least one subject field to update.');
+        }
+
+        if (array_key_exists('color', $updates)) {
+            $updates['color'] = Subject::normalizeColor((string) $updates['color']);
+        }
+
+        $updated = Subject::query()->whereIn('id', $ids)->update($updates);
+
+        return redirect()
+            ->route('admin.subjects.index')
+            ->with('success', sprintf('%d subject(s) updated.', $updated));
     }
 
     public function create(): View

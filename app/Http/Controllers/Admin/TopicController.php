@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BulkTopicActionRequest;
 use App\Http\Requests\Admin\StoreTopicRequest;
 use App\Http\Requests\Admin\UpdateTopicRequest;
 use App\Models\Subject;
@@ -56,6 +57,35 @@ class TopicController extends Controller
                 'subject_id' => $request->integer('subject_id') ?: '',
             ],
         ]);
+    }
+
+
+    public function bulkAction(BulkTopicActionRequest $request): RedirectResponse
+    {
+        $validated = $request->validated();
+        $ids = array_values(array_unique(array_map('intval', $validated['ids'])));
+
+        if ($validated['action'] === 'delete') {
+            $deleted = Topic::query()->whereIn('id', $ids)->delete();
+
+            return redirect()
+                ->route('admin.topics.index')
+                ->with('success', sprintf('%d topic(s) deleted.', $deleted));
+        }
+
+        $updates = array_filter($validated['update'] ?? [], fn ($value) => $value !== null && $value !== '');
+
+        if ($updates === []) {
+            return redirect()
+                ->route('admin.topics.index')
+                ->with('error', 'Select at least one topic field to update.');
+        }
+
+        $updated = Topic::query()->whereIn('id', $ids)->update($updates);
+
+        return redirect()
+            ->route('admin.topics.index')
+            ->with('success', sprintf('%d topic(s) updated.', $updated));
     }
 
     public function create(): View

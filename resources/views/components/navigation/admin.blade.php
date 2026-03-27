@@ -5,5 +5,6 @@
     <a class="nav-item {{ request()->routeIs('admin.questions.*') ? 'active' : '' }}" href="{{ route('admin.questions.index') }}">Questions</a>
     <a class="nav-item {{ request()->routeIs('admin.imports.*') ? 'active' : '' }}" href="{{ route('admin.imports.index') }}">Imports</a>
     <a class="nav-item {{ request()->routeIs('admin.theory-reviews.*') ? 'active' : '' }}" href="{{ route('admin.theory-reviews.index') }}">Theory Reviews</a>
+    <a class="nav-item {{ request()->routeIs('admin.data-management.*') ? 'active' : '' }}" href="{{ route('admin.data-management.index') }}">Data Management</a>
     <a class="nav-item {{ request()->routeIs('admin.billing.*') ? 'active' : '' }}" href="{{ route('admin.billing.payments.index') }}">Billing</a>
 </nav>
