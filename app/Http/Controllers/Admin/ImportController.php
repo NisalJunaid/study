@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ConfirmQuestionImportRequest;
 use App\Http\Requests\Admin\StoreQuestionImportRequest;
+use App\Http\Requests\Admin\StoreSubjectJsonImportRequest;
+use App\Http\Requests\Admin\StoreTopicJsonImportRequest;
 use App\Events\ImportProgressUpdated;
 use App\Jobs\ProcessQuestionImportJob;
 use App\Models\Import;
+use App\Services\Import\CurriculumJsonImportService;
 use App\Services\Import\QuestionImportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -17,7 +20,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ImportController extends Controller
 {
-    public function index(Request $request, QuestionImportService $questionImportService): View
+    public function index(Request $request, QuestionImportService $questionImportService, CurriculumJsonImportService $curriculumJsonImportService): View
     {
         $this->authorize('viewAny', Import::class);
 
@@ -29,6 +32,8 @@ class ImportController extends Controller
         return view('pages.admin.imports.index', [
             'imports' => $imports,
             'jsonSamples' => $questionImportService->sampleJsonStrings(),
+            'subjectJsonSample' => $curriculumJsonImportService->subjectSampleJsonString(),
+            'topicJsonSample' => $curriculumJsonImportService->topicSampleJsonString(),
         ]);
     }
 
@@ -48,6 +53,51 @@ class ImportController extends Controller
         return redirect()
             ->route('admin.imports.show', $import)
             ->with('success', "{$format} uploaded and validated. Review the preview before importing.");
+    }
+
+
+    public function storeSubjectsJson(StoreSubjectJsonImportRequest $request, CurriculumJsonImportService $curriculumJsonImportService): RedirectResponse
+    {
+        $result = $curriculumJsonImportService->importSubjects($request->importFile());
+
+        return redirect()
+            ->route('admin.imports.index')
+            ->with('success', "Subjects JSON imported successfully. {$result['created']} created, {$result['updated']} updated.");
+    }
+
+    public function storeTopicsJson(StoreTopicJsonImportRequest $request, CurriculumJsonImportService $curriculumJsonImportService): RedirectResponse
+    {
+        $result = $curriculumJsonImportService->importTopics($request->importFile());
+
+        return redirect()
+            ->route('admin.imports.index')
+            ->with('success', "Topics JSON imported successfully. {$result['created']} created, {$result['updated']} updated.");
+    }
+
+    public function subjectSample(CurriculumJsonImportService $curriculumJsonImportService): StreamedResponse
+    {
+        $this->authorize('viewAny', Import::class);
+
+        $payload = $curriculumJsonImportService->subjectSamplePayload();
+
+        return response()->streamDownload(function () use ($payload): void {
+            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
+        }, 'subject-import-sample.json', [
+            'Content-Type' => 'application/json',
+        ]);
+    }
+
+    public function topicSample(CurriculumJsonImportService $curriculumJsonImportService): StreamedResponse
+    {
+        $this->authorize('viewAny', Import::class);
+
+        $payload = $curriculumJsonImportService->topicSamplePayload();
+
+        return response()->streamDownload(function () use ($payload): void {
+            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
+        }, 'topic-import-sample.json', [
+            'Content-Type' => 'application/json',
+        ]);
     }
 
     public function show(Import $import): View
