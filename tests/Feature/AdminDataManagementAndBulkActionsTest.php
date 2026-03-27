@@ -33,6 +33,12 @@ class AdminDataManagementAndBulkActionsTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.data-management.index'))->assertOk();
         $this->actingAs($student)->get(route('admin.data-management.index'))->assertForbidden();
+
+        $this->actingAs($student)
+            ->post(route('admin.data-management.wipe'), [
+                'scope' => 'subjects',
+                'confirmation_text' => 'WIPE SUBJECTS',
+            ])->assertForbidden();
     }
 
     public function test_wipe_questions_deletes_question_dependencies_safely(): void
@@ -201,18 +207,64 @@ class AdminDataManagementAndBulkActionsTest extends TestCase
         $this->assertDatabaseHas('questions', ['id' => $questionB->id, 'difficulty' => 'hard', 'is_published' => true]);
 
         $this->actingAs($admin)
-            ->post(route('admin.subjects.bulk-action'), ['ids' => [$subjectA->id], 'action' => 'delete'])
+            ->post(route('admin.subjects.bulk-action'), ['ids' => [$subjectA->id], 'action' => 'delete', 'delete_confirmation' => '1'])
             ->assertRedirect(route('admin.subjects.index'));
         $this->assertSoftDeleted('subjects', ['id' => $subjectA->id]);
 
         $this->actingAs($admin)
-            ->post(route('admin.topics.bulk-action'), ['ids' => [$topicA->id], 'action' => 'delete'])
+            ->post(route('admin.topics.bulk-action'), ['ids' => [$topicA->id], 'action' => 'delete', 'delete_confirmation' => '1'])
             ->assertRedirect(route('admin.topics.index'));
         $this->assertSoftDeleted('topics', ['id' => $topicA->id]);
 
         $this->actingAs($admin)
-            ->post(route('admin.questions.bulk-action'), ['ids' => [$questionA->id], 'action' => 'delete'])
+            ->post(route('admin.questions.bulk-action'), ['ids' => [$questionA->id], 'action' => 'delete', 'delete_confirmation' => '1'])
             ->assertRedirect(route('admin.questions.index'));
         $this->assertSoftDeleted('questions', ['id' => $questionA->id]);
+    }
+
+    public function test_bulk_delete_requires_explicit_confirmation_flag(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $subject = Subject::factory()->create();
+
+        $this->actingAs($admin)
+            ->from(route('admin.subjects.index'))
+            ->post(route('admin.subjects.bulk-action'), [
+                'ids' => [$subject->id],
+                'action' => 'delete',
+            ])
+            ->assertRedirect(route('admin.subjects.index'))
+            ->assertSessionHasErrors('delete_confirmation');
+
+        $this->assertDatabaseHas('subjects', ['id' => $subject->id, 'deleted_at' => null]);
+    }
+
+    public function test_non_admin_cannot_run_bulk_actions(): void
+    {
+        $student = User::factory()->student()->create();
+        $subject = Subject::factory()->create();
+        $topic = Topic::factory()->create(['subject_id' => $subject->id]);
+        $question = Question::factory()->create(['subject_id' => $subject->id, 'topic_id' => $topic->id]);
+
+        $this->actingAs($student)
+            ->post(route('admin.subjects.bulk-action'), [
+                'ids' => [$subject->id],
+                'action' => 'delete',
+                'delete_confirmation' => '1',
+            ])->assertForbidden();
+
+        $this->actingAs($student)
+            ->post(route('admin.topics.bulk-action'), [
+                'ids' => [$topic->id],
+                'action' => 'delete',
+                'delete_confirmation' => '1',
+            ])->assertForbidden();
+
+        $this->actingAs($student)
+            ->post(route('admin.questions.bulk-action'), [
+                'ids' => [$question->id],
+                'action' => 'delete',
+                'delete_confirmation' => '1',
+            ])->assertForbidden();
     }
 }

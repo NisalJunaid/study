@@ -18,6 +18,7 @@ class BulkQuestionActionRequest extends FormRequest
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', Rule::exists('questions', 'id')],
             'action' => ['required', 'in:delete,update'],
+            'delete_confirmation' => ['required_if:action,delete', 'accepted'],
             'update.subject_id' => ['nullable', 'integer', Rule::exists('subjects', 'id')],
             'update.topic_id' => ['nullable', 'integer', Rule::exists('topics', 'id')],
             'update.difficulty' => ['nullable', Rule::in(['easy', 'medium', 'hard'])],

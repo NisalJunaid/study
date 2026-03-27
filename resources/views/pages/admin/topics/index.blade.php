@@ -35,6 +35,7 @@
         <form method="POST" action="{{ route('admin.topics.bulk-action') }}" data-bulk-form>
             @csrf
             <input type="hidden" name="action" data-bulk-action>
+            <input type="hidden" name="delete_confirmation" value="" data-delete-confirmation>
 
             <div class="bulk-toolbar">
                 <label class="actions-inline">
@@ -150,6 +151,7 @@
     const bulkRun = root.querySelector('[data-bulk-run]');
     const bulkForm = root.querySelector('[data-bulk-form]');
     const bulkAction = root.querySelector('[data-bulk-action]');
+    const deleteConfirmation = root.querySelector('[data-delete-confirmation]');
     const modal = document.querySelector('[data-bulk-update-modal]');
     const selectedTarget = modal?.querySelector('[data-selected-id-target]');
 
@@ -175,12 +177,15 @@
 
         if (actionSelect.value === 'delete') {
             bulkAction.value = 'delete';
+            if (deleteConfirmation) deleteConfirmation.value = '';
             const confirmed = await overlayApi?.confirm({ title: 'Delete selected topics', message: 'Delete selected topics?', variant: 'danger', primary_label: 'Delete selected', secondary_label: 'Cancel' });
             if (!confirmed) return;
+            if (deleteConfirmation) deleteConfirmation.value = '1';
             return bulkForm.submit();
         }
 
         if (actionSelect.value === 'update') {
+            if (deleteConfirmation) deleteConfirmation.value = '';
             setSelectedInputs(selectedTarget);
             modal.hidden = false;
             document.body.classList.add('overlay-open');

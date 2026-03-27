@@ -19,6 +19,7 @@ class BulkSubjectActionRequest extends FormRequest
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', Rule::exists('subjects', 'id')],
             'action' => ['required', 'in:delete,update'],
+            'delete_confirmation' => ['required_if:action,delete', 'accepted'],
             'update.level' => ['nullable', Rule::in(Subject::levels())],
             'update.color' => ['nullable', 'string', 'max:20'],
             'update.is_active' => ['nullable', 'boolean'],
