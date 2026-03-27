@@ -125,14 +125,17 @@ Route::prefix('admin')
         Route::resource('topics', TopicController::class)->except('show');
         Route::resource('questions', QuestionController::class)->except('show');
         Route::patch('questions/{question}/toggle-publish', [QuestionController::class, 'togglePublish'])->name('questions.toggle-publish');
-        Route::resource('imports', ImportController::class)->only(['index', 'show']);
-        Route::post('imports/questions', [ImportController::class, 'store'])->name('imports.questions.store');
-        Route::post('imports/subjects-json', [ImportController::class, 'storeSubjectsJson'])->name('imports.subjects.store');
-        Route::post('imports/topics-json', [ImportController::class, 'storeTopicsJson'])->name('imports.topics.store');
-        Route::post('imports/{import}/confirm', [ImportController::class, 'confirm'])->name('imports.confirm');
-        Route::get('imports/sample/questions', [ImportController::class, 'sample'])->name('imports.questions.sample');
-        Route::get('imports/sample/subjects-json', [ImportController::class, 'subjectSample'])->name('imports.subjects.sample');
-        Route::get('imports/sample/topics-json', [ImportController::class, 'topicSample'])->name('imports.topics.sample');
+        Route::prefix('imports')->name('imports.')->controller(ImportController::class)->group(function (): void {
+            Route::get('/', 'index')->name('index');
+            Route::get('/{import}', 'show')->name('show');
+            Route::post('/questions', 'store')->name('questions.store');
+            Route::post('/subjects-json', 'storeSubjectsJson')->name('subjects.store');
+            Route::post('/topics-json', 'storeTopicsJson')->name('topics.store');
+            Route::post('/{import}/confirm', 'confirm')->name('confirm');
+            Route::get('/sample/questions', 'sample')->name('questions.sample');
+            Route::get('/sample/subjects-json', 'subjectSample')->name('subjects.sample');
+            Route::get('/sample/topics-json', 'topicSample')->name('topics.sample');
+        });
         Route::get('/theory-reviews', [TheoryReviewController::class, 'index'])->name('theory-reviews.index');
         Route::get('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'show'])->name('theory-reviews.show');
         Route::put('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'update'])->name('theory-reviews.update');
