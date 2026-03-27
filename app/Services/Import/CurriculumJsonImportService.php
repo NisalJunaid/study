@@ -31,17 +31,9 @@ class CurriculumJsonImportService
             throw ValidationException::withMessages($errors);
         }
 
-        $result = ['created' => 0, 'updated' => 0, 'total' => count($preparedRows)];
-
-        DB::transaction(function () use (&$result, $preparedRows, &$errors): void {
-            $result = $this->upsertSubjects($preparedRows, $errors, 'subjects');
-
-            if ($errors !== []) {
-                throw ValidationException::withMessages($errors);
-            }
+        return DB::transaction(function () use ($preparedRows): array {
+            return $this->syncSubjects($preparedRows);
         });
-
-        return $result;
     }
 
     public function importTopics(UploadedFile $file): array
@@ -61,17 +53,11 @@ class CurriculumJsonImportService
             throw ValidationException::withMessages($errors);
         }
 
-        $result = ['created' => 0, 'updated' => 0, 'total' => count($preparedRows)];
-
-        DB::transaction(function () use (&$result, $preparedRows, &$errors): void {
-            $result = $this->upsertTopics($preparedRows, $errors, 'topics');
-
-            if ($errors !== []) {
-                throw ValidationException::withMessages($errors);
-            }
+        return DB::transaction(function () use ($preparedRows): array {
+            return [
+                'topics' => $this->syncTopics($preparedRows),
+            ];
         });
-
-        return $result;
     }
 
     public function importSubjectsAndTopics(UploadedFile $file): array
@@ -95,46 +81,33 @@ class CurriculumJsonImportService
 
         $errors = [];
         $preparedSubjects = $this->prepareSubjectRows($subjectRows, $errors, 'subjects');
-
-        if ($preparedSubjects !== []) {
-            $subjectSlugs = collect($preparedSubjects)->mapWithKeys(
-                fn (array $row): array => [Str::lower($row['slug']) => true]
-            )->all();
-        } else {
-            $subjectSlugs = [];
-        }
-
-        $preparedTopics = $this->prepareTopicRows($topicRows, $errors, 'topics', $subjectSlugs);
+        $preparedTopics = $this->prepareTopicRows($topicRows, $errors, 'topics');
 
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
         }
 
-        $subjectResult = ['created' => 0, 'updated' => 0, 'total' => count($preparedSubjects)];
-        $topicResult = ['created' => 0, 'updated' => 0, 'total' => count($preparedTopics)];
+        return DB::transaction(function () use ($preparedSubjects, $preparedTopics): array {
+            $subjectResult = [
+                'levels' => $this->emptySummary(0),
+                'subjects' => $this->emptySummary(0),
+            ];
 
-        DB::transaction(function () use (&$subjectResult, &$topicResult, $preparedSubjects, $preparedTopics, &$errors): void {
             if ($preparedSubjects !== []) {
-                $subjectResult = $this->upsertSubjects($preparedSubjects, $errors, 'subjects');
+                $subjectResult = $this->syncSubjects($preparedSubjects);
             }
 
-            if ($errors !== []) {
-                throw ValidationException::withMessages($errors);
-            }
-
+            $topicResult = $this->emptySummary(count($preparedTopics));
             if ($preparedTopics !== []) {
-                $topicResult = $this->upsertTopics($preparedTopics, $errors, 'topics');
+                $topicResult = $this->syncTopics($preparedTopics);
             }
 
-            if ($errors !== []) {
-                throw ValidationException::withMessages($errors);
-            }
+            return [
+                'levels' => $subjectResult['levels'],
+                'subjects' => $subjectResult['subjects'],
+                'topics' => $topicResult,
+            ];
         });
-
-        return [
-            'subjects' => $subjectResult,
-            'topics' => $topicResult,
-        ];
     }
 
     public function subjectSamplePayload(): array
@@ -289,7 +262,6 @@ class CurriculumJsonImportService
     private function prepareSubjectRows(array $rows, array &$errors, string $errorPrefix): array
     {
         $preparedRows = [];
-        $seenSlugs = [];
 
         foreach ($rows as $index => $row) {
             if (! is_array($row)) {
@@ -324,25 +296,15 @@ class CurriculumJsonImportService
                 continue;
             }
 
-            $slugKey = Str::lower($normalized['slug']);
-            if (isset($seenSlugs[$slugKey])) {
-                $errors[$errorPrefix.'.'.($index + 1)][] = 'Duplicate slug in uploaded payload.';
-                continue;
-            }
-
-            $seenSlugs[$slugKey] = true;
             $preparedRows[] = $normalized;
         }
 
         return $preparedRows;
     }
 
-    private function prepareTopicRows(array $rows, array &$errors, string $errorPrefix, array $allowedSubjectSlugs = []): array
+    private function prepareTopicRows(array $rows, array &$errors, string $errorPrefix): array
     {
-        $subjectsBySlug = Subject::query()->get(['id', 'slug'])->keyBy(fn (Subject $subject) => Str::lower($subject->slug));
-
         $preparedRows = [];
-        $seenKeys = [];
 
         foreach ($rows as $index => $row) {
             if (! is_array($row)) {
@@ -373,41 +335,54 @@ class CurriculumJsonImportService
                 continue;
             }
 
-            $subjectSlugKey = Str::lower($normalized['subject_slug']);
-            $subject = $subjectsBySlug->get($subjectSlugKey);
-            if (! $subject && ! isset($allowedSubjectSlugs[$subjectSlugKey])) {
-                $errors[$errorPrefix.'.'.($index + 1)][] = "Subject slug '{$normalized['subject_slug']}' could not be found.";
-                continue;
-            }
-
-            $duplicateKey = $subjectSlugKey.'::'.Str::lower($normalized['slug']);
-            if (isset($seenKeys[$duplicateKey])) {
-                $errors[$errorPrefix.'.'.($index + 1)][] = 'Duplicate topic slug for the same subject in uploaded payload.';
-                continue;
-            }
-
-            $seenKeys[$duplicateKey] = true;
             $preparedRows[] = $normalized;
         }
 
         return $preparedRows;
     }
 
-    private function upsertSubjects(array $preparedRows, array &$errors, string $errorPrefix): array
+    private function syncSubjects(array $preparedRows): array
     {
-        $created = 0;
-        $updated = 0;
+        $levelsTotal = count(array_unique(array_map(fn (array $row): string => Str::lower($row['level']), $preparedRows)));
+        $subjectSummary = $this->emptySummary(count($preparedRows));
 
-        foreach ($preparedRows as $index => $row) {
-            $subject = Subject::withTrashed()->where('slug', $row['slug'])->first();
+        $levelsPresent = Subject::query()
+            ->select('level')
+            ->whereIn('level', array_values(array_unique(array_map(fn (array $row): string => $row['level'], $preparedRows))))
+            ->pluck('level')
+            ->map(fn (string $level): string => Str::lower($level))
+            ->all();
 
-            $nameConflictExists = Subject::withTrashed()
-                ->where('name', $row['name'])
-                ->when($subject, fn ($query) => $query->where('id', '!=', $subject->id))
-                ->exists();
+        $levelsCreated = max(0, $levelsTotal - count(array_unique($levelsPresent)));
+        $levelSummary = [
+            'created' => $levelsCreated,
+            'skipped' => max(0, $levelsTotal - $levelsCreated),
+            'failed' => 0,
+            'total' => $levelsTotal,
+        ];
 
+        $seenSubjectSlugs = [];
+
+        foreach ($preparedRows as $row) {
+            $slugKey = Str::lower($row['slug']);
+            if (isset($seenSubjectSlugs[$slugKey])) {
+                $subjectSummary['skipped']++;
+                continue;
+            }
+            $seenSubjectSlugs[$slugKey] = true;
+
+            $existingBySlug = Subject::withTrashed()->whereRaw('LOWER(slug) = ?', [$slugKey])->first();
+            if ($existingBySlug) {
+                if ($existingBySlug->trashed()) {
+                    $existingBySlug->restore();
+                }
+                $subjectSummary['skipped']++;
+                continue;
+            }
+
+            $nameConflictExists = Subject::withTrashed()->where('name', $row['name'])->exists();
             if ($nameConflictExists) {
-                $errors[$errorPrefix.'.'.($index + 1)][] = "Subject name '{$row['name']}' already exists.";
+                $subjectSummary['failed']++;
                 continue;
             }
 
@@ -416,71 +391,76 @@ class CurriculumJsonImportService
                 $payload['color'] = Subject::normalizeColor($payload['color']);
             }
 
-            if ($subject) {
-                $subject->fill($payload);
-                if ($subject->trashed()) {
-                    $subject->restore();
-                }
-                $subject->save();
-                $updated++;
-                continue;
-            }
-
             Subject::create($payload);
-            $created++;
+            $subjectSummary['created']++;
         }
 
-        return ['created' => $created, 'updated' => $updated, 'total' => count($preparedRows)];
+        return [
+            'levels' => $levelSummary,
+            'subjects' => $subjectSummary,
+        ];
     }
 
-    private function upsertTopics(array $preparedRows, array &$errors, string $errorPrefix): array
+    private function syncTopics(array $preparedRows): array
     {
-        $subjectsBySlug = Subject::query()->get(['id', 'slug'])->keyBy(fn (Subject $subject) => Str::lower($subject->slug));
-        $created = 0;
-        $updated = 0;
+        $summary = $this->emptySummary(count($preparedRows));
+        $seenKeys = [];
 
-        foreach ($preparedRows as $index => $row) {
-            $subject = $subjectsBySlug->get(Str::lower($row['subject_slug']));
+        foreach ($preparedRows as $row) {
+            $key = Str::lower($row['subject_slug']).'::'.Str::lower($row['slug']);
+            if (isset($seenKeys[$key])) {
+                $summary['skipped']++;
+                continue;
+            }
+            $seenKeys[$key] = true;
 
+            $subject = Subject::query()->whereRaw('LOWER(slug) = ?', [Str::lower($row['subject_slug'])])->first();
             if (! $subject) {
-                $errors[$errorPrefix.'.'.($index + 1)][] = "Subject slug '{$row['subject_slug']}' could not be found.";
+                $summary['failed']++;
                 continue;
             }
 
             $topic = Topic::withTrashed()
                 ->where('subject_id', $subject->id)
-                ->where('slug', $row['slug'])
+                ->whereRaw('LOWER(slug) = ?', [Str::lower($row['slug'])])
                 ->first();
+
+            if ($topic) {
+                if ($topic->trashed()) {
+                    $topic->restore();
+                }
+                $summary['skipped']++;
+                continue;
+            }
 
             $nameConflictExists = Topic::withTrashed()
                 ->where('subject_id', $subject->id)
                 ->where('name', $row['name'])
-                ->when($topic, fn ($query) => $query->where('id', '!=', $topic->id))
                 ->exists();
 
             if ($nameConflictExists) {
-                $errors[$errorPrefix.'.'.($index + 1)][] = "Topic name '{$row['name']}' already exists for this subject.";
+                $summary['failed']++;
                 continue;
             }
 
             $payload = Arr::except($row, ['subject_slug']);
             $payload['subject_id'] = $subject->id;
 
-            if ($topic) {
-                $topic->fill($payload);
-                if ($topic->trashed()) {
-                    $topic->restore();
-                }
-                $topic->save();
-                $updated++;
-                continue;
-            }
-
             Topic::create($payload);
-            $created++;
+            $summary['created']++;
         }
 
-        return ['created' => $created, 'updated' => $updated, 'total' => count($preparedRows)];
+        return $summary;
+    }
+
+    private function emptySummary(int $total): array
+    {
+        return [
+            'created' => 0,
+            'skipped' => 0,
+            'failed' => 0,
+            'total' => $total,
+        ];
     }
 
     private function nullableString(mixed $value): ?string

@@ -70,7 +70,7 @@
         <div class="card quiz-panel stack-md">
             <div>
                 <h3 class="h2" style="margin-bottom:.25rem;">Import Subjects (JSON)</h3>
-                <p class="muted mb-0">Upload a JSON array of subject objects. Existing subjects are matched by <code>slug</code> and updated.</p>
+                <p class="muted mb-0">Upload a JSON array of subject objects. Existing subjects are matched by <code>slug</code> and skipped (idempotent import).</p>
             </div>
 
             <div class="actions-inline">
@@ -117,7 +117,7 @@
         <div class="card quiz-panel stack-md">
             <div>
                 <h3 class="h2" style="margin-bottom:.25rem;">Import Topics (JSON)</h3>
-                <p class="muted mb-0">Upload a JSON array of topic objects. Topics are resolved by <code>subject_slug</code> and matched by <code>subject_slug + slug</code>.</p>
+                <p class="muted mb-0">Upload a JSON array of topic objects. Topics are resolved by <code>subject_slug</code> and matched by <code>subject_slug + slug</code>; existing records are skipped.</p>
             </div>
 
             <div class="actions-inline">

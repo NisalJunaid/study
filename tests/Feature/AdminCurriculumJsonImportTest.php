@@ -21,7 +21,7 @@ class AdminCurriculumJsonImportTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_admin_can_import_subjects_json_and_upsert_by_slug(): void
+    public function test_admin_can_import_subjects_json_and_create_only_missing_rows(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
@@ -61,10 +61,9 @@ class AdminCurriculumJsonImportTest extends TestCase
 
         $this->assertDatabaseHas('subjects', [
             'slug' => 'chemistry',
-            'name' => 'Chemistry',
-            'level' => Subject::LEVEL_A,
-            'color' => '#22c55e',
-            'sort_order' => 4,
+            'name' => 'Chemistry Old',
+            'level' => Subject::LEVEL_O,
+            'color' => '#111111',
         ]);
 
         $this->assertDatabaseHas('subjects', [
@@ -74,7 +73,7 @@ class AdminCurriculumJsonImportTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_import_topics_json_and_upsert_by_subject_slug_and_topic_slug(): void
+    public function test_admin_can_import_topics_json_and_create_only_missing_rows(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $subject = Subject::factory()->create([
@@ -117,8 +116,8 @@ class AdminCurriculumJsonImportTest extends TestCase
         $this->assertDatabaseHas('topics', [
             'subject_id' => $subject->id,
             'slug' => 'cell-structure',
-            'name' => 'Cell Structure',
-            'sort_order' => 5,
+            'name' => 'Cell Basics',
+            'sort_order' => 1,
         ]);
 
         $this->assertDatabaseHas('topics', [
@@ -183,7 +182,7 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->assertSee('The level field must be one of', false);
     }
 
-    public function test_topic_import_rejects_missing_subject_reference(): void
+    public function test_topic_import_marks_missing_subject_reference_as_failed_without_aborting(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
@@ -199,10 +198,12 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->post(route('admin.imports.topics.store'), [
                 'topic_import_file' => $file,
             ])
-            ->assertSessionHasErrors('topics.1');
+            ->assertRedirect(route('admin.imports.index'));
+
+        $this->assertDatabaseCount('topics', 0);
     }
 
-    public function test_topic_import_rejects_duplicate_topic_slug_for_same_subject_in_payload(): void
+    public function test_topic_import_skips_duplicate_topic_slug_for_same_subject_in_payload(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
@@ -228,7 +229,9 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->post(route('admin.imports.topics.store'), [
                 'topic_import_file' => $file,
             ])
-            ->assertSessionHasErrors('topics.2');
+            ->assertRedirect(route('admin.imports.index'));
+
+        $this->assertDatabaseCount('topics', 1);
     }
 
     public function test_topic_import_success_message_is_visible_on_imports_page(): void
@@ -253,7 +256,8 @@ class AdminCurriculumJsonImportTest extends TestCase
                 'import_form' => 'topics',
                 'topic_import_file' => $file,
             ])
-            ->assertSee('Topics JSON imported successfully.', false);
+            ->assertSee('Topics JSON imported successfully.', false)
+            ->assertSee('skipped', false);
     }
 
     public function test_admin_can_import_subjects_and_topics_together_from_one_json_file(): void
@@ -327,10 +331,9 @@ class AdminCurriculumJsonImportTest extends TestCase
 
         $this->assertDatabaseHas('subjects', [
             'slug' => 'biology',
-            'name' => 'Biology',
-            'level' => Subject::LEVEL_O,
-            'color' => '#22c55e',
-            'sort_order' => 5,
+            'name' => 'Biology Legacy',
+            'level' => Subject::LEVEL_A,
+            'color' => '#000000',
         ]);
 
         $chemistry = Subject::query()->where('slug', 'chemistry')->firstOrFail();
@@ -344,8 +347,8 @@ class AdminCurriculumJsonImportTest extends TestCase
         $this->assertDatabaseHas('topics', [
             'subject_id' => $existingSubject->id,
             'slug' => 'mechanics',
-            'name' => 'Mechanics',
-            'sort_order' => 6,
+            'name' => 'Mechanics Old',
+            'sort_order' => 1,
         ]);
     }
 
@@ -371,7 +374,7 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->assertSessionHasErrors('subjects.1');
     }
 
-    public function test_combined_import_rejects_unresolved_topic_subject_slug(): void
+    public function test_combined_import_counts_unresolved_topic_subject_slug_as_failed(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
@@ -390,7 +393,45 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->post(route('admin.imports.subjects-topics.store'), [
                 'subject_topic_import_file' => $file,
             ])
-            ->assertSessionHasErrors('topics.1');
+            ->assertRedirect(route('admin.imports.index'));
+
+        $this->assertDatabaseCount('topics', 0);
+    }
+
+    public function test_reimporting_same_curriculum_file_skips_existing_rows_without_creating_duplicates(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $payload = json_encode([
+            'subjects' => [
+                [
+                    'name' => 'Biology',
+                    'slug' => 'biology',
+                    'level' => Subject::LEVEL_O,
+                ],
+            ],
+            'topics' => [
+                [
+                    'subject_slug' => 'biology',
+                    'name' => 'Cell Structure',
+                    'slug' => 'cell-structure',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $firstFile = UploadedFile::fake()->createWithContent('subject-topic-first.json', $payload);
+        $secondFile = UploadedFile::fake()->createWithContent('subject-topic-second.json', $payload);
+
+        $this->actingAs($admin)->post(route('admin.imports.subjects-topics.store'), [
+            'subject_topic_import_file' => $firstFile,
+        ])->assertRedirect(route('admin.imports.index'));
+
+        $this->actingAs($admin)->post(route('admin.imports.subjects-topics.store'), [
+            'subject_topic_import_file' => $secondFile,
+        ])->assertRedirect(route('admin.imports.index'));
+
+        $this->assertDatabaseCount('subjects', 1);
+        $this->assertDatabaseCount('topics', 1);
     }
 
     public function test_combined_import_rejects_malformed_json(): void

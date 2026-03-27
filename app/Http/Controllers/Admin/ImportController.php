@@ -64,7 +64,7 @@ class ImportController extends Controller
 
         return redirect()
             ->route('admin.imports.index')
-            ->with('success', "Subjects JSON imported successfully. {$result['created']} created, {$result['updated']} updated.");
+            ->with('success', "Subjects JSON imported successfully. Levels: {$result['levels']['created']} created, {$result['levels']['skipped']} skipped. Subjects: {$result['subjects']['created']} created, {$result['subjects']['skipped']} skipped, {$result['subjects']['failed']} failed.");
     }
 
     public function storeTopicsJson(StoreTopicJsonImportRequest $request, CurriculumJsonImportService $curriculumJsonImportService): RedirectResponse
@@ -73,7 +73,7 @@ class ImportController extends Controller
 
         return redirect()
             ->route('admin.imports.index')
-            ->with('success', "Topics JSON imported successfully. {$result['created']} created, {$result['updated']} updated.");
+            ->with('success', "Topics JSON imported successfully. {$result['topics']['created']} created, {$result['topics']['skipped']} skipped, {$result['topics']['failed']} failed.");
     }
 
     public function storeSubjectTopicJson(StoreSubjectTopicJsonImportRequest $request, CurriculumJsonImportService $curriculumJsonImportService): RedirectResponse
@@ -84,7 +84,7 @@ class ImportController extends Controller
             ->route('admin.imports.index')
             ->with(
                 'success',
-                "Subjects + topics JSON imported successfully. Subjects: {$result['subjects']['created']} created, {$result['subjects']['updated']} updated. Topics: {$result['topics']['created']} created, {$result['topics']['updated']} updated."
+                "Subjects + topics JSON imported successfully. Levels: {$result['levels']['created']} created, {$result['levels']['skipped']} skipped. Subjects: {$result['subjects']['created']} created, {$result['subjects']['skipped']} skipped, {$result['subjects']['failed']} failed. Topics: {$result['topics']['created']} created, {$result['topics']['skipped']} skipped, {$result['topics']['failed']} failed."
             );
     }
 
