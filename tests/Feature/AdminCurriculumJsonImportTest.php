@@ -209,6 +209,156 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->assertSessionHasErrors('topics.2');
     }
 
+    public function test_admin_can_import_subjects_and_topics_together_from_one_json_file(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        Subject::factory()->create([
+            'name' => 'Biology Legacy',
+            'slug' => 'biology',
+            'level' => Subject::LEVEL_A,
+            'color' => '#000000',
+        ]);
+
+        $existingSubject = Subject::factory()->create([
+            'name' => 'Physics',
+            'slug' => 'physics',
+            'level' => Subject::LEVEL_O,
+        ]);
+
+        Topic::factory()->create([
+            'subject_id' => $existingSubject->id,
+            'name' => 'Mechanics Old',
+            'slug' => 'mechanics',
+            'sort_order' => 1,
+        ]);
+
+        $payload = json_encode([
+            'subjects' => [
+                [
+                    'name' => 'Biology',
+                    'slug' => 'biology',
+                    'level' => Subject::LEVEL_O,
+                    'color' => '#22c55e',
+                    'is_active' => true,
+                    'sort_order' => 5,
+                ],
+                [
+                    'name' => 'Chemistry',
+                    'slug' => 'chemistry',
+                    'level' => Subject::LEVEL_O,
+                    'color' => '#16a34a',
+                    'is_active' => true,
+                    'sort_order' => 3,
+                ],
+            ],
+            'topics' => [
+                [
+                    'subject_slug' => 'chemistry',
+                    'name' => 'Atomic Structure',
+                    'slug' => 'atomic-structure',
+                    'is_active' => true,
+                    'sort_order' => 2,
+                ],
+                [
+                    'subject_slug' => 'physics',
+                    'name' => 'Mechanics',
+                    'slug' => 'mechanics',
+                    'is_active' => true,
+                    'sort_order' => 6,
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $file = UploadedFile::fake()->createWithContent('subject-topic.json', $payload);
+
+        $this->actingAs($admin)
+            ->post(route('admin.imports.subjects-topics.store'), [
+                'subject_topic_import_file' => $file,
+            ])
+            ->assertRedirect(route('admin.imports.index'));
+
+        $this->assertDatabaseHas('subjects', [
+            'slug' => 'biology',
+            'name' => 'Biology',
+            'level' => Subject::LEVEL_O,
+            'color' => '#22c55e',
+            'sort_order' => 5,
+        ]);
+
+        $chemistry = Subject::query()->where('slug', 'chemistry')->firstOrFail();
+        $this->assertDatabaseHas('topics', [
+            'subject_id' => $chemistry->id,
+            'slug' => 'atomic-structure',
+            'name' => 'Atomic Structure',
+            'sort_order' => 2,
+        ]);
+
+        $this->assertDatabaseHas('topics', [
+            'subject_id' => $existingSubject->id,
+            'slug' => 'mechanics',
+            'name' => 'Mechanics',
+            'sort_order' => 6,
+        ]);
+    }
+
+    public function test_combined_import_rejects_invalid_subject_level(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $file = UploadedFile::fake()->createWithContent('subject-topic.json', json_encode([
+            'subjects' => [
+                [
+                    'name' => 'Biology',
+                    'slug' => 'biology',
+                    'level' => 'college',
+                ],
+            ],
+            'topics' => [],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($admin)
+            ->post(route('admin.imports.subjects-topics.store'), [
+                'subject_topic_import_file' => $file,
+            ])
+            ->assertSessionHasErrors('subjects.1');
+    }
+
+    public function test_combined_import_rejects_unresolved_topic_subject_slug(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $file = UploadedFile::fake()->createWithContent('subject-topic.json', json_encode([
+            'subjects' => [],
+            'topics' => [
+                [
+                    'subject_slug' => 'unknown-subject',
+                    'name' => 'Cell Structure',
+                    'slug' => 'cell-structure',
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($admin)
+            ->post(route('admin.imports.subjects-topics.store'), [
+                'subject_topic_import_file' => $file,
+            ])
+            ->assertSessionHasErrors('topics.1');
+    }
+
+    public function test_combined_import_rejects_malformed_json(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $file = UploadedFile::fake()->createWithContent('subject-topic.json', '{"subjects":[{"name":"Biology"}]');
+
+        $this->actingAs($admin)
+            ->post(route('admin.imports.subjects-topics.store'), [
+                'subject_topic_import_file' => $file,
+            ])
+            ->assertSessionHasErrors('subject_topic_import_file');
+    }
+
     public function test_admin_can_download_subject_and_topic_json_samples(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
@@ -226,6 +376,14 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->assertHeader('content-type', 'application/json')
             ->assertSee('"subject_slug"', false)
             ->assertSee('"slug"', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.imports.subjects-topics.sample'))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/json')
+            ->assertSee('"subjects"', false)
+            ->assertSee('"topics"', false)
+            ->assertSee('"subject_slug"', false);
     }
 
     public function test_admin_imports_page_renders_with_subject_and_topic_sample_links(): void
@@ -237,6 +395,7 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->assertOk()
             ->assertSee(route('admin.imports.subjects.sample'), false)
             ->assertSee(route('admin.imports.topics.sample'), false)
+            ->assertSee(route('admin.imports.subjects-topics.sample'), false)
             ->assertSee(route('admin.imports.questions.sample', ['template' => 'general']), false);
     }
 
@@ -250,6 +409,8 @@ class AdminCurriculumJsonImportTest extends TestCase
         $this->assertTrue(Route::has('admin.imports.subjects.sample'));
         $this->assertTrue(Route::has('admin.imports.topics.store'));
         $this->assertTrue(Route::has('admin.imports.topics.sample'));
+        $this->assertTrue(Route::has('admin.imports.subjects-topics.store'));
+        $this->assertTrue(Route::has('admin.imports.subjects-topics.sample'));
     }
 
     public function test_import_routes_point_to_expected_uris_and_controller_methods(): void
@@ -263,6 +424,8 @@ class AdminCurriculumJsonImportTest extends TestCase
             ['name' => 'admin.imports.subjects.sample', 'method' => 'GET', 'uri' => 'admin/imports/sample/subjects-json', 'action' => 'subjectSample'],
             ['name' => 'admin.imports.topics.store', 'method' => 'POST', 'uri' => 'admin/imports/topics-json', 'action' => 'storeTopicsJson'],
             ['name' => 'admin.imports.topics.sample', 'method' => 'GET', 'uri' => 'admin/imports/sample/topics-json', 'action' => 'topicSample'],
+            ['name' => 'admin.imports.subjects-topics.store', 'method' => 'POST', 'uri' => 'admin/imports/subjects-topics-json', 'action' => 'storeSubjectTopicJson'],
+            ['name' => 'admin.imports.subjects-topics.sample', 'method' => 'GET', 'uri' => 'admin/imports/sample/subjects-topics-json', 'action' => 'subjectTopicSample'],
         ];
 
         foreach ($cases as $case) {
@@ -287,6 +450,8 @@ class AdminCurriculumJsonImportTest extends TestCase
             'admin.imports.subjects.sample' => 'subjectSample',
             'admin.imports.topics.store' => 'storeTopicsJson',
             'admin.imports.topics.sample' => 'topicSample',
+            'admin.imports.subjects-topics.store' => 'storeSubjectTopicJson',
+            'admin.imports.subjects-topics.sample' => 'subjectTopicSample',
         ];
 
         foreach ($routes as $name => $method) {
