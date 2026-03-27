@@ -682,9 +682,10 @@ class QuestionImportService
             $groupKey = $this->structuredGroupKey($raw);
             $groupRows = $row->import
                 ->importRows()
-                ->where('status', ImportRow::STATUS_VALID)
+                ->whereIn('status', [ImportRow::STATUS_VALID, ImportRow::STATUS_IMPORTED])
                 ->get()
                 ->filter(fn (ImportRow $candidate) => $this->structuredGroupKey($candidate->raw_payload ?? []) === $groupKey)
+                ->sortBy('row_number')
                 ->values();
 
             $parts = $groupRows->map(function (ImportRow $groupRow): array {
