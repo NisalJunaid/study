@@ -207,7 +207,7 @@ class StructuredResponseWorkflowTest extends TestCase
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
         $this->actingAs($admin)
-            ->get(route('admin.imports.sample', ['template' => 'general']))
+            ->get(route('admin.imports.questions.sample', ['template' => 'general']))
             ->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=UTF-8');
 
@@ -221,7 +221,7 @@ class StructuredResponseWorkflowTest extends TestCase
         $file = UploadedFile::fake()->createWithContent('structured.csv', $structuredCsv);
 
         $this->actingAs($admin)
-            ->post(route('admin.imports.store'), [
+            ->post(route('admin.imports.questions.store'), [
                 'csv_file' => $file,
                 'allow_create_subjects' => 1,
                 'allow_create_topics' => 1,

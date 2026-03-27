@@ -7,6 +7,7 @@ use App\Models\Topic;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class AdminCurriculumJsonImportTest extends TestCase
@@ -236,7 +237,19 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->assertOk()
             ->assertSee(route('admin.imports.subjects.sample'), false)
             ->assertSee(route('admin.imports.topics.sample'), false)
-            ->assertSee(route('admin.imports.sample', ['template' => 'general']), false);
+            ->assertSee(route('admin.imports.questions.sample', ['template' => 'general']), false);
+    }
+
+    public function test_import_routes_are_registered_with_consistent_names(): void
+    {
+        $this->assertTrue(Route::has('admin.imports.index'));
+        $this->assertTrue(Route::has('admin.imports.show'));
+        $this->assertTrue(Route::has('admin.imports.questions.store'));
+        $this->assertTrue(Route::has('admin.imports.questions.sample'));
+        $this->assertTrue(Route::has('admin.imports.subjects.store'));
+        $this->assertTrue(Route::has('admin.imports.subjects.sample'));
+        $this->assertTrue(Route::has('admin.imports.topics.store'));
+        $this->assertTrue(Route::has('admin.imports.topics.sample'));
     }
 
     public function test_manual_subject_and_topic_crud_endpoints_continue_to_work(): void
