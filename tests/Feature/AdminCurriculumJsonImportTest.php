@@ -227,6 +227,18 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->assertSee('"slug"', false);
     }
 
+    public function test_admin_imports_page_renders_with_subject_and_topic_sample_links(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.imports.index'))
+            ->assertOk()
+            ->assertSee(route('admin.imports.subjects.sample'), false)
+            ->assertSee(route('admin.imports.topics.sample'), false)
+            ->assertSee(route('admin.imports.sample', ['template' => 'general']), false);
+    }
+
     public function test_manual_subject_and_topic_crud_endpoints_continue_to_work(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);

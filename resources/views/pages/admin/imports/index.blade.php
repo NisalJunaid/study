@@ -10,7 +10,12 @@
             </div>
 
             <div class="actions-inline">
-                <a class="btn" href="{{ route('admin.imports.subjects.sample') }}">Download Subject Sample JSON</a>
+                @php
+                    $subjectSampleUrl = \Illuminate\Support\Facades\Route::has('admin.imports.subjects.sample')
+                        ? route('admin.imports.subjects.sample')
+                        : url('/admin/imports/sample/subjects-json');
+                @endphp
+                <a class="btn" href="{{ $subjectSampleUrl }}">Download Subject Sample JSON</a>
             </div>
 
             <details>
@@ -40,7 +45,12 @@
             </div>
 
             <div class="actions-inline">
-                <a class="btn" href="{{ route('admin.imports.topics.sample') }}">Download Topic Sample JSON</a>
+                @php
+                    $topicSampleUrl = \Illuminate\Support\Facades\Route::has('admin.imports.topics.sample')
+                        ? route('admin.imports.topics.sample')
+                        : url('/admin/imports/sample/topics-json');
+                @endphp
+                <a class="btn" href="{{ $topicSampleUrl }}">Download Topic Sample JSON</a>
             </div>
 
             <details>
