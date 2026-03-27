@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ConfirmQuestionImportRequest;
 use App\Http\Requests\Admin\StoreQuestionImportRequest;
 use App\Http\Requests\Admin\StoreSubjectJsonImportRequest;
+use App\Http\Requests\Admin\StoreSubjectTopicJsonImportRequest;
 use App\Http\Requests\Admin\StoreTopicJsonImportRequest;
 use App\Events\ImportProgressUpdated;
 use App\Jobs\ProcessQuestionImportJob;
@@ -34,6 +35,7 @@ class ImportController extends Controller
             'jsonSamples' => $questionImportService->sampleJsonStrings(),
             'subjectJsonSample' => $curriculumJsonImportService->subjectSampleJsonString(),
             'topicJsonSample' => $curriculumJsonImportService->topicSampleJsonString(),
+            'subjectTopicJsonSample' => $curriculumJsonImportService->combinedSubjectTopicSampleJsonString(),
         ]);
     }
 
@@ -74,6 +76,18 @@ class ImportController extends Controller
             ->with('success', "Topics JSON imported successfully. {$result['created']} created, {$result['updated']} updated.");
     }
 
+    public function storeSubjectTopicJson(StoreSubjectTopicJsonImportRequest $request, CurriculumJsonImportService $curriculumJsonImportService): RedirectResponse
+    {
+        $result = $curriculumJsonImportService->importSubjectsAndTopics($request->importFile());
+
+        return redirect()
+            ->route('admin.imports.index')
+            ->with(
+                'success',
+                "Subjects + topics JSON imported successfully. Subjects: {$result['subjects']['created']} created, {$result['subjects']['updated']} updated. Topics: {$result['topics']['created']} created, {$result['topics']['updated']} updated."
+            );
+    }
+
     public function subjectSample(CurriculumJsonImportService $curriculumJsonImportService): StreamedResponse
     {
         $this->authorize('viewAny', Import::class);
@@ -96,6 +110,19 @@ class ImportController extends Controller
         return response()->streamDownload(function () use ($payload): void {
             echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
         }, 'topic-import-sample.json', [
+            'Content-Type' => 'application/json',
+        ]);
+    }
+
+    public function subjectTopicSample(CurriculumJsonImportService $curriculumJsonImportService): StreamedResponse
+    {
+        $this->authorize('viewAny', Import::class);
+
+        $payload = $curriculumJsonImportService->combinedSubjectTopicSamplePayload();
+
+        return response()->streamDownload(function () use ($payload): void {
+            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
+        }, 'subject-topic-import-sample.json', [
             'Content-Type' => 'application/json',
         ]);
     }
