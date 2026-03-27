@@ -252,6 +252,29 @@ class AdminCurriculumJsonImportTest extends TestCase
         $this->assertTrue(Route::has('admin.imports.topics.sample'));
     }
 
+    public function test_import_routes_point_to_expected_uris_and_controller_methods(): void
+    {
+        $cases = [
+            ['name' => 'admin.imports.index', 'method' => 'GET', 'uri' => 'admin/imports', 'action' => 'index'],
+            ['name' => 'admin.imports.show', 'method' => 'GET', 'uri' => 'admin/imports/{import}', 'action' => 'show'],
+            ['name' => 'admin.imports.questions.store', 'method' => 'POST', 'uri' => 'admin/imports/questions', 'action' => 'store'],
+            ['name' => 'admin.imports.questions.sample', 'method' => 'GET', 'uri' => 'admin/imports/sample/questions', 'action' => 'sample'],
+            ['name' => 'admin.imports.subjects.store', 'method' => 'POST', 'uri' => 'admin/imports/subjects-json', 'action' => 'storeSubjectsJson'],
+            ['name' => 'admin.imports.subjects.sample', 'method' => 'GET', 'uri' => 'admin/imports/sample/subjects-json', 'action' => 'subjectSample'],
+            ['name' => 'admin.imports.topics.store', 'method' => 'POST', 'uri' => 'admin/imports/topics-json', 'action' => 'storeTopicsJson'],
+            ['name' => 'admin.imports.topics.sample', 'method' => 'GET', 'uri' => 'admin/imports/sample/topics-json', 'action' => 'topicSample'],
+        ];
+
+        foreach ($cases as $case) {
+            $route = Route::getRoutes()->getByName($case['name']);
+
+            $this->assertNotNull($route, 'Missing route: '.$case['name']);
+            $this->assertSame($case['uri'], $route->uri(), 'Unexpected URI for route: '.$case['name']);
+            $this->assertContains($case['method'], $route->methods(), 'Unexpected method for route: '.$case['name']);
+            $this->assertStringEndsWith('@'.$case['action'], $route->getActionName(), 'Unexpected action for route: '.$case['name']);
+        }
+    }
+
     public function test_manual_subject_and_topic_crud_endpoints_continue_to_work(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
