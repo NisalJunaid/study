@@ -6,6 +6,7 @@ use App\Jobs\ProcessQuestionImportJob;
 use App\Models\Import;
 use App\Models\ImportRow;
 use App\Models\Question;
+use App\Models\StructuredQuestionPart;
 use App\Models\Subject;
 use App\Models\Topic;
 use App\Models\User;
@@ -332,6 +333,220 @@ CSV;
             'import_id' => $import->id,
             'row_number' => 3,
             'status' => ImportRow::STATUS_FAILED,
+        ]);
+    }
+
+    public function test_processing_json_import_persists_all_structured_parts_and_keeps_mcq_and_theory_imports_working(): void
+    {
+        Storage::fake('local');
+
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $biology = Subject::factory()->create(['name' => 'Biology']);
+        Topic::factory()->create(['subject_id' => $biology->id, 'name' => 'Characteristics of Living Organisms']);
+
+        $math = Subject::factory()->create(['name' => 'Mathematics']);
+        Topic::factory()->create(['subject_id' => $math->id, 'name' => 'Algebra']);
+
+        $english = Subject::factory()->create(['name' => 'English']);
+        Topic::factory()->create(['subject_id' => $english->id, 'name' => 'Essay Writing']);
+
+        $json = json_encode([
+            'questions' => [
+                [
+                    'type' => 'mcq',
+                    'subject' => 'Mathematics',
+                    'topic' => 'Algebra',
+                    'difficulty' => 'easy',
+                    'marks' => 1,
+                    'question_text' => 'What is 2 + 2?',
+                    'is_published' => true,
+                    'options' => [
+                        ['option_key' => 'A', 'option_text' => '3'],
+                        ['option_key' => 'B', 'option_text' => '4'],
+                        ['option_key' => 'C', 'option_text' => '5'],
+                    ],
+                    'correct_option' => 'B',
+                ],
+                [
+                    'type' => 'theory',
+                    'subject' => 'English',
+                    'topic' => 'Essay Writing',
+                    'difficulty' => 'medium',
+                    'marks' => 3,
+                    'question_text' => 'Explain why punctuation is important in writing.',
+                    'is_published' => true,
+                    'sample_answer' => 'Punctuation helps clarify meaning, structure sentences, and guide pauses.',
+                    'grading_notes' => 'Expect meaning, clarity, and sentence structure.',
+                ],
+                [
+                    'type' => 'structured_response',
+                    'subject' => 'Biology',
+                    'topic' => 'Characteristics of Living Organisms',
+                    'difficulty' => 'easy',
+                    'marks' => 5,
+                    'question_text' => 'A student observes a plant growing towards sunlight.',
+                    'is_published' => true,
+                    'question_group_key' => 'BIO-SR-1001',
+                    'structured_parts' => [
+                        [
+                            'label' => 'a',
+                            'prompt_text' => 'State the name of this response.',
+                            'max_score' => 1,
+                            'sample_answer' => 'Phototropism',
+                            'marking_notes' => 'Accept positive phototropism.',
+                        ],
+                        [
+                            'label' => 'b',
+                            'prompt_text' => 'Explain why this response is important for the plant.',
+                            'max_score' => 2,
+                            'sample_answer' => 'It allows the plant to grow towards light so that it can absorb more light for photosynthesis.',
+                            'marking_notes' => 'Award 1 mark for grows towards light and 1 mark for more photosynthesis.',
+                        ],
+                        [
+                            'label' => 'c',
+                            'prompt_text' => 'Name two other characteristics of living organisms.',
+                            'max_score' => 2,
+                            'sample_answer' => 'Respiration and growth',
+                            'marking_notes' => 'Accept any two valid characteristics such as movement, respiration, sensitivity, growth, reproduction, excretion or nutrition.',
+                        ],
+                    ],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $file = UploadedFile::fake()->createWithContent('questions.json', $json);
+
+        $this->actingAs($admin)->post(route('admin.imports.questions.store'), [
+            'import_file' => $file,
+            'allow_create_subjects' => false,
+            'allow_create_topics' => false,
+        ])->assertRedirect();
+
+        $import = Import::query()->firstOrFail();
+        app(QuestionImportService::class)->processImport($import->fresh(), $admin);
+
+        $structuredQuestion = Question::query()
+            ->where('type', Question::TYPE_STRUCTURED_RESPONSE)
+            ->where('question_text', 'A student observes a plant growing towards sunlight.')
+            ->firstOrFail();
+
+        $parts = $structuredQuestion->structuredParts()->orderBy('sort_order')->get();
+
+        $this->assertCount(3, $parts);
+        $this->assertSame(['a', 'b', 'c'], $parts->pluck('part_label')->all());
+        $this->assertSame('State the name of this response.', $parts[0]->prompt_text);
+        $this->assertSame('1.00', $parts[0]->max_score);
+        $this->assertSame('Phototropism', $parts[0]->sample_answer);
+        $this->assertSame('Accept positive phototropism.', $parts[0]->marking_notes);
+        $this->assertSame('Explain why this response is important for the plant.', $parts[1]->prompt_text);
+        $this->assertSame('2.00', $parts[1]->max_score);
+        $this->assertSame('Name two other characteristics of living organisms.', $parts[2]->prompt_text);
+
+        $this->assertDatabaseHas('questions', [
+            'type' => Question::TYPE_MCQ,
+            'question_text' => 'What is 2 + 2?',
+        ]);
+
+        $this->assertDatabaseHas('questions', [
+            'type' => Question::TYPE_THEORY,
+            'question_text' => 'Explain why punctuation is important in writing.',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.questions.edit', $structuredQuestion))
+            ->assertOk()
+            ->assertSee('State the name of this response.')
+            ->assertSee('Explain why this response is important for the plant.')
+            ->assertSee('Name two other characteristics of living organisms.');
+    }
+
+    public function test_processing_structured_json_update_replaces_question_with_full_part_set_instead_of_last_part_only(): void
+    {
+        Storage::fake('local');
+
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $biology = Subject::factory()->create(['name' => 'Biology']);
+        $topic = Topic::factory()->create([
+            'subject_id' => $biology->id,
+            'name' => 'Characteristics of Living Organisms',
+        ]);
+
+        $question = Question::factory()->create([
+            'subject_id' => $biology->id,
+            'topic_id' => $topic->id,
+            'type' => Question::TYPE_STRUCTURED_RESPONSE,
+            'question_text' => 'A student observes a plant growing towards sunlight.',
+            'marks' => 1,
+        ]);
+
+        StructuredQuestionPart::query()->create([
+            'question_id' => $question->id,
+            'part_label' => 'legacy',
+            'prompt_text' => 'Legacy prompt',
+            'max_score' => 1,
+            'sample_answer' => 'Legacy answer',
+            'marking_notes' => 'Legacy notes',
+            'sort_order' => 0,
+        ]);
+
+        $json = json_encode([
+            'questions' => [
+                [
+                    'type' => 'structured_response',
+                    'subject' => 'Biology',
+                    'topic' => 'Characteristics of Living Organisms',
+                    'difficulty' => 'easy',
+                    'marks' => 5,
+                    'question_text' => 'A student observes a plant growing towards sunlight.',
+                    'is_published' => true,
+                    'question_group_key' => 'BIO-SR-1001',
+                    'structured_parts' => [
+                        [
+                            'label' => 'a',
+                            'prompt_text' => 'State the name of this response.',
+                            'max_score' => 1,
+                            'sample_answer' => 'Phototropism',
+                            'marking_notes' => 'Accept positive phototropism.',
+                        ],
+                        [
+                            'label' => 'b',
+                            'prompt_text' => 'Explain why this response is important for the plant.',
+                            'max_score' => 2,
+                            'sample_answer' => 'It allows the plant to grow towards light so that it can absorb more light for photosynthesis.',
+                            'marking_notes' => 'Award 1 mark for grows towards light and 1 mark for more photosynthesis.',
+                        ],
+                        [
+                            'label' => 'c',
+                            'prompt_text' => 'Name two other characteristics of living organisms.',
+                            'max_score' => 2,
+                            'sample_answer' => 'Respiration and growth',
+                            'marking_notes' => 'Accept any two valid characteristics such as movement, respiration, sensitivity, growth, reproduction, excretion or nutrition.',
+                        ],
+                    ],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $file = UploadedFile::fake()->createWithContent('questions-update.json', $json);
+
+        $this->actingAs($admin)->post(route('admin.imports.questions.store'), [
+            'import_file' => $file,
+            'allow_create_subjects' => false,
+            'allow_create_topics' => false,
+        ])->assertRedirect();
+
+        $import = Import::query()->latest('id')->firstOrFail();
+        app(QuestionImportService::class)->processImport($import->fresh(), $admin);
+
+        $question->refresh();
+        $parts = $question->structuredParts()->orderBy('sort_order')->get();
+
+        $this->assertCount(3, $parts);
+        $this->assertSame(['a', 'b', 'c'], $parts->pluck('part_label')->all());
+        $this->assertDatabaseMissing('structured_question_parts', [
+            'question_id' => $question->id,
+            'part_label' => 'legacy',
         ]);
     }
 }
