@@ -275,6 +275,29 @@ class AdminCurriculumJsonImportTest extends TestCase
         }
     }
 
+
+    public function test_import_routes_use_controller_actions_for_route_cache_compatibility(): void
+    {
+        $routes = [
+            'admin.imports.index' => 'index',
+            'admin.imports.show' => 'show',
+            'admin.imports.questions.store' => 'store',
+            'admin.imports.questions.sample' => 'sample',
+            'admin.imports.subjects.store' => 'storeSubjectsJson',
+            'admin.imports.subjects.sample' => 'subjectSample',
+            'admin.imports.topics.store' => 'storeTopicsJson',
+            'admin.imports.topics.sample' => 'topicSample',
+        ];
+
+        foreach ($routes as $name => $method) {
+            $route = Route::getRoutes()->getByName($name);
+
+            $this->assertNotNull($route, 'Missing route: '.$name);
+            $this->assertStringContainsString('App\\Http\\Controllers\\Admin\\ImportController@'.$method, $route->getActionName());
+            $this->assertArrayNotHasKey('uses', array_filter($route->getAction(), fn ($value, $key) => $key === 'uses' && $value instanceof \Closure, ARRAY_FILTER_USE_BOTH));
+        }
+    }
+
     public function test_manual_subject_and_topic_crud_endpoints_continue_to_work(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
