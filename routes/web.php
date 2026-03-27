@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\BillingPlanController;
 use App\Http\Controllers\Admin\PlanDiscountController;
@@ -19,68 +20,9 @@ use App\Http\Controllers\Student\QuizController as StudentQuizController;
 use App\Http\Controllers\Student\BillingController as StudentBillingController;
 use App\Http\Controllers\Student\ResultController as StudentResultController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
-use App\Models\Subject;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    $defaultSubjects = [
-        Subject::LEVEL_O => [
-            ['name' => 'Mathematics', 'color' => '#4f46e5'],
-            ['name' => 'English', 'color' => '#0ea5e9'],
-            ['name' => 'Physics', 'color' => '#0891b2'],
-            ['name' => 'Chemistry', 'color' => '#14b8a6'],
-            ['name' => 'Biology', 'color' => '#16a34a'],
-            ['name' => 'Geography', 'color' => '#f59e0b'],
-        ],
-        Subject::LEVEL_A => [
-            ['name' => 'Pure Mathematics', 'color' => '#7c3aed'],
-            ['name' => 'Further Mathematics', 'color' => '#4338ca'],
-            ['name' => 'Physics', 'color' => '#0369a1'],
-            ['name' => 'Chemistry', 'color' => '#0d9488'],
-            ['name' => 'Economics', 'color' => '#ea580c'],
-            ['name' => 'Literature', 'color' => '#db2777'],
-        ],
-    ];
-
-    $subjectsByLevel = Subject::query()
-        ->active()
-        ->orderBy('sort_order')
-        ->orderBy('name')
-        ->get(['id', 'name', 'level', 'color'])
-        ->groupBy('level')
-        ->map(function ($subjects): array {
-            return [
-                'count' => $subjects->count(),
-                'subjects' => $subjects
-                    ->take(6)
-                    ->map(fn (Subject $subject) => [
-                        'name' => $subject->name,
-                        'color' => Subject::normalizeColor($subject->color),
-                    ])
-                    ->values()
-                    ->all(),
-            ];
-        });
-
-    foreach ([Subject::LEVEL_O, Subject::LEVEL_A] as $level) {
-        if (! $subjectsByLevel->has($level)) {
-            $subjectsByLevel[$level] = [
-                'count' => count($defaultSubjects[$level]),
-                'subjects' => $defaultSubjects[$level],
-            ];
-            continue;
-        }
-
-        if ($subjectsByLevel[$level]['subjects'] === []) {
-            $subjectsByLevel[$level]['subjects'] = $defaultSubjects[$level];
-            $subjectsByLevel[$level]['count'] = max($subjectsByLevel[$level]['count'], count($defaultSubjects[$level]));
-        }
-    }
-
-    return view('pages.welcome', [
-        'subjectsByLevel' => $subjectsByLevel,
-    ]);
-})->name('home');
+Route::get('/', HomeController::class)->name('home');
 
 Route::middleware(['auth', 'suspension.guard'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -90,12 +32,12 @@ Route::middleware(['auth', 'suspension.guard'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:student', 'suspension.guard'])->group(function () {
-    Route::get('/dashboard', fn () => redirect()->route('student.quiz.setup'))->name('student.dashboard');
+    Route::redirect('/dashboard', '/quiz/setup')->name('student.dashboard');
     Route::get('/levels', [StudentLevelController::class, 'index'])->name('student.levels.index');
     Route::get('/levels/{level}/subjects', [StudentSubjectController::class, 'indexByLevel'])->name('student.levels.subjects.index');
-    Route::get('/subjects', fn () => redirect()->route('student.levels.index'))->name('student.subjects.index');
+    Route::redirect('/subjects', '/levels')->name('student.subjects.index');
 
-    Route::get('/quiz/create', fn () => redirect()->route('student.quiz.setup'))->name('student.quiz.builder');
+    Route::redirect('/quiz/create', '/quiz/setup')->name('student.quiz.builder');
     Route::get('/quiz/setup', [StudentQuizController::class, 'create'])->name('student.quiz.setup');
     Route::post('/quiz', [StudentQuizController::class, 'store'])->middleware('quiz.access')->name('student.quiz.store');
     Route::get('/quiz/{quiz}', [StudentQuizController::class, 'show'])->name('student.quiz.take');
@@ -108,7 +50,7 @@ Route::middleware(['auth', 'role:student', 'suspension.guard'])->group(function 
     Route::get('/history', [StudentHistoryController::class, 'index'])->name('student.history.index');
     Route::get('/progress', StudentProgressController::class)->name('student.progress.index');
 
-    Route::get('/billing', fn () => redirect()->route('student.billing.subscription'))->name('student.billing.index');
+    Route::redirect('/billing', '/billing/subscription')->name('student.billing.index');
     Route::get('/billing/subscription', [StudentBillingController::class, 'subscription'])->name('student.billing.subscription');
     Route::post('/billing/subscription/select-plan', [StudentBillingController::class, 'selectPlan'])->name('student.billing.subscription.select-plan');
     Route::get('/billing/payment', [StudentBillingController::class, 'payment'])->name('student.billing.payment');
@@ -120,7 +62,7 @@ Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'role:admin'])
     ->group(function () {
-        Route::get('/', fn () => view('pages.admin.dashboard'))->name('dashboard');
+        Route::view('/', 'pages.admin.dashboard')->name('dashboard');
         Route::resource('subjects', SubjectController::class)->except('show');
         Route::resource('topics', TopicController::class)->except('show');
         Route::resource('questions', QuestionController::class)->except('show');
