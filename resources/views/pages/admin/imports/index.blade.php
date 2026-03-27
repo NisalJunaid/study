@@ -2,6 +2,18 @@
 
 @section('content')
 <div class="stack-lg">
+    @if(session('success'))
+        <div class="card card-soft" role="status" aria-live="polite">
+            <p class="mb-0 text-strong" style="color:#166534;">{{ session('success') }}</p>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="card card-soft" role="alert" aria-live="assertive">
+            <p class="mb-0 text-strong" style="color:#991b1b;">{{ session('error') }}</p>
+        </div>
+    @endif
+
     <div class="card quiz-panel stack-md">
         <div>
             <h3 class="h2" style="margin-bottom:.25rem;">Import Subjects + Topics (JSON)</h3>
@@ -19,12 +31,34 @@
 
         <form method="POST" action="{{ route('admin.imports.subjects-topics.store') }}" enctype="multipart/form-data" class="stack-sm">
             @csrf
+            <input type="hidden" name="import_form" value="subjects_topics">
             <div class="field">
                 <span>Subjects + Topics JSON File</span>
                 <input type="file" name="subject_topic_import_file" accept=".json,application/json,text/plain" required>
                 <small class="muted">Accepted format: .json (max 5MB)</small>
                 @error('subject_topic_import_file') <span class="field-error">{{ $message }}</span> @enderror
             </div>
+
+            @if(old('import_form') === 'subjects_topics' && ($errors->has('subject_topic_import_file') || $errors->has('subjects.*') || $errors->has('topics.*')))
+                <div class="field-error" role="alert">
+                    <div class="text-strong">Import issues found:</div>
+                    <ul style="margin:.35rem 0 0 1rem;">
+                        @foreach($errors->get('subject_topic_import_file') as $message)
+                            <li>{{ $message }}</li>
+                        @endforeach
+                        @foreach($errors->get('subjects.*') as $messages)
+                            @foreach((array) $messages as $message)
+                                <li>{{ $message }}</li>
+                            @endforeach
+                        @endforeach
+                        @foreach($errors->get('topics.*') as $messages)
+                            @foreach((array) $messages as $message)
+                                <li>{{ $message }}</li>
+                            @endforeach
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             <div class="actions-row">
                 <button class="btn btn-primary" type="submit">Import Subjects + Topics</button>
@@ -50,12 +84,29 @@
 
             <form method="POST" action="{{ route('admin.imports.subjects.store') }}" enctype="multipart/form-data" class="stack-sm">
                 @csrf
+                <input type="hidden" name="import_form" value="subjects">
                 <div class="field">
                     <span>Subject JSON File</span>
                     <input type="file" name="subject_import_file" accept=".json,application/json,text/plain" required>
                     <small class="muted">Accepted format: .json (max 5MB)</small>
                     @error('subject_import_file') <span class="field-error">{{ $message }}</span> @enderror
                 </div>
+
+                @if(old('import_form') === 'subjects' && ($errors->has('subject_import_file') || $errors->has('subjects.*')))
+                    <div class="field-error" role="alert">
+                        <div class="text-strong">Import issues found:</div>
+                        <ul style="margin:.35rem 0 0 1rem;">
+                            @foreach($errors->get('subject_import_file') as $message)
+                                <li>{{ $message }}</li>
+                            @endforeach
+                            @foreach($errors->get('subjects.*') as $messages)
+                                @foreach((array) $messages as $message)
+                                    <li>{{ $message }}</li>
+                                @endforeach
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 <div class="actions-row">
                     <button class="btn btn-primary" type="submit">Import Subjects</button>
@@ -80,12 +131,29 @@
 
             <form method="POST" action="{{ route('admin.imports.topics.store') }}" enctype="multipart/form-data" class="stack-sm">
                 @csrf
+                <input type="hidden" name="import_form" value="topics">
                 <div class="field">
                     <span>Topic JSON File</span>
                     <input type="file" name="topic_import_file" accept=".json,application/json,text/plain" required>
                     <small class="muted">Accepted format: .json (max 5MB)</small>
                     @error('topic_import_file') <span class="field-error">{{ $message }}</span> @enderror
                 </div>
+
+                @if(old('import_form') === 'topics' && ($errors->has('topic_import_file') || $errors->has('topics.*')))
+                    <div class="field-error" role="alert">
+                        <div class="text-strong">Import issues found:</div>
+                        <ul style="margin:.35rem 0 0 1rem;">
+                            @foreach($errors->get('topic_import_file') as $message)
+                                <li>{{ $message }}</li>
+                            @endforeach
+                            @foreach($errors->get('topics.*') as $messages)
+                                @foreach((array) $messages as $message)
+                                    <li>{{ $message }}</li>
+                                @endforeach
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 <div class="actions-row">
                     <button class="btn btn-primary" type="submit">Import Topics</button>
@@ -132,6 +200,7 @@
 
         <form method="POST" action="{{ route('admin.imports.questions.store') }}" enctype="multipart/form-data" class="stack-md">
             @csrf
+            <input type="hidden" name="import_form" value="questions">
 
             <div class="field">
                 <span>File</span>

@@ -161,6 +161,28 @@ class AdminCurriculumJsonImportTest extends TestCase
             ->assertSessionHasErrors('subjects.1');
     }
 
+    public function test_subject_import_validation_errors_are_visible_on_imports_page(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $file = UploadedFile::fake()->createWithContent('subjects.json', json_encode([
+            [
+                'name' => 'Biology',
+                'slug' => 'biology',
+                'level' => 'college',
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($admin)
+            ->followingRedirects()
+            ->post(route('admin.imports.subjects.store'), [
+                'import_form' => 'subjects',
+                'subject_import_file' => $file,
+            ])
+            ->assertSee('Import issues found:', false)
+            ->assertSee('The level field must be one of', false);
+    }
+
     public function test_topic_import_rejects_missing_subject_reference(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
@@ -207,6 +229,31 @@ class AdminCurriculumJsonImportTest extends TestCase
                 'topic_import_file' => $file,
             ])
             ->assertSessionHasErrors('topics.2');
+    }
+
+    public function test_topic_import_success_message_is_visible_on_imports_page(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        Subject::factory()->create([
+            'name' => 'Biology',
+            'slug' => 'biology',
+        ]);
+
+        $file = UploadedFile::fake()->createWithContent('topics.json', json_encode([
+            [
+                'subject_slug' => 'biology',
+                'name' => 'Genetics',
+                'slug' => 'genetics',
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->actingAs($admin)
+            ->followingRedirects()
+            ->post(route('admin.imports.topics.store'), [
+                'import_form' => 'topics',
+                'topic_import_file' => $file,
+            ])
+            ->assertSee('Topics JSON imported successfully.', false);
     }
 
     public function test_admin_can_import_subjects_and_topics_together_from_one_json_file(): void
