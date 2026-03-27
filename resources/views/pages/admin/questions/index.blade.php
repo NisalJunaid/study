@@ -137,9 +137,12 @@
     @endif
 </div>
 
-<div class="modal-backdrop" data-bulk-update-modal hidden>
+<div class="modal-backdrop" data-bulk-update-modal hidden aria-hidden="true" role="dialog" aria-modal="true" tabindex="-1">
     <div class="modal-card card">
-        <h3 class="h2">Update selected questions</h3>
+        <div class="modal-card-header">
+            <h3 class="h2">Update selected questions</h3>
+            <button type="button" class="modal-close" data-update-close aria-label="Close update selected questions modal">×</button>
+        </div>
         <p class="muted">Leave fields blank to keep existing values. Bulk type changes are intentionally disabled for safety.</p>
 
         <form method="POST" action="{{ route('admin.questions.bulk-action') }}" class="stack-sm" data-update-form>
@@ -242,6 +245,7 @@
             const syncCount = () => {
                 const count = selectedIds().length;
                 countEl.textContent = `${count} selected`;
+                if (bulkRun) bulkRun.disabled = count === 0;
                 if (selectAll) selectAll.checked = rowChecks.length > 0 && rowChecks.every((item) => item.checked);
             };
 
@@ -249,10 +253,20 @@
             rowChecks.forEach((item) => item.addEventListener('change', syncCount));
 
             const setSelectedInputs = (container) => { container.innerHTML = selectedIds().map((id) => `<input type="hidden" name="ids[]" value="${id}">`).join(''); };
-            const closeModal = () => { modal.hidden = true; document.body.classList.remove('overlay-open'); };
+            const closeModal = () => {
+                if (!modal) return;
+                modal.hidden = true;
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('overlay-open');
+            };
 
             modal?.querySelector('[data-update-cancel]')?.addEventListener('click', closeModal);
+            modal?.querySelector('[data-update-close]')?.addEventListener('click', closeModal);
             modal?.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
+            document.addEventListener('keydown', (event) => {
+                if (event.key !== 'Escape' || modal?.hidden) return;
+                closeModal();
+            });
 
             bulkRun?.addEventListener('click', async () => {
                 const ids = selectedIds();
@@ -271,13 +285,16 @@
                     if (deleteConfirmation) deleteConfirmation.value = '';
                     setSelectedInputs(selectedTarget);
                     modal.hidden = false;
+                    modal.setAttribute('aria-hidden', 'false');
                     document.body.classList.add('overlay-open');
+                    modal.focus();
                     return;
                 }
 
                 overlayApi?.show({ title: 'Choose an action', message: 'Select a bulk action before continuing.', variant: 'warning', primary_label: 'Okay' });
             });
 
+            closeModal();
             syncCount();
         })();
     </script>

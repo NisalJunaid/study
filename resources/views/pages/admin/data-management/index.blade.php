@@ -63,9 +63,12 @@
     </div>
 </div>
 
-<div class="modal-backdrop" data-wipe-modal hidden>
+<div class="modal-backdrop" data-wipe-modal hidden aria-hidden="true" role="dialog" aria-modal="true" tabindex="-1">
     <div class="modal-card card">
-        <h3 class="h2" data-wipe-title>Confirm wipe</h3>
+        <div class="modal-card-header">
+            <h3 class="h2" data-wipe-title>Confirm wipe</h3>
+            <button type="button" class="modal-close" data-wipe-close aria-label="Close wipe modal">×</button>
+        </div>
         <p class="muted" data-wipe-message></p>
 
         <form method="POST" action="{{ route('admin.data-management.wipe') }}" class="stack-sm">
@@ -103,6 +106,7 @@
 
     const close = () => {
         modal.hidden = true;
+        modal.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('overlay-open');
         phraseInput.value = '';
     };
@@ -116,15 +120,24 @@
             message.textContent = `This is destructive and cannot be undone. Type ${phrase} to continue.`;
             phraseHint.textContent = `Required phrase: ${phrase}`;
             modal.hidden = false;
+            modal.setAttribute('aria-hidden', 'false');
             document.body.classList.add('overlay-open');
+            modal.focus();
             phraseInput.focus();
         });
     });
 
     modal.querySelector('[data-wipe-cancel]')?.addEventListener('click', close);
+    modal.querySelector('[data-wipe-close]')?.addEventListener('click', close);
     modal.addEventListener('click', (event) => {
         if (event.target === modal) close();
     });
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || modal.hidden) return;
+        close();
+    });
+
+    close();
 })();
 </script>
 @endpush
