@@ -4,6 +4,8 @@ namespace App\Jobs;
 
 use App\Actions\Student\FinalizeQuizGradingAction;
 use App\Events\TheoryAnswerGraded;
+use App\Exceptions\TheoryGradingException;
+use App\Models\GradingAttempt;
 use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\StudentAnswer;
@@ -49,7 +51,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
             ->get()
             ->filter(fn (StudentAnswer $answer) => $answer->quizQuestion?->quiz_id === $this->quizId)
             ->filter(fn (StudentAnswer $answer) => in_array(($answer->quizQuestion->question_snapshot['type'] ?? null), Question::theoryLikeTypes(), true))
-            ->filter(fn (StudentAnswer $answer) => $answer->grading_status === StudentAnswer::STATUS_PENDING)
+            ->filter(fn (StudentAnswer $answer) => in_array($answer->grading_status, [StudentAnswer::STATUS_PENDING, StudentAnswer::STATUS_PROCESSING], true))
             ->values();
 
         if ($answers->isEmpty()) {
@@ -63,7 +65,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
 
             StudentAnswer::query()
                 ->whereIn('id', $eligibleAnswerIds)
-                ->where('grading_status', StudentAnswer::STATUS_PENDING)
+                ->whereIn('grading_status', [StudentAnswer::STATUS_PENDING, StudentAnswer::STATUS_PROCESSING])
                 ->update(['grading_status' => StudentAnswer::STATUS_PROCESSING]);
 
             $answers = StudentAnswer::query()
@@ -80,6 +82,105 @@ class GradeTheoryAnswerJob implements ShouldQueue
             return;
         }
 
+        $attemptsByAnswerId = $this->startAttempts($answers);
+        $gradeItems = $this->buildGradeItems($answers);
+
+        try {
+            $results = $theoryGraderService->gradeBatch($gradeItems);
+
+            foreach ($answers as $answer) {
+                $snapshot = $answer->quizQuestion->question_snapshot ?? [];
+                $type = $snapshot['type'] ?? null;
+
+                if ($type === Question::TYPE_STRUCTURED_RESPONSE) {
+                    $outcome = $this->persistStructuredResult($answer, $snapshot, $results);
+                    $this->completeAttempt($attemptsByAnswerId[$answer->id] ?? null, $answer, $outcome['status'], $outcome['summary'], $outcome['meta']);
+                    TheoryAnswerGraded::dispatch($answer->id);
+                    continue;
+                }
+
+                $result = $results[(string) $answer->id] ?? null;
+
+                if (! $result instanceof TheoryGradeResult) {
+                    $this->markManualReview(
+                        $answer,
+                        'Automatic grading returned an incomplete batch result; this answer requires manual review.',
+                        [
+                            'error' => 'Missing item from graded batch.',
+                            'manual_review_reason' => 'ai_failed',
+                        ]
+                    );
+                    $this->completeAttempt($attemptsByAnswerId[$answer->id] ?? null, $answer, 'manual_review', 'Missing batch item in AI response.');
+                    TheoryAnswerGraded::dispatch($answer->id);
+
+                    continue;
+                }
+
+                $outcome = $this->persistGradedResult($answer, $result);
+                $this->completeAttempt($attemptsByAnswerId[$answer->id] ?? null, $answer, $outcome['status'], $outcome['summary'], $outcome['meta']);
+                TheoryAnswerGraded::dispatch($answer->id);
+            }
+        } catch (TheoryGradingException $exception) {
+            if ($exception->retriable && $this->attempts() < $this->tries) {
+                $this->resetAnswersToPending($answers);
+
+                foreach ($answers as $answer) {
+                    $this->completeAttempt(
+                        $attemptsByAnswerId[$answer->id] ?? null,
+                        $answer,
+                        'retry_scheduled',
+                        'Transient provider failure; retry scheduled.',
+                        [
+                            'error' => $exception->getMessage(),
+                            'provider_status' => $exception->providerStatus,
+                        ]
+                    );
+                }
+
+                throw $exception;
+            }
+
+            foreach ($answers as $answer) {
+                $this->markManualReview(
+                    $answer,
+                    'Automatic grading failed repeatedly; this answer requires manual review.',
+                    [
+                        'error' => $exception->getMessage(),
+                        'failed_at' => now()->toIso8601String(),
+                        'manual_review_reason' => 'ai_failed',
+                        'provider_status' => $exception->providerStatus,
+                    ]
+                );
+
+                $this->completeAttempt($attemptsByAnswerId[$answer->id] ?? null, $answer, 'manual_review', 'AI provider failure fallback to manual review.');
+                TheoryAnswerGraded::dispatch($answer->id);
+            }
+        } catch (Throwable $exception) {
+            foreach ($answers as $answer) {
+                $this->markManualReview(
+                    $answer,
+                    'Automatic grading failed; this answer requires manual review.',
+                    [
+                        'error' => $exception->getMessage(),
+                        'failed_at' => now()->toIso8601String(),
+                        'manual_review_reason' => 'ai_failed',
+                    ]
+                );
+
+                $this->completeAttempt($attemptsByAnswerId[$answer->id] ?? null, $answer, 'manual_review', 'Unexpected grading failure fallback to manual review.');
+                TheoryAnswerGraded::dispatch($answer->id);
+            }
+        }
+
+        $loadedQuiz = $answers->first()?->quizQuestion?->quiz;
+
+        if ($loadedQuiz) {
+            $finalizeQuizGradingAction->execute($loadedQuiz);
+        }
+    }
+
+    private function buildGradeItems($answers): array
+    {
         $gradeItems = [];
 
         foreach ($answers as $answer) {
@@ -99,6 +200,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
                     'max_score' => (float) ($theoryMeta['max_score'] ?? $answer->quizQuestion->max_score),
                     'strict_semantic' => false,
                 ];
+
                 continue;
             }
 
@@ -112,7 +214,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
                 $itemKey = $answer->id.'::'.$partId;
                 $gradeItems[$itemKey] = [
                     'question_type' => Question::TYPE_STRUCTURED_RESPONSE,
-                    'question' => (string) ($snapshot['question_text'] ?? '')."\nPart ".($part['part_label'] ?? '').": ".($part['prompt_text'] ?? ''),
+                    'question' => (string) ($snapshot['question_text'] ?? '')."\nPart ".($part['part_label'] ?? '').': '.($part['prompt_text'] ?? ''),
                     'student_answer' => $studentPartAnswer,
                     'sample_answer' => (string) ($part['sample_answer'] ?? ''),
                     'grading_notes' => (string) ($part['marking_notes'] ?? ''),
@@ -124,59 +226,56 @@ class GradeTheoryAnswerJob implements ShouldQueue
             }
         }
 
-        try {
-            $results = $theoryGraderService->gradeBatch($gradeItems);
-
-            foreach ($answers as $answer) {
-                $snapshot = $answer->quizQuestion->question_snapshot ?? [];
-                $type = $snapshot['type'] ?? null;
-
-                if ($type === Question::TYPE_STRUCTURED_RESPONSE) {
-                    $this->persistStructuredResult($answer, $snapshot, $results);
-                    TheoryAnswerGraded::dispatch($answer->id);
-                    continue;
-                }
-
-                $result = $results[(string) $answer->id] ?? null;
-
-                if (! $result instanceof TheoryGradeResult) {
-                    $this->markManualReview(
-                        $answer,
-                        'Automatic grading returned an incomplete batch result; this answer requires manual review.',
-                        ['error' => 'Missing item from graded batch.']
-                    );
-
-                    TheoryAnswerGraded::dispatch($answer->id);
-
-                    continue;
-                }
-
-                $this->persistGradedResult($answer, $result);
-                TheoryAnswerGraded::dispatch($answer->id);
-            }
-        } catch (Throwable $exception) {
-            foreach ($answers as $answer) {
-                $this->markManualReview(
-                    $answer,
-                    'Automatic grading failed; this answer requires manual review.',
-                    [
-                        'error' => $exception->getMessage(),
-                        'failed_at' => now()->toIso8601String(),
-                    ]
-                );
-
-                TheoryAnswerGraded::dispatch($answer->id);
-            }
-        }
-
-        $loadedQuiz = $answers->first()?->quizQuestion?->quiz;
-
-        if ($loadedQuiz) {
-            $finalizeQuizGradingAction->execute($loadedQuiz);
-        }
+        return $gradeItems;
     }
 
-    private function persistStructuredResult(StudentAnswer $answer, array $snapshot, array $results): void
+    private function startAttempts($answers): array
+    {
+        $byAnswerId = [];
+
+        foreach ($answers as $answer) {
+            $nextAttempt = (int) GradingAttempt::query()
+                ->where('student_answer_id', $answer->id)
+                ->max('attempt_number') + 1;
+
+            $byAnswerId[$answer->id] = GradingAttempt::query()->create([
+                'student_answer_id' => $answer->id,
+                'quiz_id' => $answer->quizQuestion?->quiz_id,
+                'attempt_number' => $nextAttempt,
+                'trigger' => 'ai',
+                'status' => 'processing',
+                'provider' => 'openai',
+                'started_at' => now(),
+            ]);
+        }
+
+        return $byAnswerId;
+    }
+
+    private function completeAttempt(?GradingAttempt $attempt, StudentAnswer $answer, string $status, string $summary, array $meta = []): void
+    {
+        if (! $attempt) {
+            return;
+        }
+
+        $attempt->forceFill([
+            'status' => $status,
+            'summary' => $summary,
+            'model' => (string) data_get($answer->ai_result_json, 'routing.model', data_get($answer->ai_result_json, 'parts.0.routing.model', '')) ?: null,
+            'meta' => $meta === [] ? null : $meta,
+            'completed_at' => now(),
+        ])->save();
+    }
+
+    private function resetAnswersToPending($answers): void
+    {
+        StudentAnswer::query()
+            ->whereIn('id', $answers->pluck('id'))
+            ->where('grading_status', StudentAnswer::STATUS_PROCESSING)
+            ->update(['grading_status' => StudentAnswer::STATUS_PENDING]);
+    }
+
+    private function persistStructuredResult(StudentAnswer $answer, array $snapshot, array $results): array
     {
         $parts = collect($snapshot['structured_parts'] ?? []);
         $partGrades = [];
@@ -219,16 +318,20 @@ class GradeTheoryAnswerJob implements ShouldQueue
             $this->markManualReview(
                 $answer,
                 'One or more structured parts could not be graded automatically; manual review is required.',
-                ['error' => 'Missing structured subpart result.']
+                [
+                    'error' => 'Missing structured subpart result.',
+                    'manual_review_reason' => 'ai_failed',
+                ]
             );
 
-            return;
+            return ['status' => 'manual_review', 'summary' => 'Missing structured subpart result.', 'meta' => ['manual_review_reason' => 'ai_failed']];
         }
 
         DB::transaction(function () use ($answer, $partGrades, $total, $flagManualReview): void {
             $maxScore = (float) $answer->quizQuestion->max_score;
             $boundedScore = max(0, min($total, $maxScore));
             $isCorrect = $boundedScore >= $maxScore && $maxScore > 0;
+            $reason = $flagManualReview ? 'low_confidence' : null;
 
             $answer->forceFill([
                 'is_correct' => $isCorrect,
@@ -238,6 +341,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
                 'ai_result_json' => [
                     'kind' => 'structured_response',
                     'parts' => $partGrades,
+                    'manual_review_reason' => $reason,
                 ],
                 'graded_at' => now(),
             ])->save();
@@ -248,20 +352,30 @@ class GradeTheoryAnswerJob implements ShouldQueue
                 'requires_manual_review' => $flagManualReview,
             ])->save();
         });
+
+        if ($flagManualReview) {
+            return ['status' => 'manual_review', 'summary' => 'Low confidence structured grading requires review.', 'meta' => ['manual_review_reason' => 'low_confidence']];
+        }
+
+        return ['status' => 'graded', 'summary' => 'AI grading completed.', 'meta' => []];
     }
 
-    private function persistGradedResult(StudentAnswer $answer, TheoryGradeResult $result): void
+    private function persistGradedResult(StudentAnswer $answer, TheoryGradeResult $result): array
     {
         DB::transaction(function () use ($answer, $result): void {
             $isCorrect = $result->verdict === 'correct';
             $manualReview = $result->shouldFlagForReview;
+            $raw = $result->raw;
+            if ($manualReview) {
+                $raw['manual_review_reason'] = 'low_confidence';
+            }
 
             $answer->forceFill([
                 'is_correct' => $isCorrect,
                 'score' => $result->score,
                 'feedback' => $result->feedback,
                 'grading_status' => $manualReview ? StudentAnswer::STATUS_MANUAL_REVIEW : StudentAnswer::STATUS_GRADED,
-                'ai_result_json' => $result->raw,
+                'ai_result_json' => $raw,
                 'graded_at' => now(),
             ])->save();
 
@@ -271,6 +385,12 @@ class GradeTheoryAnswerJob implements ShouldQueue
                 'requires_manual_review' => $manualReview,
             ])->save();
         });
+
+        if ($result->shouldFlagForReview) {
+            return ['status' => 'manual_review', 'summary' => 'Low confidence grading requires manual review.', 'meta' => ['manual_review_reason' => 'low_confidence']];
+        }
+
+        return ['status' => 'graded', 'summary' => 'AI grading completed.', 'meta' => []];
     }
 
     private function markManualReview(StudentAnswer $answer, string $feedback, array $meta): void

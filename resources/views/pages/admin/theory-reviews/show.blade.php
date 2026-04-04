@@ -55,6 +55,40 @@
     </section>
 
     <section class="card stack-md">
+        <h4 style="margin:0">Grading Attempts & Overrides</h4>
+        @if($review->gradingAttempts->isEmpty())
+            <p class="muted" style="margin:0">No grading attempts recorded yet.</p>
+        @else
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Trigger</th>
+                            <th>Status</th>
+                            <th>Summary</th>
+                            <th>Started</th>
+                            <th>Completed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($review->gradingAttempts as $attempt)
+                            <tr>
+                                <td>{{ $attempt->attempt_number }}</td>
+                                <td>{{ $attempt->trigger }}</td>
+                                <td>{{ $attempt->status }}</td>
+                                <td>{{ $attempt->summary ?? '—' }}</td>
+                                <td>{{ optional($attempt->started_at)->toDateTimeString() ?? '—' }}</td>
+                                <td>{{ optional($attempt->completed_at)->toDateTimeString() ?? '—' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </section>
+
+    <section class="card stack-md">
         <h4 style="margin:0">Override Grade</h4>
         <form method="POST" action="{{ route('admin.theory-reviews.update', $review) }}" class="stack-md">
             @csrf

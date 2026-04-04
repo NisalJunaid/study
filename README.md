@@ -142,6 +142,19 @@ php artisan queue:work --queue=imports
 php artisan queue:work --queue=grading
 ```
 
+
+## Theory Grading Reliability (Production)
+
+The AI grading pipeline is hardened for retriable provider failures and manual-review fallback safety:
+
+- `GradeTheoryAnswerJob` now distinguishes retriable vs permanent grading errors.
+- Retries restore answer state to `pending` (instead of leaving stale `processing`).
+- Terminal failures are safely marked `manual_review` with explicit `manual_review_reason` metadata.
+- Admin overrides are audited with before/after metadata.
+- Every AI grading attempt/override is logged in `grading_attempts`.
+
+Operational runbook: see `docs/grading-pipeline.md`.
+
 ## Production Readiness
 
 A production deployment should include all of the following services/processes:
