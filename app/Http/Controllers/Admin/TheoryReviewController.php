@@ -15,6 +15,8 @@ class TheoryReviewController extends Controller
 {
     public function index(Request $request): View
     {
+        $this->authorize('reviewAny', StudentAnswer::class);
+
         $status = (string) $request->string('status');
         $manualOnly = $request->boolean('manual_only');
 
@@ -63,6 +65,8 @@ class TheoryReviewController extends Controller
 
     public function show(StudentAnswer $theoryReview): View
     {
+        $this->authorize('review', $theoryReview);
+
         $review = $this->loadTheoryReview($theoryReview);
 
         return view('pages.admin.theory-reviews.show', [
@@ -76,6 +80,8 @@ class TheoryReviewController extends Controller
         StudentAnswer $theoryReview,
         OverrideTheoryGradeAction $overrideTheoryGradeAction
     ): RedirectResponse {
+        $this->authorize('override', $theoryReview);
+
         $review = $this->loadTheoryReview($theoryReview);
 
         $overrideTheoryGradeAction->execute(

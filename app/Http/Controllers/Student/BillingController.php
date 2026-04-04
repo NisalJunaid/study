@@ -154,7 +154,7 @@ class BillingController extends Controller
 
     public function slip(SubscriptionPayment $payment)
     {
-        abort_unless($payment->user_id === request()->user()->id, 403);
+        $this->authorize('view', $payment);
 
         return response()->download(storage_path('app/'.$payment->slip_path), $payment->slip_original_name);
     }

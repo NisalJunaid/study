@@ -41,11 +41,11 @@ Route::middleware(['auth', 'role:student', 'suspension.guard'])->group(function 
     Route::redirect('/quiz/create', '/quiz/setup')->name('student.quiz.builder');
     Route::get('/quiz/setup', [StudentQuizController::class, 'create'])->name('student.quiz.setup');
     Route::post('/quiz', [StudentQuizController::class, 'store'])->middleware('quiz.access')->name('student.quiz.store');
-    Route::get('/quiz/{quiz}', [StudentQuizController::class, 'show'])->name('student.quiz.take');
-    Route::post('/quiz/{quiz}/interact', [StudentQuizController::class, 'interact'])->name('student.quiz.interact');
-    Route::put('/quiz/{quiz}/questions/{quizQuestion}/answer', [StudentQuizController::class, 'saveAnswer'])->name('student.quiz.answer.save');
-    Route::post('/quiz/{quiz}/submit', [StudentQuizController::class, 'submit'])->name('student.quiz.submit');
-    Route::get('/quiz/{quiz}/results', [StudentQuizController::class, 'results'])->name('student.quiz.results');
+    Route::get('/quiz/{quiz}', [StudentQuizController::class, 'show'])->middleware('can:view,quiz')->name('student.quiz.take');
+    Route::post('/quiz/{quiz}/interact', [StudentQuizController::class, 'interact'])->middleware('can:update,quiz')->name('student.quiz.interact');
+    Route::put('/quiz/{quiz}/questions/{quizQuestion}/answer', [StudentQuizController::class, 'saveAnswer'])->middleware('can:update,quiz')->name('student.quiz.answer.save');
+    Route::post('/quiz/{quiz}/submit', [StudentQuizController::class, 'submit'])->middleware('can:update,quiz')->name('student.quiz.submit');
+    Route::get('/quiz/{quiz}/results', [StudentQuizController::class, 'results'])->middleware('can:view,quiz')->name('student.quiz.results');
     Route::get('/results', [StudentResultController::class, 'index'])->name('student.results.index');
 
     Route::get('/history', [StudentHistoryController::class, 'index'])->name('student.history.index');
@@ -56,7 +56,7 @@ Route::middleware(['auth', 'role:student', 'suspension.guard'])->group(function 
     Route::post('/billing/subscription/select-plan', [StudentBillingController::class, 'selectPlan'])->name('student.billing.subscription.select-plan');
     Route::get('/billing/payment', [StudentBillingController::class, 'payment'])->name('student.billing.payment');
     Route::post('/billing/payments', [StudentBillingController::class, 'storePayment'])->name('student.billing.payments.store');
-    Route::get('/billing/payments/{payment}/slip', [StudentBillingController::class, 'slip'])->name('student.billing.payments.slip');
+    Route::get('/billing/payments/{payment}/slip', [StudentBillingController::class, 'slip'])->middleware('can:view,payment')->name('student.billing.payments.slip');
 });
 
 Route::prefix('admin')
@@ -98,7 +98,7 @@ Route::prefix('admin')
             Route::get('payments', [SubscriptionPaymentController::class, 'index'])->name('payments.index');
             Route::post('payments/{payment}/verify', [SubscriptionPaymentController::class, 'verify'])->name('payments.verify');
             Route::post('payments/{payment}/reject', [SubscriptionPaymentController::class, 'reject'])->name('payments.reject');
-            Route::get('payments/{payment}/slip', [SubscriptionPaymentController::class, 'slip'])->name('payments.slip');
+            Route::get('payments/{payment}/slip', [SubscriptionPaymentController::class, 'slip'])->middleware('can:view,payment')->name('payments.slip');
         });
     });
 
