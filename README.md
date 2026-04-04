@@ -232,6 +232,11 @@ Set up cron (or equivalent) to run:
 php artisan schedule:run
 ```
 
+
+### Admin analytics operations guide
+
+For the admin dashboard operational metrics definitions and recommended actions, see `docs/admin-analytics.md`.
+
 ### Queue-backed pipelines currently required
 
 - `GradeTheoryAnswerJob` (AI grading)
