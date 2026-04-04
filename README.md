@@ -18,6 +18,13 @@ A Laravel 10 study platform with separate **student** and **admin** experiences,
 ### Student workflow
 1. Student signs in.
 2. Chooses level(s), subject(s), optional topic filters, quiz mode, count.
+   - Optional presets now prefill this same setup form:
+     - Quick Revision
+     - Weak Topics Only
+     - Mixed Practice
+     - Exam Style / Full Practice
+     - Continue Recommended Practice
+   - Presets do **not** bypass the normal setup pipeline; students can still adjust fields before submit.
 3. Starts quiz and answers with autosave.
 4. Submits quiz:
    - MCQ graded immediately.
@@ -257,6 +264,11 @@ If queue workers are down, grading/import status will remain pending/manual-revi
 - Failed jobs/logs should be monitored (`failed_jobs`, app logs).
 
 ## Developer Checklist
+
+## Preset documentation
+
+- Student guide: `docs/student-quiz-presets.md`
+- Admin notes: `docs/admin-quiz-presets.md`
 
 Before testing a feature locally, run:
 

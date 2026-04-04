@@ -6,13 +6,32 @@
     $selectedSubjectValue = (string) old('subject_id', $selectedSubjectId ?: '');
     $selectedSubjectValues = collect(old('subject_ids', $selectedSubjectIds ?? []))->map(fn ($id) => (string) $id)->all();
     $selectedTopicIds = collect(old('topic_ids', $defaultTopicIds ?? []))->map(fn ($id) => (string) $id)->all();
-    $selectedDifficulty = old('difficulty', '');
+    $selectedDifficulty = old('difficulty', $defaultDifficulty ?? '');
     $isMultiMode = (bool) old('multi_subject_mode', $multiSubjectMode ?? false);
     $initialStep = (int) old('guided_step', 1);
     $initialStep = $initialStep < 1 ? 1 : min(5, $initialStep);
 @endphp
 
 <div class="stack-lg" id="guided-quiz-setup" data-multi-mode-initial="{{ $isMultiMode ? '1' : '0' }}" data-initial-step="{{ $initialStep }}">
+    <section class="card stack-sm section-surface-secondary">
+        <h2 class="section-heading">Recommended presets</h2>
+        <p class="section-intro">Presets prefill the existing setup form. You can still edit subjects, topics, and settings before starting.</p>
+        <div class="card-grid">
+            @foreach($presetOptions as $preset)
+                <a
+                    class="select-card {{ ($selectedPreset ?? null) === $preset['key'] ? 'active' : '' }}"
+                    href="{{ route('student.quiz.setup', array_merge(request()->except('page'), ['preset' => $preset['key']])) }}"
+                >
+                    <span class="select-title">{{ $preset['label'] }}</span>
+                    <span class="muted text-sm">{{ $preset['description'] }}</span>
+                </a>
+            @endforeach
+        </div>
+        @if(! empty($presetNotice))
+            <p class="mb-0 muted">{{ $presetNotice }}</p>
+        @endif
+    </section>
+
     @if(($billingAccess['allowed'] ?? false) === false)
         <section class="card stack-sm section-surface-secondary">
             <strong>Quiz access is limited.</strong>
@@ -53,6 +72,9 @@
     @else
         <form class="card stack-lg quiz-panel guided-form" method="POST" action="{{ route('student.quiz.store') }}" id="guided-quiz-form">
             @csrf
+            @if(! empty($selectedPreset))
+                <input type="hidden" name="preset" value="{{ $selectedPreset }}">
+            @endif
             <input type="hidden" name="guided_step" value="{{ $initialStep }}" data-guided-current-step-input>
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="1">

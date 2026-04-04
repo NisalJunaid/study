@@ -32,6 +32,7 @@ class StoreQuizRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'preset' => ['nullable', 'string'],
             'levels' => ['required', 'array', 'min:1'],
             'levels.*' => [Rule::in(Subject::levels())],
             'multi_subject_mode' => ['required', 'boolean'],
