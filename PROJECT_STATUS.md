@@ -1,53 +1,29 @@
-# Project Status (2026-03-24)
+# Project Status (2026-04-04)
 
-## Implemented
+## Confirmed current implementation
 
-### Core platform
-- Laravel 10 app scaffold with role-based admin/student route separation.
-- Domain models and migrations for subjects, topics, questions, quizzes, answers, and imports.
-- Policies + middleware for access control.
+- Laravel 10 monolith with role-separated student/admin route groups.
+- Primary UI is Blade-rendered pages and Blade layouts.
+- Inertia/React packages and some auth pages exist, but core product routes remain Blade-based.
+- Queue-backed jobs are in active use for theory grading and import processing.
+- Broadcast channels/events are implemented for realtime progress UX.
+- Billing and subscription access rules are enforced in middleware/services.
 
-### Student experience
-- Subject browsing and subject detail pages.
-- Quiz builder (mode/topic/difficulty/question count constraints).
-- Quiz attempt flow with autosave.
-- Submit flow with immediate MCQ grading.
-- Queue-backed theory grading with realtime updates.
-- Results page, history page, and progress analytics.
+## Implemented domains
 
-### Admin experience
-- Subject CRUD.
-- Topic CRUD.
-- Question CRUD for MCQ and theory metadata.
-- Publish/unpublish controls.
-- CSV import upload, validation preview, confirm/import processing.
-- Theory review queue and manual override tooling.
+- Student quiz setup/taking/results/history/progress.
+- Admin subject/topic/question CRUD and bulk actions.
+- Theory grading workflow with AI + manual review override.
+- Import workflows (question CSV and curriculum JSON variants).
+- Billing plans/discounts/payment review and student billing submission flow.
 
-### Async + realtime
-- Import processing and theory grading jobs.
-- Broadcast events for quiz/import progress and question-bank changes.
+## Operational requirements
 
-### Test coverage
-- Feature tests for access control, quiz flow, grading workflow, imports, progress/history, and curriculum CRUD.
+- Queue workers are required for grading/import completion.
+- Scheduler is required for subscription enforcement and abandoned quiz cleanup.
+- Broadcast infrastructure is optional for correctness but required for live event UX.
 
-## Recently Improved in This Pass
+## Documentation status
 
-- README fully updated for setup, required env keys, queueing, and seed credentials.
-- Added explicit `IMPORT_PROCESSING_QUEUE` config wiring.
-- Added additional user-visible failure context for import and theory manual-review states.
-- Reduced avoidable heavy query patterns in quiz availability counting.
-- Tightened controller consistency by explicitly authorizing update actions.
-- Removed dead broadcast channel registration.
-
-## Optional / Not Yet Implemented
-
-- Inertia.js + React frontend architecture (current implementation is Blade-based).
-- Tailwind-driven design system completion and dark mode polish.
-- Full analytics/dashboard metrics implementation beyond starter cards.
-- CSV failure-report export download.
-- Audit log UI and broader operational tooling.
-- Dedicated queue separation/monitoring infrastructure templates (e.g., Horizon config docs).
-
-## Overall Assessment
-
-The app is functionally strong for a first production candidate in a modern monolith style. Remaining work is mostly enhancement-level (frontend architecture migration, observability, and UX polish), not core correctness blockers.
+- README and `.env.example` are aligned to the current code-level architecture and dependencies.
+- Historical implementation plan notes should be treated as roadmap context, not as the current baseline snapshot.
