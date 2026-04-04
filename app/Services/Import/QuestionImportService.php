@@ -135,27 +135,34 @@ class QuestionImportService
     {
         $import->refresh();
 
-        if (! in_array($import->status, [Import::STATUS_READY, Import::STATUS_IMPORTING], true)) {
+        if (! in_array($import->status, [Import::STATUS_READY, Import::STATUS_IMPORTING, Import::STATUS_PARTIALLY_COMPLETED, Import::STATUS_FAILED], true)) {
             return;
         }
 
+        $alreadyImportedCount = $import->importRows()
+            ->where('status', ImportRow::STATUS_IMPORTED)
+            ->count();
+
+        $failedCount = $import->importRows()
+            ->where('status', ImportRow::STATUS_INVALID)
+            ->count();
+
         $import->forceFill([
             'status' => Import::STATUS_IMPORTING,
-            'imported_rows' => 0,
-            'failed_rows' => $import->total_rows - $import->valid_rows,
+            'imported_rows' => $alreadyImportedCount,
+            'failed_rows' => $failedCount,
             'completed_at' => null,
         ])->save();
         ImportProgressUpdated::dispatch($import->id);
 
-        $importedCount = 0;
-        $failedCount = max(0, $import->total_rows - $import->valid_rows);
+        $importedCount = $alreadyImportedCount;
 
-        $validRows = $import->importRows()
-            ->where('status', ImportRow::STATUS_VALID)
+        $rowsToProcess = $import->importRows()
+            ->whereIn('status', [ImportRow::STATUS_VALID, ImportRow::STATUS_FAILED])
             ->orderBy('row_number')
             ->get();
 
-        foreach ($validRows as $row) {
+        foreach ($rowsToProcess as $row) {
             try {
                 DB::transaction(function () use ($row, $import, $admin, &$importedCount): void {
                     $payload = $this->buildQuestionPayloadFromRow($row, $import);
@@ -387,8 +394,7 @@ class QuestionImportService
 
     private function persistValidatedRows(Import $import, array $rowCandidates, string $emptyMessage): void
     {
-        $totalRows = 0;
-        $validRows = 0;
+        $preparedRows = [];
 
         foreach ($rowCandidates as $candidate) {
             $payload = $candidate['payload'];
@@ -399,11 +405,25 @@ class QuestionImportService
                 $errors[$field] = array_values(array_unique(array_merge($errors[$field] ?? [], $messages)));
             }
 
+            $preparedRows[] = [
+                'row_number' => $candidate['row_number'],
+                'payload' => $payload,
+                'errors' => $errors,
+            ];
+        }
+
+        $preparedRows = $this->addDuplicateValidationErrors($import, $preparedRows);
+
+        $totalRows = 0;
+        $validRows = 0;
+
+        foreach ($preparedRows as $preparedRow) {
+            $errors = $preparedRow['errors'];
             $status = $errors === [] ? ImportRow::STATUS_VALID : ImportRow::STATUS_INVALID;
 
             $import->importRows()->create([
-                'row_number' => $candidate['row_number'],
-                'raw_payload' => $payload,
+                'row_number' => $preparedRow['row_number'],
+                'raw_payload' => $preparedRow['payload'],
                 'validation_errors' => $errors === [] ? null : $errors,
                 'status' => $status,
             ]);
@@ -422,6 +442,126 @@ class QuestionImportService
             'error_summary' => $totalRows === 0 ? $emptyMessage : null,
         ])->save();
         ImportProgressUpdated::dispatch($import->id);
+    }
+
+    private function addDuplicateValidationErrors(Import $import, array $preparedRows): array
+    {
+        $seenFingerprints = [];
+
+        foreach ($preparedRows as $index => $preparedRow) {
+            if ($preparedRow['errors'] !== []) {
+                continue;
+            }
+
+            $fingerprint = $this->rowDuplicateFingerprint($preparedRow['payload']);
+            if ($fingerprint === null) {
+                continue;
+            }
+
+            if (isset($seenFingerprints[$fingerprint])) {
+                $firstRowNumber = $seenFingerprints[$fingerprint];
+                $preparedRows[$index]['errors']['duplicate'][] = "Duplicate row in file. It matches row #{$firstRowNumber} after normalization.";
+
+                continue;
+            }
+
+            $seenFingerprints[$fingerprint] = $preparedRow['row_number'];
+        }
+
+        foreach ($preparedRows as $index => $preparedRow) {
+            if ($preparedRow['errors'] !== []) {
+                continue;
+            }
+
+            $duplicate = $this->findExistingDuplicate($import, $preparedRow['payload']);
+            if (! $duplicate) {
+                continue;
+            }
+
+            $preparedRows[$index]['errors']['duplicate'][] = $duplicate['exact']
+                ? "Exact duplicate of existing question #{$duplicate['id']} under the same subject/topic/type. Row will be skipped."
+                : "Normalized duplicate of existing question #{$duplicate['id']} under the same subject/topic/type. Row will be skipped.";
+        }
+
+        return $preparedRows;
+    }
+
+    private function findExistingDuplicate(Import $import, array $payload): ?array
+    {
+        $type = Str::lower((string) ($payload['type'] ?? ''));
+        $subject = $this->findSubjectByName((string) ($payload['subject'] ?? ''));
+
+        if (! $subject || ! in_array($type, [Question::TYPE_MCQ, Question::TYPE_THEORY, Question::TYPE_STRUCTURED_RESPONSE], true)) {
+            return null;
+        }
+
+        $topicName = trim((string) ($payload['topic'] ?? ''));
+        $topic = null;
+
+        if ($topicName !== '') {
+            $topic = Topic::query()
+                ->where('subject_id', $subject->id)
+                ->whereRaw('LOWER(name) = ?', [Str::lower($topicName)])
+                ->first();
+
+            if (! $topic) {
+                return null;
+            }
+        }
+
+        $rowQuestionText = trim((string) ($payload['question_text'] ?? ''));
+        $rowNormalized = $this->normalizeQuestionText($rowQuestionText);
+
+        if ($rowNormalized === '') {
+            return null;
+        }
+
+        $query = Question::query()
+            ->where('subject_id', $subject->id)
+            ->where('type', $type)
+            ->when($topic ? $topic->id : null, fn ($builder, $topicId) => $builder->where('topic_id', $topicId), fn ($builder) => $builder->whereNull('topic_id'));
+
+        $candidates = $query->get(['id', 'question_text']);
+
+        foreach ($candidates as $candidate) {
+            if (trim((string) $candidate->question_text) === $rowQuestionText) {
+                return ['id' => $candidate->id, 'exact' => true];
+            }
+
+            if ($this->normalizeQuestionText((string) $candidate->question_text) === $rowNormalized) {
+                return ['id' => $candidate->id, 'exact' => false];
+            }
+        }
+
+        return null;
+    }
+
+    private function rowDuplicateFingerprint(array $payload): ?string
+    {
+        $type = Str::lower(trim((string) ($payload['type'] ?? '')));
+        $subject = Str::lower(trim((string) ($payload['subject'] ?? '')));
+        $topic = Str::lower(trim((string) ($payload['topic'] ?? '')));
+        $questionText = $this->normalizeQuestionText((string) ($payload['question_text'] ?? ''));
+
+        if ($type === '' || $subject === '' || $questionText === '') {
+            return null;
+        }
+
+        if ($type === Question::TYPE_STRUCTURED_RESPONSE) {
+            $group = Str::lower(trim((string) ($payload['question_group_key'] ?? '')));
+            $partLabel = Str::lower(trim((string) ($payload['part_label'] ?? '')));
+
+            return implode('|', [$subject, $topic, $type, $questionText, $group, $partLabel]);
+        }
+
+        return implode('|', [$subject, $topic, $type, $questionText]);
+    }
+
+    private function normalizeQuestionText(string $questionText): string
+    {
+        $normalizedWhitespace = preg_replace('/\s+/', ' ', trim($questionText));
+
+        return Str::lower((string) $normalizedWhitespace);
     }
 
     private function normalizeJsonQuestionRows(array $questionPayload, int $questionNumber): array

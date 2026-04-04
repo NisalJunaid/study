@@ -15,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class AdminQuestionImportWorkflowTest extends TestCase
@@ -549,4 +550,110 @@ CSV;
             'part_label' => 'legacy',
         ]);
     }
+
+    public function test_preview_marks_duplicate_rows_within_same_file_as_invalid(): void
+    {
+        Storage::fake('local');
+
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $subject = Subject::factory()->create(['name' => 'Mathematics']);
+        Topic::factory()->create(['subject_id' => $subject->id, 'name' => 'Algebra']);
+
+        $csv = <<<'CSV'
+subject,topic,type,question_text,difficulty,marks,is_published,option_a,option_b,option_c,option_d,option_e,correct_option,explanation,sample_answer,grading_notes,keywords,acceptable_phrases
+Mathematics,Algebra,mcq,What is 9 + 1?,easy,1,1,8,10,11,,,B,Basic arithmetic,,,,
+Mathematics,Algebra,mcq,  What is 9 + 1?  ,easy,1,1,8,10,11,,,B,Basic arithmetic,,,,
+CSV;
+
+        $file = UploadedFile::fake()->createWithContent('duplicates.csv', $csv);
+
+        $this->actingAs($admin)->post(route('admin.imports.questions.store'), [
+            'import_file' => $file,
+            'allow_create_subjects' => false,
+            'allow_create_topics' => false,
+        ])->assertRedirect();
+
+        $import = Import::query()->firstOrFail()->refresh();
+
+        $this->assertSame(Import::STATUS_READY, $import->status);
+        $this->assertSame(2, $import->total_rows);
+        $this->assertSame(1, $import->valid_rows);
+        $this->assertSame(1, $import->failed_rows);
+
+        $duplicateRow = ImportRow::query()->where('status', ImportRow::STATUS_INVALID)->firstOrFail();
+        $this->assertStringContainsString('Duplicate row in file', json_encode($duplicateRow->validation_errors, JSON_THROW_ON_ERROR));
+    }
+
+    public function test_preview_marks_duplicates_against_existing_questions_as_invalid(): void
+    {
+        Storage::fake('local');
+
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $subject = Subject::factory()->create(['name' => 'Mathematics']);
+        $topic = Topic::factory()->create(['subject_id' => $subject->id, 'name' => 'Algebra']);
+
+        Question::factory()->create([
+            'subject_id' => $subject->id,
+            'topic_id' => $topic->id,
+            'type' => Question::TYPE_THEORY,
+            'question_text' => 'Explain algebraic substitution.',
+        ]);
+
+        $csv = <<<'CSV'
+subject,topic,type,question_text,difficulty,marks,is_published,option_a,option_b,option_c,option_d,option_e,correct_option,explanation,sample_answer,grading_notes,keywords,acceptable_phrases
+Mathematics,Algebra,theory, Explain   algebraic substitution. ,medium,3,1,,,,,,,,Sample answer,notes,,
+CSV;
+
+        $file = UploadedFile::fake()->createWithContent('existing-duplicate.csv', $csv);
+
+        $this->actingAs($admin)->post(route('admin.imports.questions.store'), [
+            'import_file' => $file,
+            'allow_create_subjects' => false,
+            'allow_create_topics' => false,
+        ])->assertRedirect();
+
+        $import = Import::query()->firstOrFail()->refresh();
+
+        $this->assertSame(Import::STATUS_FAILED, $import->status);
+        $this->assertSame(0, $import->valid_rows);
+
+        $duplicateRow = $import->importRows()->firstOrFail();
+        $this->assertSame(ImportRow::STATUS_INVALID, $duplicateRow->status);
+        $this->assertStringContainsString('duplicate of existing question', Str::lower(json_encode($duplicateRow->validation_errors, JSON_THROW_ON_ERROR)));
+    }
+
+    public function test_reprocessing_an_import_is_idempotent_and_does_not_create_duplicate_questions(): void
+    {
+        Storage::fake('local');
+
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $subject = Subject::factory()->create(['name' => 'Mathematics']);
+        Topic::factory()->create(['subject_id' => $subject->id, 'name' => 'Algebra']);
+
+        $csv = <<<'CSV'
+subject,topic,type,question_text,difficulty,marks,is_published,option_a,option_b,option_c,option_d,option_e,correct_option,explanation,sample_answer,grading_notes,keywords,acceptable_phrases
+Mathematics,Algebra,mcq,What is 7 + 5?,easy,1,1,10,12,13,,,B,Addition,,,,
+CSV;
+
+        $file = UploadedFile::fake()->createWithContent('retry-safe.csv', $csv);
+
+        $this->actingAs($admin)->post(route('admin.imports.questions.store'), [
+            'import_file' => $file,
+            'allow_create_subjects' => false,
+            'allow_create_topics' => false,
+        ])->assertRedirect();
+
+        $import = Import::query()->firstOrFail();
+
+        app(QuestionImportService::class)->processImport($import->fresh(), $admin);
+        app(QuestionImportService::class)->processImport($import->fresh(), $admin);
+
+        $this->assertSame(1, Question::query()->where('question_text', 'What is 7 + 5?')->count());
+
+        $import->refresh();
+        $this->assertSame(Import::STATUS_COMPLETED, $import->status);
+        $this->assertSame(1, $import->imported_rows);
+        $this->assertSame(0, $import->failed_rows);
+    }
+
 }

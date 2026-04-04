@@ -155,10 +155,10 @@ class ImportController extends Controller
     {
         $this->authorize('create', Import::class);
 
-        if ($import->status !== Import::STATUS_READY) {
+        if (! in_array($import->status, [Import::STATUS_READY, Import::STATUS_PARTIALLY_COMPLETED, Import::STATUS_FAILED], true)) {
             return redirect()
                 ->route('admin.imports.show', $import)
-                ->with('error', 'This import is not in ready state.');
+                ->with('error', 'This import cannot be started from its current status.');
         }
 
         $import->forceFill([
