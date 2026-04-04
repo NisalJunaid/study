@@ -63,6 +63,10 @@ class StoreQuestionRequest extends FormRequest
                 $this->validateStructuredParts($validator);
             }
 
+            if ($this->boolean('is_published')) {
+                $this->validatePublishReadiness($validator);
+            }
+
             if ($this->filled('topic_id')) {
                 $topicBelongsToSubject = Topic::query()
                     ->whereKey($this->integer('topic_id'))
@@ -118,6 +122,33 @@ class StoreQuestionRequest extends FormRequest
 
         if ($totalMarks > 0 && abs($totalMarks - (float) $this->input('marks')) > 0.01) {
             $validator->errors()->add('marks', 'Total question marks must equal the sum of structured part marks.');
+        }
+    }
+
+    protected function validatePublishReadiness(Validator $validator): void
+    {
+        $type = $this->input('type');
+
+        if ($type === Question::TYPE_THEORY) {
+            if ((float) $this->input('marks', 0) <= 0) {
+                $validator->errors()->add('marks', 'Theory questions must have marks greater than 0 to publish.');
+            }
+
+            if (! is_string($this->input('sample_answer')) || trim((string) $this->input('sample_answer')) === '') {
+                $validator->errors()->add('sample_answer', 'Theory questions require a sample answer before publishing.');
+            }
+        }
+
+        if ($type === Question::TYPE_STRUCTURED_RESPONSE) {
+            $parts = collect($this->input('structured_parts', []));
+            $totalPartMarks = $parts
+                ->pluck('max_score')
+                ->filter(fn ($value) => is_numeric($value))
+                ->sum(fn ($value) => (float) $value);
+
+            if ($totalPartMarks <= 0) {
+                $validator->errors()->add('structured_parts', 'Structured response questions need part marks greater than 0 to publish.');
+            }
         }
     }
 }

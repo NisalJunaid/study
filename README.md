@@ -269,6 +269,7 @@ If queue workers are down, grading/import status will remain pending/manual-revi
 
 - Student guide: `docs/student-quiz-presets.md`
 - Admin notes: `docs/admin-quiz-presets.md`
+- Admin content moderation: `docs/admin-content-moderation.md`
 
 Before testing a feature locally, run:
 

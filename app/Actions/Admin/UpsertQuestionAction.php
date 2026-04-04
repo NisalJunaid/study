@@ -4,6 +4,7 @@ namespace App\Actions\Admin;
 
 use App\Models\Question;
 use App\Models\User;
+use App\Services\Admin\QuestionModerationService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -11,9 +12,13 @@ use Illuminate\Support\Facades\Storage;
 
 class UpsertQuestionAction
 {
-    public function execute(array $payload, User $user, ?Question $question = null, ?UploadedFile $image = null): Question
+    public function __construct(
+        private readonly QuestionModerationService $questionModerationService,
+    ) {}
+
+    public function execute(array $payload, User $user, ?Question $question = null, ?UploadedFile $image = null, bool $needsReviewAfterImport = false): Question
     {
-        return DB::transaction(function () use ($payload, $user, $question, $image): Question {
+        return DB::transaction(function () use ($payload, $user, $question, $image, $needsReviewAfterImport): Question {
             $question = $question ?? new Question();
             $isNew = ! $question->exists;
 
@@ -99,7 +104,15 @@ class UpsertQuestionAction
                 }
             }
 
-            return $question;
+            $question->loadMissing(['mcqOptions', 'theoryMeta', 'structuredParts']);
+            $question->syncModerationFlags(
+                $this->questionModerationService->evaluateFlags(
+                    question: $question,
+                    needsReviewAfterImport: $needsReviewAfterImport,
+                )
+            );
+
+            return $question->refresh();
         });
     }
 

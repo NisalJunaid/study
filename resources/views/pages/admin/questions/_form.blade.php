@@ -20,6 +20,18 @@
         @method('PUT')
     @endif
 
+    @if($isEdit && !empty($question->moderationFlags()))
+        <section class="form-panel">
+            <h3 class="h3">Moderation Flags</h3>
+            <p class="muted">These flags help admins review quality issues before publishing.</p>
+            <div class="actions-inline">
+                @foreach($question->moderationFlags() as $flag)
+                    <span class="pill pill-warning">{{ $flagLabels[$flag] ?? $flag }}</span>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     <section class="form-panel">
         <h3 class="h3">Question Metadata</h3>
 
@@ -130,6 +142,7 @@
             </label>
         </div>
         @error('is_published')<small class="field-error">{{ $message }}</small>@enderror
+        @error('publish')<small class="field-error">{{ $message }}</small>@enderror
     </section>
 
     @include('pages.admin.questions._mcq-options', [

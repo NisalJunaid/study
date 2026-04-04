@@ -11,12 +11,17 @@ use App\Http\Requests\Admin\UpdateQuestionRequest;
 use App\Models\Question;
 use App\Models\Subject;
 use App\Models\Topic;
+use App\Services\Admin\QuestionModerationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class QuestionController extends Controller
 {
+    public function __construct(
+        private readonly QuestionModerationService $questionModerationService,
+    ) {}
+
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Question::class);
@@ -64,6 +69,14 @@ class QuestionController extends Controller
             }
         }
 
+        if ($flag = $request->string('flag')->toString()) {
+            if ($flag === 'flagged') {
+                $query->whereJsonLength('moderation_flags', '>', 0);
+            } elseif (array_key_exists($flag, $this->questionModerationService->flagLabels())) {
+                $query->withModerationFlag($flag);
+            }
+        }
+
         $questions = $query
             ->latest('id')
             ->paginate(12)
@@ -80,8 +93,10 @@ class QuestionController extends Controller
                 'type' => $request->string('type')->toString(),
                 'difficulty' => $request->string('difficulty')->toString(),
                 'published' => $request->string('published')->toString(),
+                'flag' => $request->string('flag')->toString(),
             ],
             'difficulties' => ['easy', 'medium', 'hard'],
+            'flagLabels' => $this->questionModerationService->flagLabels(),
         ]);
     }
 
@@ -125,6 +140,21 @@ class QuestionController extends Controller
         }
 
         $updates['updated_by'] = (int) $request->user()->id;
+
+        if (($updates['is_published'] ?? null) === true || ($updates['is_published'] ?? null) === 1 || ($updates['is_published'] ?? null) === '1') {
+            $nonPublishable = Question::query()
+                ->whereIn('id', $ids)
+                ->with(['mcqOptions', 'theoryMeta', 'structuredParts'])
+                ->get()
+                ->filter(fn (Question $question) => $question->publishReadinessIssues() !== []);
+
+            if ($nonPublishable->isNotEmpty()) {
+                return redirect()
+                    ->route('admin.questions.index')
+                    ->with('error', 'Some selected questions cannot be published yet. Resolve their content issues first.');
+            }
+        }
+
         $updated = Question::query()->whereIn('id', $ids)->update($updates);
 
         if ($updated > 0) {
@@ -176,6 +206,7 @@ class QuestionController extends Controller
             'subjects' => Subject::query()->orderBy('name')->get(['id', 'name']),
             'topics' => Topic::query()->orderBy('name')->get(['id', 'name', 'subject_id']),
             'difficulties' => ['easy', 'medium', 'hard'],
+            'flagLabels' => $this->questionModerationService->flagLabels(),
         ]);
     }
 
@@ -212,6 +243,17 @@ class QuestionController extends Controller
     {
         $this->authorize('publish', $question);
 
+        if (! $question->is_published) {
+            $question->loadMissing(['mcqOptions', 'theoryMeta', 'structuredParts']);
+            $issues = $question->publishReadinessIssues();
+
+            if ($issues !== []) {
+                return redirect()
+                    ->route('admin.questions.edit', $question)
+                    ->withErrors(['publish' => implode(' ', $issues)]);
+            }
+        }
+
         $question->update([
             'is_published' => ! $question->is_published,
             'updated_by' => auth()->id(),
@@ -221,5 +263,35 @@ class QuestionController extends Controller
         return redirect()
             ->route('admin.questions.index')
             ->with('success', $question->is_published ? 'Question published.' : 'Question moved to draft.');
+    }
+
+    public function duplicates(Request $request): View
+    {
+        $this->authorize('viewAny', Question::class);
+
+        $questions = Question::query()
+            ->with(['subject:id,name', 'topic:id,name'])
+            ->withModerationFlag(Question::FLAG_DUPLICATE_SUSPECTED)
+            ->latest('id')
+            ->paginate(15);
+
+        return view('pages.admin.questions.duplicates', [
+            'questions' => $questions,
+            'flagLabels' => $this->questionModerationService->flagLabels(),
+        ]);
+    }
+
+    public function dismissFlag(Request $request, Question $question): RedirectResponse
+    {
+        $this->authorize('update', $question);
+
+        $flag = $request->string('flag')->toString();
+        if (! array_key_exists($flag, $this->questionModerationService->flagLabels())) {
+            return redirect()->back()->with('error', 'Unknown moderation flag.');
+        }
+
+        $question->dismissModerationFlag($flag);
+
+        return redirect()->back()->with('success', 'Moderation flag dismissed.');
     }
 }

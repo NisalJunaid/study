@@ -9,7 +9,10 @@
             <h3 class="h2">Questions</h3>
             <p id="question-bank-live-badge" class="muted text-sm mb-0" style="display:none;"></p>
         </div>
-        <a href="{{ route('admin.questions.create') }}" class="btn btn-primary">New question</a>
+        <div class="actions-inline">
+            <a href="{{ route('admin.questions.duplicates') }}" class="btn">Duplicate review</a>
+            <a href="{{ route('admin.questions.create') }}" class="btn btn-primary">New question</a>
+        </div>
     </div>
 
     <form method="GET" class="filter-grid">
@@ -49,6 +52,14 @@
             <option value="">Any status</option>
             <option value="published" @selected($filters['published'] === 'published')>Published</option>
             <option value="unpublished" @selected($filters['published'] === 'unpublished')>Draft</option>
+        </select>
+
+        <select name="flag">
+            <option value="">Any moderation state</option>
+            <option value="flagged" @selected($filters['flag'] === 'flagged')>Any flagged</option>
+            @foreach($flagLabels as $flag => $label)
+                <option value="{{ $flag }}" @selected($filters['flag'] === $flag)>{{ $label }}</option>
+            @endforeach
         </select>
 
         <button type="submit" class="btn">Apply</button>
@@ -122,6 +133,13 @@
                                 <span class="pill {{ $question->is_published ? 'pill-success' : 'pill-muted' }}">
                                     {{ $question->is_published ? 'Published' : 'Draft' }}
                                 </span>
+                                @if(!empty($question->moderationFlags()))
+                                    <div class="stack-sm mt-8">
+                                        @foreach($question->moderationFlags() as $flag)
+                                            <span class="pill pill-warning">{{ $flagLabels[$flag] ?? $flag }}</span>
+                                        @endforeach
+                                    </div>
+                                @endif
                             </td>
                             <td class="text-right"><a class="btn" href="{{ route('admin.questions.edit', $question) }}">Edit</a></td>
                         </tr>
