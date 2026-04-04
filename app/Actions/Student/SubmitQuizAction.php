@@ -27,14 +27,23 @@ class SubmitQuizAction
             throw new RuntimeException('You are not allowed to submit this quiz.');
         }
 
-        if (in_array($quiz->status, [Quiz::STATUS_SUBMITTED, Quiz::STATUS_GRADING, Quiz::STATUS_GRADED], true)) {
-            return [
-                'quiz' => $quiz,
-                'message' => 'This quiz has already been submitted.',
-            ];
-        }
-
         return DB::transaction(function () use ($quiz) {
+            $quiz = Quiz::query()
+                ->whereKey($quiz->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($quiz->isSubmittedAttempt()) {
+                return [
+                    'quiz' => $quiz,
+                    'message' => 'This quiz has already been submitted.',
+                ];
+            }
+
+            if (! $quiz->canTransitionTo(Quiz::STATUS_SUBMITTED)) {
+                throw new RuntimeException('This quiz cannot be submitted in its current state.');
+            }
+
             $quiz->load([
                 'quizQuestions' => fn ($query) => $query->orderBy('order_no')->with('studentAnswer'),
             ]);
@@ -70,12 +79,21 @@ class SubmitQuizAction
                 ])->save();
             }
 
-            $quiz->forceFill([
-                'status' => $hasTheoryQuestions ? Quiz::STATUS_GRADING : Quiz::STATUS_GRADED,
+            $submittedAt = now();
+
+            $quiz->transitionTo(Quiz::STATUS_SUBMITTED, [
                 'last_interacted_at' => now(),
-                'submitted_at' => now(),
-                'graded_at' => $hasTheoryQuestions ? null : now(),
-            ])->save();
+                'submitted_at' => $submittedAt,
+                'graded_at' => null,
+            ]);
+
+            if ($hasTheoryQuestions) {
+                $quiz->transitionTo(Quiz::STATUS_GRADING);
+            } else {
+                $quiz->transitionTo(Quiz::STATUS_GRADED, [
+                    'graded_at' => now(),
+                ]);
+            }
 
             $this->aggregateQuizScoresAction->execute($quiz);
             $this->quizAccessService->registerSubmittedQuizUsage($quiz->user, $quiz);

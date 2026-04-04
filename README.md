@@ -24,6 +24,29 @@ A Laravel 10 study platform with separate **student** and **admin** experiences,
    - Theory/structured answers queued for grading.
 5. Views results/progress/history; grading can continue asynchronously.
 
+### Quiz lifecycle state rules (hardened)
+
+Quiz status transitions are now enforced centrally in `App\Models\Quiz` (`allowedTransitions`, `canTransitionTo`, `transitionTo`).
+
+Allowed transitions:
+
+- `draft -> in_progress -> submitted -> grading -> graded`
+- `submitted -> graded` (when no theory-like answers are pending)
+- idempotent same-state transitions are allowed (`graded -> graded`) for safe retries
+
+Blocked transitions include:
+
+- `graded -> in_progress`
+- `submitted -> draft`
+- any other non-declared transition path
+
+Operational notes:
+
+- Quiz submission is row-locked and transactional to prevent duplicate submit races.
+- Answer autosave is transactional and blocked once a quiz is submitted/finalized.
+- Theory grading jobs only pick answers in `pending` state; retries on already processed items are no-ops.
+- Finalization (`FinalizeQuizGradingAction`) recalculates totals and promotes quiz state safely based on remaining `pending/processing` theory answers.
+
 ### Admin workflow
 1. Manages subjects, topics, questions.
 2. Publishes/unpublishes question inventory.
@@ -145,6 +168,13 @@ php artisan schedule:run
 
 - `GradeTheoryAnswerJob` (AI grading)
 - `ProcessQuestionImportJob` (import row processing)
+
+### Lifecycle processors by state
+
+- `in_progress`: student autosave via `SaveQuizAnswerAction`.
+- `submitted`: `SubmitQuizAction` finalizes attempt records and routes to grading.
+- `grading`: `QueueTheoryGradingAction` dispatches `GradeTheoryAnswerJob` batches; each job updates answer grades.
+- `graded`: `FinalizeQuizGradingAction` confirms completion timestamps/aggregates when no theory answers remain pending.
 
 If queue workers are down, grading/import status will remain pending/manual-review until workers resume.
 

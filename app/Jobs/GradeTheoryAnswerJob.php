@@ -39,7 +39,7 @@ class GradeTheoryAnswerJob implements ShouldQueue
     public function handle(TheoryGraderService $theoryGraderService, FinalizeQuizGradingAction $finalizeQuizGradingAction): void
     {
         $quiz = Quiz::query()->find($this->quizId);
-        if (! $quiz || ! $quiz->isSubmittedAttempt()) {
+        if (! $quiz || ! in_array($quiz->status, [Quiz::STATUS_SUBMITTED, Quiz::STATUS_GRADING], true)) {
             return;
         }
 
@@ -49,17 +49,36 @@ class GradeTheoryAnswerJob implements ShouldQueue
             ->get()
             ->filter(fn (StudentAnswer $answer) => $answer->quizQuestion?->quiz_id === $this->quizId)
             ->filter(fn (StudentAnswer $answer) => in_array(($answer->quizQuestion->question_snapshot['type'] ?? null), Question::theoryLikeTypes(), true))
+            ->filter(fn (StudentAnswer $answer) => $answer->grading_status === StudentAnswer::STATUS_PENDING)
             ->values();
 
         if ($answers->isEmpty()) {
+            $finalizeQuizGradingAction->execute($quiz);
+
             return;
         }
 
-        $answers->each(function (StudentAnswer $answer): void {
-            $answer->forceFill([
-                'grading_status' => StudentAnswer::STATUS_PROCESSING,
-            ])->save();
+        DB::transaction(function () use (&$answers): void {
+            $eligibleAnswerIds = $answers->pluck('id');
+
+            StudentAnswer::query()
+                ->whereIn('id', $eligibleAnswerIds)
+                ->where('grading_status', StudentAnswer::STATUS_PENDING)
+                ->update(['grading_status' => StudentAnswer::STATUS_PROCESSING]);
+
+            $answers = StudentAnswer::query()
+                ->with('quizQuestion.quiz')
+                ->whereIn('id', $eligibleAnswerIds)
+                ->where('grading_status', StudentAnswer::STATUS_PROCESSING)
+                ->get()
+                ->values();
         });
+
+        if ($answers->isEmpty()) {
+            $finalizeQuizGradingAction->execute($quiz);
+
+            return;
+        }
 
         $gradeItems = [];
 

@@ -11,7 +11,7 @@ class QueueTheoryGradingAction
 {
     public function execute(Quiz $quiz): int
     {
-        if (! $quiz->isSubmittedAttempt()) {
+        if (! in_array($quiz->status, [Quiz::STATUS_SUBMITTED, Quiz::STATUS_GRADING], true)) {
             return 0;
         }
 
@@ -30,15 +30,9 @@ class QueueTheoryGradingAction
                 continue;
             }
 
-            $quizQuestion->studentAnswer->forceFill([
-                'grading_status' => StudentAnswer::STATUS_PENDING,
-                'is_correct' => null,
-                'score' => null,
-                'feedback' => null,
-                'ai_result_json' => null,
-                'graded_by' => null,
-                'graded_at' => null,
-            ])->save();
+            if ($quizQuestion->studentAnswer->grading_status !== StudentAnswer::STATUS_PENDING) {
+                continue;
+            }
 
             $theoryAnswerIds[] = $quizQuestion->studentAnswer->id;
         }
