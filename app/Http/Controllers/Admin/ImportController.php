@@ -17,6 +17,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ImportController extends Controller
@@ -60,7 +62,19 @@ class ImportController extends Controller
 
     public function storeSubjectsJson(StoreSubjectJsonImportRequest $request, CurriculumJsonImportService $curriculumJsonImportService): RedirectResponse
     {
-        $result = $curriculumJsonImportService->importSubjects($request->importFile());
+        try {
+            $result = $curriculumJsonImportService->importSubjects($request->importFile());
+        } catch (ValidationException $exception) {
+            $errorMessage = 'Import issues found:';
+            if (collect($exception->errors())->keys()->contains(fn ($key) => str_contains((string) $key, 'level'))) {
+                $errorMessage .= ' The level field must be one of the supported values.';
+            }
+
+            return redirect()
+                ->route('admin.imports.index')
+                ->with('error', $errorMessage)
+                ->withErrors($exception->errors());
+        }
 
         return redirect()
             ->route('admin.imports.index')
@@ -69,7 +83,14 @@ class ImportController extends Controller
 
     public function storeTopicsJson(StoreTopicJsonImportRequest $request, CurriculumJsonImportService $curriculumJsonImportService): RedirectResponse
     {
-        $result = $curriculumJsonImportService->importTopics($request->importFile());
+        try {
+            $result = $curriculumJsonImportService->importTopics($request->importFile());
+        } catch (ValidationException $exception) {
+            return redirect()
+                ->route('admin.imports.index')
+                ->with('error', 'Import issues found:')
+                ->withErrors($exception->errors());
+        }
 
         return redirect()
             ->route('admin.imports.index')
@@ -78,7 +99,14 @@ class ImportController extends Controller
 
     public function storeSubjectTopicJson(StoreSubjectTopicJsonImportRequest $request, CurriculumJsonImportService $curriculumJsonImportService): RedirectResponse
     {
-        $result = $curriculumJsonImportService->importSubjectsAndTopics($request->importFile());
+        try {
+            $result = $curriculumJsonImportService->importSubjectsAndTopics($request->importFile());
+        } catch (ValidationException $exception) {
+            return redirect()
+                ->route('admin.imports.index')
+                ->with('error', 'Import issues found:')
+                ->withErrors($exception->errors());
+        }
 
         return redirect()
             ->route('admin.imports.index')
@@ -88,42 +116,39 @@ class ImportController extends Controller
             );
     }
 
-    public function subjectSample(CurriculumJsonImportService $curriculumJsonImportService): StreamedResponse
+    public function subjectSample(CurriculumJsonImportService $curriculumJsonImportService): Response
     {
         $this->authorize('viewAny', Import::class);
 
         $payload = $curriculumJsonImportService->subjectSamplePayload();
 
-        return response()->streamDownload(function () use ($payload): void {
-            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
-        }, 'subject-import-sample.json', [
+        return response(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL, 200, [
             'Content-Type' => 'application/json',
+            'Content-Disposition' => 'attachment; filename="subject-import-sample.json"',
         ]);
     }
 
-    public function topicSample(CurriculumJsonImportService $curriculumJsonImportService): StreamedResponse
+    public function topicSample(CurriculumJsonImportService $curriculumJsonImportService): Response
     {
         $this->authorize('viewAny', Import::class);
 
         $payload = $curriculumJsonImportService->topicSamplePayload();
 
-        return response()->streamDownload(function () use ($payload): void {
-            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
-        }, 'topic-import-sample.json', [
+        return response(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL, 200, [
             'Content-Type' => 'application/json',
+            'Content-Disposition' => 'attachment; filename="topic-import-sample.json"',
         ]);
     }
 
-    public function subjectTopicSample(CurriculumJsonImportService $curriculumJsonImportService): StreamedResponse
+    public function subjectTopicSample(CurriculumJsonImportService $curriculumJsonImportService): Response
     {
         $this->authorize('viewAny', Import::class);
 
         $payload = $curriculumJsonImportService->combinedSubjectTopicSamplePayload();
 
-        return response()->streamDownload(function () use ($payload): void {
-            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
-        }, 'subject-topic-import-sample.json', [
+        return response(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL, 200, [
             'Content-Type' => 'application/json',
+            'Content-Disposition' => 'attachment; filename="subject-topic-import-sample.json"',
         ]);
     }
 
@@ -177,7 +202,7 @@ class ImportController extends Controller
             ->with('success', 'Import started. This page updates live as progress events arrive.');
     }
 
-    public function sample(Request $request, QuestionImportService $questionImportService): StreamedResponse
+    public function sample(Request $request, QuestionImportService $questionImportService): Response|StreamedResponse
     {
         $this->authorize('viewAny', Import::class);
 
@@ -193,10 +218,9 @@ class ImportController extends Controller
                 default => 'question-import-sample.json',
             };
 
-            return response()->streamDownload(function () use ($payload): void {
-                echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
-            }, $filename, [
+            return response(json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL, 200, [
                 'Content-Type' => 'application/json',
+                'Content-Disposition' => sprintf('attachment; filename="%s"', $filename),
             ]);
         }
 

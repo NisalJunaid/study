@@ -8,6 +8,11 @@ use Illuminate\Http\UploadedFile;
 
 class StoreSubjectTopicJsonImportRequest extends FormRequest
 {
+    protected function getRedirectUrl(): string
+    {
+        return route('admin.imports.index');
+    }
+
     public function authorize(): bool
     {
         return $this->user()?->can('create', Import::class) ?? false;

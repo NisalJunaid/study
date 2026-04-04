@@ -32,6 +32,18 @@ return new class extends Migration
             $table->boolean('answered_on_time')->nullable()->after('answer_duration_seconds');
         });
 
+        if (DB::getDriverName() === 'sqlite') {
+            DB::table('quizzes')->update([
+                'level' => DB::raw('(SELECT COALESCE(subjects.level, "o_level") FROM subjects WHERE subjects.id = quizzes.subject_id)'),
+            ]);
+
+            DB::table('quizzes')
+                ->whereNull('level')
+                ->update(['level' => Subject::LEVEL_O]);
+
+            return;
+        }
+
         DB::table('quizzes')
             ->leftJoin('subjects', 'subjects.id', '=', 'quizzes.subject_id')
             ->update([

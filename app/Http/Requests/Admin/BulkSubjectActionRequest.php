@@ -8,6 +8,17 @@ use Illuminate\Validation\Rule;
 
 class BulkSubjectActionRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('update.is_active')) {
+            $this->merge([
+                'update' => array_merge($this->input('update', []), [
+                    'is_active' => filter_var($this->input('update.is_active'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
+                ]),
+            ]);
+        }
+    }
+
     public function authorize(): bool
     {
         return (bool) $this->user()?->isAdmin();
@@ -22,7 +33,7 @@ class BulkSubjectActionRequest extends FormRequest
             'delete_confirmation' => ['required_if:action,delete', 'accepted'],
             'update.level' => ['nullable', Rule::in(Subject::levels())],
             'update.color' => ['nullable', 'string', 'max:20'],
-            'update.is_active' => ['nullable', 'boolean'],
+            'update.is_active' => ['nullable', Rule::in([true, false])],
             'update.sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
         ];
     }
