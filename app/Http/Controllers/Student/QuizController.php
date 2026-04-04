@@ -85,7 +85,7 @@ class QuizController extends Controller
             ],
             'defaultQuestionCount' => 50,
             'multiSubjectMode' => $oldMulti,
-            'billingAccess' => $quizAccessService->evaluate((request()->user()), (int) old('question_count', 50)),
+            'billingAccess' => $quizAccessService->canStartQuiz((request()->user()), (int) old('question_count', 50)),
         ]);
     }
 
@@ -95,7 +95,7 @@ class QuizController extends Controller
         QuizAccessService $quizAccessService
     ): RedirectResponse
     {
-        $access = $request->attributes->get('quiz_access_context', $quizAccessService->evaluate($request->user(), (int) $request->input('question_count', 1)));
+        $access = $request->attributes->get('quiz_access_context', $quizAccessService->canStartQuiz($request->user(), (int) $request->input('question_count', 1)));
 
         if (! ($access['allowed'] ?? false)) {
             return redirect()->route('student.billing.subscription')->with('overlay', OverlayMessage::billingAccessRequired($access));
@@ -118,9 +118,15 @@ class QuizController extends Controller
         return redirect()->route('student.quiz.take', $quiz);
     }
 
-    public function show(Quiz $quiz): View
+    public function show(Quiz $quiz, QuizAccessService $quizAccessService): View|RedirectResponse
     {
         $this->authorize('view', $quiz);
+
+        $resumeAccess = $quizAccessService->canResumeQuiz(request()->user(), $quiz);
+
+        if (! ($resumeAccess['allowed'] ?? false)) {
+            return redirect()->route('student.billing.subscription')->with('overlay', OverlayMessage::billingAccessRequired($resumeAccess));
+        }
 
         $quiz->load([
             'subject:id,name',
@@ -138,9 +144,18 @@ class QuizController extends Controller
         SaveQuizAnswerRequest $request,
         Quiz $quiz,
         QuizQuestion $quizQuestion,
-        SaveQuizAnswerAction $saveQuizAnswerAction
+        SaveQuizAnswerAction $saveQuizAnswerAction,
+        QuizAccessService $quizAccessService
     ): JsonResponse {
         $this->authorize('update', $quiz);
+
+        $resumeAccess = $quizAccessService->canResumeQuiz($request->user(), $quiz);
+        if (! ($resumeAccess['allowed'] ?? false)) {
+            return response()->json([
+                'status' => 'locked',
+                'message' => $resumeAccess['message'] ?? 'Quiz access is blocked.',
+            ], 403);
+        }
 
         abort_unless($quizQuestion->quiz_id === $quiz->id, 404);
 
@@ -166,18 +181,32 @@ class QuizController extends Controller
         ]);
     }
 
-    public function submit(Quiz $quiz, SubmitQuizAction $submitQuizAction): RedirectResponse
+    public function submit(Quiz $quiz, SubmitQuizAction $submitQuizAction, QuizAccessService $quizAccessService): RedirectResponse
     {
         $this->authorize('update', $quiz);
+
+        $submitAccess = $quizAccessService->canSubmitQuiz(request()->user(), $quiz);
+
+        if (! ($submitAccess['allowed'] ?? false)) {
+            return redirect()->route('student.billing.subscription')->with('overlay', OverlayMessage::billingAccessRequired($submitAccess));
+        }
 
         $submitQuizAction->execute($quiz, (int) request()->user()->id);
 
         return redirect()->route('student.quiz.results', $quiz);
     }
 
-    public function interact(Quiz $quiz): JsonResponse
+    public function interact(Quiz $quiz, QuizAccessService $quizAccessService): JsonResponse
     {
         $this->authorize('update', $quiz);
+
+        $resumeAccess = $quizAccessService->canResumeQuiz(request()->user(), $quiz);
+        if (! ($resumeAccess['allowed'] ?? false)) {
+            return response()->json([
+                'status' => 'locked',
+                'message' => $resumeAccess['message'] ?? 'Quiz access is blocked.',
+            ], 403);
+        }
 
         $quiz->markInteracted();
 
