@@ -12,6 +12,8 @@ use App\Models\Quiz;
 use App\Models\QuizQuestion;
 use App\Models\Subject;
 use App\Services\Billing\QuizAccessService;
+use App\Services\Quiz\QuizPresetService;
+use App\Support\OverlayMessage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -20,13 +22,21 @@ use RuntimeException;
 
 class QuizController extends Controller
 {
-    public function create(QuizAccessService $quizAccessService): View
+    public function create(QuizAccessService $quizAccessService, QuizPresetService $quizPresetService): View
     {
+        $presetKey = request()->string('preset')->toString();
+        $preset = $quizPresetService->resolve($presetKey !== '' ? $presetKey : null, request()->user());
+
+        $presetParams = $preset['params'] ?? [];
         $selectedLevels = collect(request()->input('levels', old('levels', [])))
             ->map(fn ($value) => (string) $value)
             ->filter(fn (string $value) => in_array($value, Subject::levels(), true))
             ->unique()
             ->values();
+
+        if ($selectedLevels->isEmpty() && ($presetParams['levels'] ?? []) !== []) {
+            $selectedLevels = collect($presetParams['levels']);
+        }
 
         if ($selectedLevels->isEmpty()) {
             $legacyLevel = request()->string('level')->toString();
@@ -35,7 +45,7 @@ class QuizController extends Controller
                 : collect([Subject::LEVEL_O]);
         }
 
-        $oldMulti = request()->boolean('multi_subject_mode', old('multi_subject_mode', false));
+        $oldMulti = request()->boolean('multi_subject_mode', old('multi_subject_mode', (bool) ($presetParams['multi_subject_mode'] ?? false)));
 
         $subjects = Subject::query()
             ->active()
@@ -49,13 +59,13 @@ class QuizController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'description', 'color', 'level', 'icon']);
 
-        $selectedSubjectIds = collect(old('subject_ids', request()->input('subject_ids', [])))
+        $selectedSubjectIds = collect(old('subject_ids', request()->input('subject_ids', $presetParams['subject_ids'] ?? [])))
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->unique()
             ->values();
 
-        $selectedSubjectId = (int) old('subject_id', request()->integer('subject_id'));
+        $selectedSubjectId = (int) old('subject_id', request()->integer('subject_id', (int) ($presetParams['subject_id'] ?? 0)));
         if ($selectedSubjectId > 0 && ! $subjects->contains('id', $selectedSubjectId)) {
             $selectedSubjectId = 0;
         }
@@ -68,6 +78,13 @@ class QuizController extends Controller
             ->filter(fn (int $id) => $subjects->contains('id', $id))
             ->values();
 
+        $requestedMode = request()->string('mode', (string) ($presetParams['mode'] ?? ''))->toString();
+        $defaultMode = in_array($requestedMode, [Quiz::MODE_MCQ, Quiz::MODE_THEORY, Quiz::MODE_MIXED], true)
+            ? $requestedMode
+            : Quiz::MODE_MIXED;
+
+        $defaultQuestionCount = (int) request()->integer('question_count', (int) ($presetParams['question_count'] ?? 50));
+
         return view('pages.student.quiz.builder', [
             'levels' => collect(Subject::levels())->map(fn (string $level) => [
                 'value' => $level,
@@ -77,24 +94,26 @@ class QuizController extends Controller
             'selectedSubjectId' => $selectedSubjectId,
             'selectedSubjectIds' => $selectedSubjectIds->all(),
             'subjects' => $subjects,
+            'presetOptions' => $quizPresetService->options(),
+            'selectedPreset' => $preset['key'],
+            'presetNotice' => $preset['notice'],
             'difficulties' => ['easy', 'medium', 'hard'],
             'modes' => [
                 Quiz::MODE_MCQ => 'MCQ',
                 Quiz::MODE_THEORY => 'Theory',
                 Quiz::MODE_MIXED => 'Mixed',
             ],
-            'defaultQuestionCount' => (int) request()->integer('question_count', 50),
-            'defaultMode' => in_array(request()->string('mode')->toString(), [Quiz::MODE_MCQ, Quiz::MODE_THEORY, Quiz::MODE_MIXED], true)
-                ? request()->string('mode')->toString()
-                : Quiz::MODE_MIXED,
-            'defaultTopicIds' => collect(request()->input('topic_ids', []))
+            'defaultQuestionCount' => $defaultQuestionCount,
+            'defaultMode' => $defaultMode,
+            'defaultTopicIds' => collect(request()->input('topic_ids', $presetParams['topic_ids'] ?? []))
                 ->map(fn ($id) => (int) $id)
                 ->filter()
                 ->unique()
                 ->values()
                 ->all(),
+            'defaultDifficulty' => (string) ($presetParams['difficulty'] ?? ''),
             'multiSubjectMode' => $oldMulti,
-            'billingAccess' => $quizAccessService->canStartQuiz((request()->user()), (int) old('question_count', 50)),
+            'billingAccess' => $quizAccessService->canStartQuiz((request()->user()), (int) old('question_count', $defaultQuestionCount)),
         ]);
     }
 
