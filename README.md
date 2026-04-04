@@ -210,6 +210,28 @@ The AI grading pipeline is hardened for retriable provider failures and manual-r
 
 Operational runbook: see `docs/grading-pipeline.md`.
 
+
+## Notification Operations (New)
+
+Student reminders and admin alerts now run through Laravel notifications (mail + database channels) and are dispatched by scheduler to queue workers.
+
+### Student reminder types
+
+- Inactivity reminder after configurable inactive days.
+- Pending verification reminder when payment/access remains pending beyond a configurable age.
+- Draft quiz reminder for stale unfinished drafts.
+
+### Admin alert types
+
+- Recent grading failures (AI fallback to manual review).
+- Manual review backlog over threshold.
+- Recent import failures.
+- Billing/access configuration anomalies.
+
+All reminder and alert cadence settings are configured in `config/study.php` and overridden via environment variables.
+
+Detailed runbook: `docs/notifications-operations.md`.
+
 ## Production Readiness
 
 A production deployment should include all of the following services/processes:
@@ -225,6 +247,7 @@ A production deployment should include all of the following services/processes:
 
 - `subscriptions:enforce` (hourly)
 - `quizzes:cleanup-abandoned` (every 5 minutes)
+- `notifications:dispatch-operational` (hourly; dispatches queued student/admin notification jobs)
 
 Set up cron (or equivalent) to run:
 
@@ -241,6 +264,8 @@ For the admin dashboard operational metrics definitions and recommended actions,
 
 - `GradeTheoryAnswerJob` (AI grading)
 - `ProcessQuestionImportJob` (import row processing)
+- `SendStudentRemindersJob` (student inactivity/pending/draft reminders)
+- `SendAdminOperationalAlertsJob` (admin operational alerts)
 
 ### Lifecycle processors by state
 
@@ -260,6 +285,8 @@ If queue workers are down, grading/import status will remain pending/manual-revi
 - **Mail:** `MAIL_*`
 - **AI grading:** `OPENAI_*`
 - **Imports:** `IMPORT_PROCESSING_QUEUE`
+- **Notifications:** `NOTIFICATIONS_QUEUE`, `STUDY_NOTIFICATIONS_ENABLED`, `STUDY_STUDENT_REMINDERS_ENABLED`, `STUDY_ADMIN_ALERTS_ENABLED`
+- **Reminder cadence controls:** `STUDY_REMINDER_INACTIVITY_*`, `STUDY_REMINDER_PENDING_*`, `STUDY_REMINDER_DRAFT_*`, `STUDY_ADMIN_*`
 - **Broadcasting:** `BROADCAST_DRIVER`, `PUSHER_*` and/or `REVERB_*`, plus `VITE_PUSHER_*` for frontend subscriptions
 
 ### Runtime components
