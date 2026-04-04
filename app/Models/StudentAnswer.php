@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StudentAnswer extends Model
 {
@@ -75,6 +76,11 @@ class StudentAnswer extends Model
         return $this->belongsTo(User::class, 'graded_by');
     }
 
+
+    public function gradingAttempts(): HasMany
+    {
+        return $this->hasMany(GradingAttempt::class);
+    }
     public function scopeWithStatus($query, string $status)
     {
         return $query->where('grading_status', $status);

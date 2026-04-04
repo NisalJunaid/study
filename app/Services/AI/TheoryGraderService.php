@@ -2,11 +2,13 @@
 
 namespace App\Services\AI;
 
+use App\Exceptions\TheoryGradingException;
 use App\Support\DTOs\TheoryGradeResult;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -31,7 +33,7 @@ class TheoryGraderService
         $apiKey = (string) config('openai.api_key');
 
         if ($apiKey === '') {
-            throw new RuntimeException('OpenAI API key is not configured.');
+            throw new TheoryGradingException('OpenAI API key is not configured.', false);
         }
 
         $resolved = [];
@@ -155,63 +157,69 @@ class TheoryGraderService
      */
     private function requestBatch(array $items, array $route): array
     {
-        $response = $this->http
-            ->baseUrl((string) config('openai.base_url'))
-            ->timeout((int) config('openai.timeout'))
-            ->withToken((string) config('openai.api_key'))
-            ->acceptJson()
-            ->asJson()
-            ->post('/responses', [
-                'model' => (string) ($route['model'] ?? config('openai.model')),
-                'input' => [
-                    [
-                        'role' => 'system',
-                        'content' => [[
-                            'type' => 'input_text',
-                            'text' => $this->systemPrompt((string) ($route['profile'] ?? 'short_answer')),
-                        ]],
+        try {
+            $response = $this->http
+                ->baseUrl((string) config('openai.base_url'))
+                ->timeout((int) config('openai.timeout'))
+                ->withToken((string) config('openai.api_key'))
+                ->acceptJson()
+                ->asJson()
+                ->post('/responses', [
+                    'model' => (string) ($route['model'] ?? config('openai.model')),
+                    'input' => [
+                        [
+                            'role' => 'system',
+                            'content' => [[
+                                'type' => 'input_text',
+                                'text' => $this->systemPrompt((string) ($route['profile'] ?? 'short_answer')),
+                            ]],
+                        ],
+                        [
+                            'role' => 'user',
+                            'content' => [[
+                                'type' => 'input_text',
+                                'text' => $this->userPrompt($items, (string) ($route['profile'] ?? 'short_answer')),
+                            ]],
+                        ],
                     ],
-                    [
-                        'role' => 'user',
-                        'content' => [[
-                            'type' => 'input_text',
-                            'text' => $this->userPrompt($items, (string) ($route['profile'] ?? 'short_answer')),
-                        ]],
+                    'text' => [
+                        'format' => [
+                            'type' => 'json_schema',
+                            'name' => 'theory_grading_batch_result',
+                            'strict' => true,
+                            'schema' => $this->schema(),
+                        ],
                     ],
-                ],
-                'text' => [
-                    'format' => [
-                        'type' => 'json_schema',
-                        'name' => 'theory_grading_batch_result',
-                        'strict' => true,
-                        'schema' => $this->schema(),
-                    ],
-                ],
-                'max_output_tokens' => (int) ($route['max_output_tokens'] ?? config('openai.max_output_tokens', 1200)),
-                'temperature' => (float) ($route['temperature'] ?? 0),
-            ]);
+                    'max_output_tokens' => (int) ($route['max_output_tokens'] ?? config('openai.max_output_tokens', 1200)),
+                    'temperature' => (float) ($route['temperature'] ?? 0),
+                ]);
+        } catch (ConnectionException $exception) {
+            throw new TheoryGradingException('OpenAI grading request could not connect.', true, null);
+        }
 
         if ($response->failed()) {
-            throw new RuntimeException('OpenAI grading request failed with status '.$response->status());
+            $status = $response->status();
+            $retriable = in_array($status, [408, 409, 425, 429], true) || $status >= 500;
+            throw new TheoryGradingException('OpenAI grading request failed with status '.$status, $retriable, $status);
         }
 
         $json = $response->json();
         $rawOutputText = Arr::get($json, 'output.0.content.0.text');
 
         if (! is_string($rawOutputText) || trim($rawOutputText) === '') {
-            throw new RuntimeException('OpenAI grading response did not include structured JSON text.');
+            throw new TheoryGradingException('OpenAI grading response did not include structured JSON text.', false);
         }
 
         $decoded = json_decode($rawOutputText, true);
 
         if (! is_array($decoded)) {
-            throw new RuntimeException('OpenAI grading response JSON is invalid.');
+            throw new TheoryGradingException('OpenAI grading response JSON is invalid.', false);
         }
 
         $results = Arr::get($decoded, 'results');
 
         if (! is_array($results)) {
-            throw new RuntimeException('OpenAI grading response is missing results.');
+            throw new TheoryGradingException('OpenAI grading response is missing results.', false);
         }
 
         Log::info('Theory grading batch completed', [
