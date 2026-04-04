@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\BillingPlanController;
 use App\Http\Controllers\Admin\PlanDiscountController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\DataManagementController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PaymentSettingController;
 use App\Http\Controllers\Admin\SubscriptionPaymentController;
 use App\Http\Controllers\Admin\SubjectController;
@@ -63,7 +64,7 @@ Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'role:admin'])
     ->group(function () {
-        Route::view('/', 'pages.admin.dashboard')->name('dashboard');
+        Route::get('/', DashboardController::class)->name('dashboard');
         Route::resource('subjects', SubjectController::class)->except('show');
         Route::resource('topics', TopicController::class)->except('show');
         Route::resource('questions', QuestionController::class)->except('show');
