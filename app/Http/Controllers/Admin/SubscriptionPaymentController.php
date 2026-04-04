@@ -13,6 +13,8 @@ class SubscriptionPaymentController extends Controller
 {
     public function index(): View
     {
+        $this->authorize('viewAny', SubscriptionPayment::class);
+
         $payments = SubscriptionPayment::query()
             ->with(['user:id,name,email', 'plan:id,name,type'])
             ->latest('submitted_at')
@@ -23,6 +25,8 @@ class SubscriptionPaymentController extends Controller
 
     public function verify(SubscriptionPayment $payment, SubscriptionPaymentService $service): RedirectResponse
     {
+        $this->authorize('update', $payment);
+
         if ($payment->status !== SubscriptionPayment::STATUS_PENDING) {
             return back()->with('error', 'Only pending payments can be verified.');
         }
@@ -37,6 +41,7 @@ class SubscriptionPaymentController extends Controller
         SubscriptionPayment $payment,
         SubscriptionPaymentService $service
     ): RedirectResponse {
+        $this->authorize('update', $payment);
         if ($payment->status !== SubscriptionPayment::STATUS_PENDING) {
             return back()->with('error', 'Only pending payments can be rejected.');
         }
@@ -48,6 +53,8 @@ class SubscriptionPaymentController extends Controller
 
     public function slip(SubscriptionPayment $payment)
     {
+        $this->authorize('view', $payment);
+
         return response()->download(storage_path('app/'.$payment->slip_path), $payment->slip_original_name);
     }
 }

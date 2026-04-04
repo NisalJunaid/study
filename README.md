@@ -46,6 +46,36 @@ A Laravel 10 study platform with separate **student** and **admin** experiences,
 | Billing/subscription/access gating | ✅ Supported | Middleware + services enforce trial/subscription/payment logic. |
 | Websocket realtime UX | ✅ Optional enhancement | Broadcast events exist; correctness still DB/HTTP-backed. |
 
+
+## Authorization Model & Access Boundaries
+
+The app uses Laravel-native authorization with **role middleware + policies** (no external RBAC package).
+
+### Roles
+
+- `admin`: full access to `/admin/*` routes and admin management workflows.
+- `student`: access to student flows (`/quiz/*`, `/history`, `/progress`, `/billing/*`) only.
+
+Role checks are enforced by `role:admin` and `role:student` route middleware (see `EnsureUserHasRole`).
+
+### Route protection boundaries
+
+- **Admin-only areas**: admin dashboard, curriculum CRUD, imports, theory manual review queue, billing administration, and data management routes.
+- **Student-only areas**: quiz setup/taking/submission/results, history/progress, and student billing pages.
+- **Guest behavior**: unauthenticated users are redirected to login for protected routes (`auth` middleware convention).
+- **Wrong-role behavior**: authenticated users with an incorrect role receive `403 Forbidden`.
+
+### Ownership scoping
+
+Policies scope user-owned resources so one student cannot access another student's records:
+
+- `QuizPolicy`: student can view/update only their own quiz attempts.
+- `StudentAnswerPolicy`: theory review actions are admin-only; answer view access is owner-or-admin.
+- `SubscriptionPaymentPolicy`: student can view only their own payment slip; admin can review all payments.
+- Existing subject/topic/question/import policies continue to enforce admin management boundaries.
+
+This ensures route, controller, and model-level authorization stay consistent even when route bindings are used directly.
+
 ## Quick Setup
 
 1. Install dependencies

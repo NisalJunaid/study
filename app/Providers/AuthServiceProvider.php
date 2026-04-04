@@ -5,13 +5,17 @@ namespace App\Providers;
 use App\Models\Import;
 use App\Models\Question;
 use App\Models\Quiz;
+use App\Models\StudentAnswer;
 use App\Models\Subject;
+use App\Models\SubscriptionPayment;
 use App\Models\Topic;
 use App\Models\User;
 use App\Policies\ImportPolicy;
 use App\Policies\QuestionPolicy;
 use App\Policies\QuizPolicy;
+use App\Policies\StudentAnswerPolicy;
 use App\Policies\SubjectPolicy;
+use App\Policies\SubscriptionPaymentPolicy;
 use App\Policies\TopicPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
@@ -29,6 +33,8 @@ class AuthServiceProvider extends ServiceProvider
         Question::class => QuestionPolicy::class,
         Quiz::class => QuizPolicy::class,
         Import::class => ImportPolicy::class,
+        StudentAnswer::class => StudentAnswerPolicy::class,
+        SubscriptionPayment::class => SubscriptionPaymentPolicy::class,
     ];
 
     /**
