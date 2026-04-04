@@ -20,6 +20,25 @@
 
             <p class="mb-0"><strong>Access:</strong> {{ $access['message'] ?? 'No status available.' }}</p>
 
+            @if(($access['allowed'] ?? false) === false)
+                <div class="card section-surface-secondary stack-sm" style="margin-top:.8rem;">
+                    <p class="mb-0"><strong>Why blocked:</strong> {{ $access['message'] ?? 'Billing access is required.' }}</p>
+                    @if(($access['reason'] ?? null) === \App\Services\Billing\QuizAccessService::REASON_NO_ACTIVE_ACCESS)
+                        <p class="mb-0 muted">Action: choose a plan, upload payment proof, and wait for verification.</p>
+                    @elseif(($access['reason'] ?? null) === \App\Services\Billing\QuizAccessService::REASON_PENDING_VERIFICATION)
+                        <p class="mb-0 muted">Action: wait for verification or upload updated payment if requested.</p>
+                    @elseif(($access['reason'] ?? null) === \App\Services\Billing\QuizAccessService::REASON_TEMPORARY_ACCESS_EXPIRED)
+                        <p class="mb-0 muted">Action: temporary access expired, so submit a new payment proof.</p>
+                    @elseif(($access['reason'] ?? null) === \App\Services\Billing\QuizAccessService::REASON_DAILY_LIMIT_REACHED)
+                        <p class="mb-0 muted">Action: wait for daily reset or continue an existing draft quiz.</p>
+                    @elseif(($access['reason'] ?? null) === \App\Services\Billing\QuizAccessService::REASON_PAYMENT_REJECTED)
+                        <p class="mb-0 muted">Action: upload a clearer payment proof.</p>
+                    @elseif(($access['reason'] ?? null) === \App\Services\Billing\QuizAccessService::REASON_BILLING_CONFIGURATION_INVALID)
+                        <p class="mb-0 muted">Action: contact support while billing settings are being updated.</p>
+                    @endif
+                </div>
+            @endif
+
             @if($subscription && $subscription->status === \App\Models\UserSubscription::STATUS_PENDING_VERIFICATION)
                 <p class="mb-0"><strong>Verification:</strong> Pending admin review.</p>
                 @if($latestPayment?->temporary_access_expires_at)

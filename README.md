@@ -181,6 +181,50 @@ composer test
 # equivalent: php artisan test
 ```
 
+## Billing Access Decision Model (Production)
+
+Quiz access decisions are centralized in `App\Services\Billing\QuizAccessService`.
+
+### Access checks now covered in one place
+
+- `canStartQuiz(User $user, int $questionCount)`
+- `canResumeQuiz(User $user, Quiz $quiz)`
+- `canSubmitQuiz(User $user, Quiz $quiz)`
+- `registerSubmittedQuizUsage(User $user, Quiz $quiz)`
+
+### Start-quiz decision order (current behavior)
+
+1. Admin bypass (allowed).
+2. Suspended subscription (blocked).
+3. Active subscription (allowed).
+4. Free trial available:
+   - up to 10 questions allowed;
+   - above 10 blocked.
+5. Billing configuration safety check (fail-closed when invalid):
+   - requires payment settings and at least one active plan.
+6. Pending payment with temporary access:
+   - allowed while temporary window is valid and daily quota remains;
+   - blocked when daily quota is exhausted.
+7. Rejected subscription status (blocked).
+8. Default no-access state (blocked; student directed to billing).
+
+### Resume/submit decision rules
+
+- Students can resume/submit only their own quizzes.
+- Submitted/graded/grading attempts cannot be resumed or resubmitted.
+- Existing drafts remain resumable even when new-quiz access is blocked by billing.
+
+### Troubleshooting
+
+- If students are unexpectedly blocked with “Billing unavailable”, verify:
+  - `payment_settings` has `bank_account_name`, `bank_account_number`, and `currency`.
+  - At least one `subscription_plans` record is active.
+- Check application logs for warning entries containing:
+  - `Quiz access billing configuration is invalid.`
+  - `Quiz access evaluation failed closed.`
+
+See additional operator notes in `docs/billing-access.md`.
+
 ## Notes
 
 - Routes and views are intentionally kept backward-compatible with existing Blade pages.

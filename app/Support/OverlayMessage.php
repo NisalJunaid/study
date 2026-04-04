@@ -30,10 +30,11 @@ class OverlayMessage
     public static function billingAccessRequired(array $access): array
     {
         $type = $access['access_type'] ?? QuizAccessService::ACCESS_BLOCKED;
+        $reason = $access['reason'] ?? null;
         $message = (string) ($access['message'] ?? 'Billing access required before continuing.');
 
-        return match ($type) {
-            QuizAccessService::ACCESS_FREE_TRIAL => self::redirect(
+        return match ($reason) {
+            QuizAccessService::REASON_FREE_TRIAL => self::redirect(
                 title: 'Free trial complete',
                 message: $message,
                 redirectUrl: route('student.billing.subscription'),
@@ -42,7 +43,16 @@ class OverlayMessage
                     'primary_label' => 'Choose a Plan',
                 ],
             ),
-            QuizAccessService::ACCESS_TEMPORARY_PENDING_PAYMENT => self::redirect(
+            QuizAccessService::REASON_DAILY_LIMIT_REACHED => self::redirect(
+                title: 'Daily temporary limit reached',
+                message: $message,
+                redirectUrl: route('student.billing.subscription'),
+                variant: 'warning',
+                overrides: [
+                    'primary_label' => 'Review Billing Status',
+                ],
+            ),
+            QuizAccessService::REASON_PENDING_VERIFICATION => self::redirect(
                 title: 'Payment verification pending',
                 message: $message,
                 redirectUrl: route('student.billing.subscription'),
@@ -51,15 +61,53 @@ class OverlayMessage
                     'primary_label' => 'Review Billing Status',
                 ],
             ),
-            default => self::redirect(
-                title: str_contains(strtolower($message), 'rejected') ? 'Payment proof rejected' : 'Billing access required',
+            QuizAccessService::REASON_TEMPORARY_ACCESS_EXPIRED => self::redirect(
+                title: 'Temporary access expired',
+                message: $message,
+                redirectUrl: route('student.billing.subscription', ['start_payment' => 1]),
+                variant: 'danger',
+                overrides: [
+                    'primary_label' => 'Upload New Payment',
+                ],
+            ),
+            QuizAccessService::REASON_BILLING_CONFIGURATION_INVALID => self::redirect(
+                title: 'Billing unavailable',
                 message: $message,
                 redirectUrl: route('student.billing.subscription'),
                 variant: 'danger',
                 overrides: [
-                    'primary_label' => str_contains(strtolower($message), 'rejected') ? 'Upload New Proof' : 'Go to Subscription',
+                    'primary_label' => 'Open Billing',
                 ],
             ),
+            default => match ($type) {
+                QuizAccessService::ACCESS_FREE_TRIAL => self::redirect(
+                    title: 'Free trial complete',
+                    message: $message,
+                    redirectUrl: route('student.billing.subscription'),
+                    variant: 'warning',
+                    overrides: [
+                        'primary_label' => 'Choose a Plan',
+                    ],
+                ),
+                QuizAccessService::ACCESS_TEMPORARY_PENDING_PAYMENT => self::redirect(
+                    title: 'Payment verification pending',
+                    message: $message,
+                    redirectUrl: route('student.billing.subscription'),
+                    variant: 'warning',
+                    overrides: [
+                        'primary_label' => 'Review Billing Status',
+                    ],
+                ),
+                default => self::redirect(
+                    title: str_contains(strtolower($message), 'rejected') ? 'Payment proof rejected' : 'Billing access required',
+                    message: $message,
+                    redirectUrl: route('student.billing.subscription'),
+                    variant: 'danger',
+                    overrides: [
+                        'primary_label' => str_contains(strtolower($message), 'rejected') ? 'Upload New Proof' : 'Go to Subscription',
+                    ],
+                ),
+            },
         };
     }
 

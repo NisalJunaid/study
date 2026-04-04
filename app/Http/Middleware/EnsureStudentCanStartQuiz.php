@@ -23,7 +23,7 @@ class EnsureStudentCanStartQuiz
         }
 
         $questionCount = (int) $request->input('question_count', 1);
-        $access = $this->quizAccessService->evaluate($user, $questionCount);
+        $access = $this->quizAccessService->canStartQuiz($user, $questionCount);
 
         if (! ($access['allowed'] ?? false)) {
             return redirect()

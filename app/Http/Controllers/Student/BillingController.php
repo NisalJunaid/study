@@ -57,7 +57,7 @@ class BillingController extends Controller
             'plans' => $plans,
             'subscription' => $subscription,
             'payments' => $user->payments()->with('plan')->latest('submitted_at')->limit(10)->get(),
-            'access' => $quizAccessService->evaluate($user, 1),
+            'access' => $quizAccessService->canStartQuiz($user, 1),
             'trialRemaining' => $user->hasTrialRemaining(),
             'temporaryQuotaRemaining' => $user->temporaryQuizQuotaRemaining(),
             'selectedType' => $selectedType,

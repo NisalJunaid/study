@@ -17,7 +17,16 @@
         <section class="card stack-sm section-surface-secondary">
             <strong>Quiz access is limited.</strong>
             <p class="mb-0">{{ $billingAccess['message'] ?? 'Open billing to continue.' }}</p>
-            <a class="btn mt-2" href="{{ route('student.billing.subscription') }}">Open billing</a>
+            @if(($billingAccess['reason'] ?? null) === \App\Services\Billing\QuizAccessService::REASON_DAILY_LIMIT_REACHED)
+                <p class="mb-0 muted">You can continue any existing draft quiz, but starting a new quiz is blocked until quota resets.</p>
+            @elseif(($billingAccess['reason'] ?? null) === \App\Services\Billing\QuizAccessService::REASON_TEMPORARY_ACCESS_EXPIRED)
+                <p class="mb-0 muted">Temporary access is no longer valid. Upload a new payment proof to regain temporary access.</p>
+            @elseif(($billingAccess['reason'] ?? null) === \App\Services\Billing\QuizAccessService::REASON_PENDING_VERIFICATION)
+                <p class="mb-0 muted">Your payment is pending admin review. Temporary access applies while quota remains.</p>
+            @elseif(($billingAccess['reason'] ?? null) === \App\Services\Billing\QuizAccessService::REASON_BILLING_CONFIGURATION_INVALID)
+                <p class="mb-0 muted">We cannot process new quiz access right now. Please contact support.</p>
+            @endif
+            <a class="btn mt-2" href="{{ route('student.billing.subscription', ['start_payment' => 1]) }}">Open billing</a>
         </section>
     @elseif(($billingAccess['access_type'] ?? null) === \App\Services\Billing\QuizAccessService::ACCESS_FREE_TRIAL)
         <section class="card stack-sm section-surface-secondary">
