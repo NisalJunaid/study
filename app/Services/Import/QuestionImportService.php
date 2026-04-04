@@ -172,6 +172,7 @@ class QuestionImportService
                         payload: $payload,
                         user: $admin,
                         question: $question,
+                        needsReviewAfterImport: true,
                     );
 
                     $row->forceFill([
@@ -447,6 +448,7 @@ class QuestionImportService
     private function addDuplicateValidationErrors(Import $import, array $preparedRows): array
     {
         $seenFingerprints = [];
+        $existingDuplicateQuestionIds = [];
 
         foreach ($preparedRows as $index => $preparedRow) {
             if ($preparedRow['errors'] !== []) {
@@ -481,6 +483,22 @@ class QuestionImportService
             $preparedRows[$index]['errors']['duplicate'][] = $duplicate['exact']
                 ? "Exact duplicate of existing question #{$duplicate['id']} under the same subject/topic/type. Row will be skipped."
                 : "Normalized duplicate of existing question #{$duplicate['id']} under the same subject/topic/type. Row will be skipped.";
+            $existingDuplicateQuestionIds[] = (int) $duplicate['id'];
+        }
+
+        if ($existingDuplicateQuestionIds !== []) {
+            $questions = Question::query()
+                ->whereIn('id', array_values(array_unique($existingDuplicateQuestionIds)))
+                ->get();
+
+            foreach ($questions as $question) {
+                $question->syncModerationFlags(
+                    array_merge(
+                        $question->moderationFlags(),
+                        [Question::FLAG_DUPLICATE_SUSPECTED]
+                    )
+                );
+            }
         }
 
         return $preparedRows;

@@ -68,6 +68,8 @@ Route::prefix('admin')
         Route::resource('topics', TopicController::class)->except('show');
         Route::resource('questions', QuestionController::class)->except('show');
         Route::patch('questions/{question}/toggle-publish', [QuestionController::class, 'togglePublish'])->name('questions.toggle-publish');
+        Route::get('questions/duplicates', [QuestionController::class, 'duplicates'])->name('questions.duplicates');
+        Route::post('questions/{question}/dismiss-flag', [QuestionController::class, 'dismissFlag'])->name('questions.dismiss-flag');
         Route::get('data-management', [DataManagementController::class, 'index'])->name('data-management.index');
         Route::post('data-management/wipe', [DataManagementController::class, 'wipe'])->name('data-management.wipe');
         Route::post('subjects/bulk-action', [SubjectController::class, 'bulkAction'])->name('subjects.bulk-action');
