@@ -6,64 +6,76 @@ use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\QuizQuestion;
 use App\Models\StudentAnswer;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class SaveQuizAnswerAction
 {
     public function execute(Quiz $quiz, QuizQuestion $quizQuestion, int $studentId, array $payload): StudentAnswer
     {
-        $snapshot = $quizQuestion->question_snapshot ?? [];
-        $questionType = $snapshot['type'] ?? null;
+        return DB::transaction(function () use ($quiz, $quizQuestion, $studentId, $payload): StudentAnswer {
+            $lockedQuiz = Quiz::query()
+                ->whereKey($quiz->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $existingAnswer = $quizQuestion->studentAnswer;
+            if (! $lockedQuiz->canAcceptAnswerChanges()) {
+                throw new RuntimeException('This quiz is already submitted and cannot be edited.');
+            }
 
-        if ($existingAnswer && $existingAnswer->answered_at !== null) {
-            throw new RuntimeException('This question is already locked and cannot be edited.');
-        }
+            $lockedQuizQuestion = $lockedQuiz->quizQuestions()
+                ->whereKey($quizQuestion->id)
+                ->with('studentAnswer')
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $answerAttributes = [
-            'question_id' => $quizQuestion->question_id,
-            'user_id' => $studentId,
-            'is_correct' => null,
-            'score' => null,
-            'feedback' => null,
-            'ai_result_json' => null,
-            'graded_by' => null,
-            'graded_at' => null,
-            'question_started_at' => $payload['question_started_at'] ?? null,
-            'answered_at' => $payload['answered_at'] ?? null,
-            'ideal_time_seconds' => $payload['ideal_time_seconds'] ?? null,
-            'answer_duration_seconds' => $payload['answer_duration_seconds'] ?? null,
-            'answered_on_time' => $payload['answered_on_time'] ?? null,
-        ];
+            $snapshot = $lockedQuizQuestion->question_snapshot ?? [];
+            $questionType = $snapshot['type'] ?? null;
+            $existingAnswer = $lockedQuizQuestion->studentAnswer;
 
-        if ($questionType === Question::TYPE_MCQ) {
-            $answerAttributes['selected_option_id'] = $payload['selected_option_id'] ?? null;
-            $answerAttributes['answer_text'] = null;
-            $answerAttributes['answer_json'] = null;
-        } elseif ($questionType === Question::TYPE_STRUCTURED_RESPONSE) {
-            $answerAttributes['selected_option_id'] = null;
-            $answerAttributes['answer_text'] = null;
-            $answerAttributes['answer_json'] = $this->normalizeStructuredAnswers($payload['structured_answers'] ?? []);
-        } else {
-            $answerAttributes['answer_text'] = isset($payload['answer_text'])
-                ? trim((string) $payload['answer_text'])
-                : null;
-            $answerAttributes['selected_option_id'] = null;
-            $answerAttributes['answer_json'] = null;
-        }
+            if ($existingAnswer && $existingAnswer->answered_at !== null) {
+                throw new RuntimeException('This question is already locked and cannot be edited.');
+            }
 
-        $answerAttributes['grading_status'] = StudentAnswer::STATUS_PENDING;
+            $answerAttributes = [
+                'question_id' => $lockedQuizQuestion->question_id,
+                'user_id' => $studentId,
+                'is_correct' => null,
+                'score' => null,
+                'feedback' => null,
+                'ai_result_json' => null,
+                'graded_by' => null,
+                'graded_at' => null,
+                'question_started_at' => $payload['question_started_at'] ?? null,
+                'answered_at' => $payload['answered_at'] ?? null,
+                'ideal_time_seconds' => $payload['ideal_time_seconds'] ?? null,
+                'answer_duration_seconds' => $payload['answer_duration_seconds'] ?? null,
+                'answered_on_time' => $payload['answered_on_time'] ?? null,
+            ];
 
-        $answer = $quiz->quizQuestions()
-            ->whereKey($quizQuestion->id)
-            ->firstOrFail()
-            ->studentAnswer()
-            ->updateOrCreate([], $answerAttributes);
+            if ($questionType === Question::TYPE_MCQ) {
+                $answerAttributes['selected_option_id'] = $payload['selected_option_id'] ?? null;
+                $answerAttributes['answer_text'] = null;
+                $answerAttributes['answer_json'] = null;
+            } elseif ($questionType === Question::TYPE_STRUCTURED_RESPONSE) {
+                $answerAttributes['selected_option_id'] = null;
+                $answerAttributes['answer_text'] = null;
+                $answerAttributes['answer_json'] = $this->normalizeStructuredAnswers($payload['structured_answers'] ?? []);
+            } else {
+                $answerAttributes['answer_text'] = isset($payload['answer_text'])
+                    ? trim((string) $payload['answer_text'])
+                    : null;
+                $answerAttributes['selected_option_id'] = null;
+                $answerAttributes['answer_json'] = null;
+            }
 
-        $quiz->markInteracted();
+            $answerAttributes['grading_status'] = StudentAnswer::STATUS_PENDING;
 
-        return $answer;
+            $answer = $lockedQuizQuestion->studentAnswer()->updateOrCreate([], $answerAttributes);
+            $lockedQuiz->markInteracted();
+
+            return $answer;
+        });
     }
 
     private function normalizeStructuredAnswers(array $input): array

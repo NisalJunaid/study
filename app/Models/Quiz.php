@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use RuntimeException;
 
 class Quiz extends Model
 {
@@ -94,7 +95,7 @@ class Quiz extends Model
 
     public function markInteracted(?\Carbon\CarbonInterface $at = null): void
     {
-        if ($this->submitted_at !== null || ! in_array($this->status, [self::STATUS_DRAFT, self::STATUS_IN_PROGRESS], true)) {
+        if (! $this->canAcceptAnswerChanges()) {
             return;
         }
 
@@ -106,6 +107,49 @@ class Quiz extends Model
     public function isSubmittedAttempt(): bool
     {
         return $this->submitted_at !== null && in_array($this->status, self::submittedAttemptStatuses(), true);
+    }
+
+    public function canTransitionTo(string $targetStatus): bool
+    {
+        if ($this->status === $targetStatus) {
+            return true;
+        }
+
+        return in_array($targetStatus, self::allowedTransitions()[$this->status] ?? [], true);
+    }
+
+    public function transitionTo(string $targetStatus, array $attributes = []): bool
+    {
+        if (! $this->canTransitionTo($targetStatus)) {
+            throw new RuntimeException("Invalid quiz state transition [{$this->status} -> {$targetStatus}].");
+        }
+
+        if ($this->status !== $targetStatus) {
+            $attributes['status'] = $targetStatus;
+        }
+
+        if ($attributes === []) {
+            return false;
+        }
+
+        return $this->forceFill($attributes)->save();
+    }
+
+    public function canAcceptAnswerChanges(): bool
+    {
+        return $this->submitted_at === null
+            && in_array($this->status, [self::STATUS_DRAFT, self::STATUS_IN_PROGRESS], true);
+    }
+
+    public static function allowedTransitions(): array
+    {
+        return [
+            self::STATUS_DRAFT => [self::STATUS_IN_PROGRESS, self::STATUS_SUBMITTED],
+            self::STATUS_IN_PROGRESS => [self::STATUS_SUBMITTED],
+            self::STATUS_SUBMITTED => [self::STATUS_GRADING, self::STATUS_GRADED],
+            self::STATUS_GRADING => [self::STATUS_GRADED],
+            self::STATUS_GRADED => [],
+        ];
     }
 
     public static function submittedAttemptStatuses(): array
