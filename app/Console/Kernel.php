@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('subscriptions:enforce')->hourly();
         $schedule->command('quizzes:cleanup-abandoned')->everyFiveMinutes();
+        $schedule->command('notifications:dispatch-operational')->hourly();
     }
 
     /**

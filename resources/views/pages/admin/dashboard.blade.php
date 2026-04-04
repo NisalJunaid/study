@@ -42,6 +42,21 @@
     </article>
 </div>
 
+
+@if(!empty($alerts))
+<div class="card stack-sm" style="margin-top:1rem;"> 
+    <h3 class="h2">Operational alerts</h3>
+    <ul class="stack-xs mb-0" style="padding-left:1.1rem;">
+        @foreach($alerts as $alert)
+            <li>
+                <strong>{{ $alert['title'] }}</strong>
+                <span class="muted">{{ $alert['message'] }}</span>
+            </li>
+        @endforeach
+    </ul>
+</div>
+@endif
+
 <div class="card stack-md" style="margin-top:1rem;">
     <h3 class="h2">Content health</h3>
     <div class="table-wrap">
