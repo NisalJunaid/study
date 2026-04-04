@@ -6,6 +6,7 @@ use App\Models\Quiz;
 use App\Models\StudentAnswer;
 use App\Models\Subject;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 class StudentProgressAnalyticsService
@@ -211,6 +212,9 @@ class StudentProgressAnalyticsService
         ];
 
         $weakSubjects = $this->buildWeakSubjects($subjectPerformance, $topicPerformance);
+        $streak = $this->buildStudyStreak((clone $baseQuizQuery)->whereIn('status', $completedStatuses)->whereNotNull('submitted_at')->pluck('submitted_at'));
+        $dailyGoal = $this->buildDailyGoalProgress($student, (clone $baseQuizQuery)->whereIn('status', $completedStatuses));
+        $recommendations = $this->buildRecommendations($weakTopics, $weakSubjects, $subjectPerformance, $dailyGoal);
 
         return [
             'summary' => [
@@ -227,9 +231,12 @@ class StudentProgressAnalyticsService
                 'strongest_subject' => $strongestSubject,
                 'weakest_subject' => $weakestSubject,
             ],
+            'streak' => $streak,
+            'daily_goal' => $dailyGoal,
             'subject_performance' => $subjectPerformance,
             'weak_topics' => $weakTopics,
             'weak_subjects' => $weakSubjects,
+            'recommendations' => $recommendations,
             'topic_performance' => $topicPerformance,
             'recent_activity' => $recentActivityPreview,
             'recent_activity_all' => $recentActivityAll,
@@ -244,6 +251,141 @@ class StudentProgressAnalyticsService
             'insights' => [
                 'is_low_data' => (int) ($summary?->completed_quizzes ?? 0) < 2,
                 'measured_answers' => $measuredAnswers,
+                'streak_rule' => 'A study day counts when you submit at least one quiz (statuses: submitted, grading, or graded) within the same UTC calendar day.',
+            ],
+        ];
+    }
+
+    private function buildStudyStreak(Collection $submittedAtValues): array
+    {
+        $days = $submittedAtValues
+            ->filter()
+            ->map(fn ($submittedAt) => CarbonImmutable::parse($submittedAt)->utc()->toDateString())
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($days->isEmpty()) {
+            return [
+                'current' => 0,
+                'longest' => 0,
+                'last_study_date' => null,
+                'active_today' => false,
+            ];
+        }
+
+        $longest = 0;
+        $running = 0;
+        $previous = null;
+
+        foreach ($days as $day) {
+            $current = CarbonImmutable::parse($day, 'UTC');
+
+            if ($previous && $previous->addDay()->equalTo($current)) {
+                $running++;
+            } else {
+                $running = 1;
+            }
+
+            $longest = max($longest, $running);
+            $previous = $current;
+        }
+
+        $current = 0;
+        $daySet = $days->flip();
+        $pointer = now('UTC')->startOfDay();
+        while ($daySet->has($pointer->toDateString())) {
+            $current++;
+            $pointer = $pointer->subDay();
+        }
+
+        $lastStudyDate = (string) $days->last();
+
+        return [
+            'current' => $current,
+            'longest' => $longest,
+            'last_study_date' => $lastStudyDate,
+            'active_today' => $lastStudyDate === now('UTC')->toDateString(),
+        ];
+    }
+
+    private function buildDailyGoalProgress(User $student, $completedQuizQuery): array
+    {
+        $today = now('UTC')->toDateString();
+        $goal = max(1, (int) ($student->daily_quiz_goal ?? 2));
+
+        $completedToday = (clone $completedQuizQuery)
+            ->whereDate('submitted_at', $today)
+            ->count();
+
+        return [
+            'goal' => $goal,
+            'completed_today' => $completedToday,
+            'remaining' => max(0, $goal - $completedToday),
+            'progress_percentage' => (int) min(100, round(($completedToday / $goal) * 100)),
+            'is_met' => $completedToday >= $goal,
+            'date' => $today,
+            'metric' => 'submitted_quizzes',
+        ];
+    }
+
+    private function buildRecommendations(
+        Collection $weakTopics,
+        Collection $weakSubjects,
+        Collection $subjectPerformance,
+        array $dailyGoal
+    ): array {
+        if ($weakTopics->isNotEmpty()) {
+            $topWeak = $weakTopics->take(2)->values();
+            $primary = $topWeak->first();
+            $topicIds = $topWeak->pluck('topic_id')->map(fn ($id) => (int) $id)->all();
+            $subjectId = (int) ($primary->subject_id ?? 0);
+
+            return [
+                'strategy' => 'weak_topics',
+                'title' => 'Target weak topics first',
+                'description' => 'Practice your lowest-scoring topics with a focused quiz before broader revision.',
+                'topic_names' => $topWeak->pluck('topic_name')->all(),
+                'quiz_setup_params' => [
+                    'subject_id' => $subjectId > 0 ? $subjectId : null,
+                    'topic_ids' => $topicIds,
+                    'mode' => Quiz::MODE_MIXED,
+                    'question_count' => max(10, min(25, $dailyGoal['goal'] * 5)),
+                    'guided_step' => 4,
+                ],
+            ];
+        }
+
+        if ($weakSubjects->isNotEmpty()) {
+            $subject = $weakSubjects->first();
+
+            return [
+                'strategy' => 'weak_subject',
+                'title' => 'Reinforce your weakest subject',
+                'description' => "Start with {$subject['name']} to lift your overall consistency.",
+                'topic_names' => collect($subject['weak_topics'])->pluck('name')->all(),
+                'quiz_setup_params' => [
+                    'subject_id' => $subject['id'],
+                    'mode' => Quiz::MODE_MIXED,
+                    'question_count' => max(10, min(25, $dailyGoal['goal'] * 5)),
+                    'guided_step' => 4,
+                ],
+            ];
+        }
+
+        $subjectIds = $subjectPerformance->pluck('id')->map(fn ($id) => (int) $id)->take(3)->all();
+
+        return [
+            'strategy' => 'mixed_revision',
+            'title' => 'Run a mixed revision set',
+            'description' => 'Not enough topic-level data yet, so build balanced mixed practice across your available subjects.',
+            'topic_names' => [],
+            'quiz_setup_params' => [
+                'multi_subject_mode' => 1,
+                'subject_ids' => $subjectIds,
+                'mode' => Quiz::MODE_MIXED,
+                'question_count' => max(10, min(20, $dailyGoal['goal'] * 5)),
+                'guided_step' => 4,
             ],
         ];
     }

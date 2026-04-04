@@ -5,7 +5,7 @@
     $selectedLevelValues = collect(old('levels', $selectedLevels ?? []))->map(fn ($value) => (string) $value)->all();
     $selectedSubjectValue = (string) old('subject_id', $selectedSubjectId ?: '');
     $selectedSubjectValues = collect(old('subject_ids', $selectedSubjectIds ?? []))->map(fn ($id) => (string) $id)->all();
-    $selectedTopicIds = collect(old('topic_ids', []))->map(fn ($id) => (string) $id)->all();
+    $selectedTopicIds = collect(old('topic_ids', $defaultTopicIds ?? []))->map(fn ($id) => (string) $id)->all();
     $selectedDifficulty = old('difficulty', '');
     $isMultiMode = (bool) old('multi_subject_mode', $multiSubjectMode ?? false);
     $initialStep = (int) old('guided_step', 1);
@@ -177,7 +177,7 @@
                         <span>Mode</span>
                         <select name="mode" class="input-control" required>
                             @foreach($modes as $value => $label)
-                                <option value="{{ $value }}" @selected(old('mode', \App\Models\Quiz::MODE_MIXED) === $value)>{{ $label }}</option>
+                                <option value="{{ $value }}" @selected(old('mode', $defaultMode ?? \App\Models\Quiz::MODE_MIXED) === $value)>{{ $label }}</option>
                             @endforeach
                         </select>
                         @error('mode') <small class="field-error">{{ $message }}</small> @enderror

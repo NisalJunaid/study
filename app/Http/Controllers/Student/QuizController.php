@@ -49,7 +49,7 @@ class QuizController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'description', 'color', 'level', 'icon']);
 
-        $selectedSubjectIds = collect(old('subject_ids', []))
+        $selectedSubjectIds = collect(old('subject_ids', request()->input('subject_ids', [])))
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->unique()
@@ -83,7 +83,16 @@ class QuizController extends Controller
                 Quiz::MODE_THEORY => 'Theory',
                 Quiz::MODE_MIXED => 'Mixed',
             ],
-            'defaultQuestionCount' => 50,
+            'defaultQuestionCount' => (int) request()->integer('question_count', 50),
+            'defaultMode' => in_array(request()->string('mode')->toString(), [Quiz::MODE_MCQ, Quiz::MODE_THEORY, Quiz::MODE_MIXED], true)
+                ? request()->string('mode')->toString()
+                : Quiz::MODE_MIXED,
+            'defaultTopicIds' => collect(request()->input('topic_ids', []))
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all(),
             'multiSubjectMode' => $oldMulti,
             'billingAccess' => $quizAccessService->canStartQuiz((request()->user()), (int) old('question_count', 50)),
         ]);

@@ -104,6 +104,9 @@ class StudentProgressAndHistoryTest extends TestCase
             ->get(route('student.progress.index'))
             ->assertOk()
             ->assertSee('Average accuracy')
+            ->assertSee('Current streak')
+            ->assertSee('Daily goal')
+            ->assertSee('Recommended next practice')
             ->assertSee('On-time answer rate')
             ->assertSee('Weak areas to focus on')
             ->assertSee('View All')
@@ -115,6 +118,18 @@ class StudentProgressAndHistoryTest extends TestCase
 
         preg_match_all('/class="card-soft progress-activity-item"/', $response->getContent(), $matches);
         $this->assertNotEmpty($matches);
+    }
+
+    public function test_progress_dashboard_shows_mixed_revision_fallback_for_no_data_students(): void
+    {
+        $student = User::factory()->create(['role' => User::ROLE_STUDENT]);
+
+        $this->actingAs($student)
+            ->get(route('student.progress.index'))
+            ->assertOk()
+            ->assertSee('Start your first quiz to unlock progress insights')
+            ->assertSee('Recommended next practice')
+            ->assertSee('Run a mixed revision set');
     }
 
     private function createQuiz(int $userId, int $subjectId, float $awarded, float $possible, $submittedAt): Quiz

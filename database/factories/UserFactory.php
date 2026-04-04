@@ -31,6 +31,7 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'role' => User::ROLE_STUDENT,
             'onboarding_intent' => User::ONBOARDING_FREE_TRIAL,
+            'daily_quiz_goal' => 2,
             'remember_token' => Str::random(10),
         ];
     }
