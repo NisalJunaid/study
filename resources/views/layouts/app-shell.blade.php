@@ -13,7 +13,9 @@
             root.dataset.theme = saved === 'dark' || saved === 'light' ? saved : preferred;
         })();
     </script>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @unless(app()->environment('testing'))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endunless
 </head>
 <body>
     @php use App\Support\OverlayMessage; @endphp

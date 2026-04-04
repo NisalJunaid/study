@@ -61,7 +61,7 @@
     <x-guided.stepper
         :steps="['Levels', 'Subjects', 'Topics', 'Settings', 'Review']"
         :current="$initialStep"
-        label="Setup progress"
+        label="Quiz setup progress"
     />
 
     @if($subjects->isEmpty())
@@ -78,10 +78,10 @@
             <input type="hidden" name="guided_step" value="{{ $initialStep }}" data-guided-current-step-input>
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="1">
-                <h2 class="section-heading">Step 1: Levels</h2>
+                <h2 class="section-heading">Step 1: Select level(s)</h2>
 
                 <label class="toggle-row" style="gap:.55rem; max-width:fit-content;">
-                    <span class="text-sm text-strong">Multi-level</span>
+                    <span class="text-sm text-strong">Multi-level mode</span>
                     <span class="switch">
                         <input type="checkbox" id="multi-level-mode" @checked(count($selectedLevelValues) > 1)>
                         <span class="switch-track"></span>
@@ -227,7 +227,7 @@
             </section>
 
             <section class="stack-sm section-block guided-step-pane" data-guided-step="5" hidden>
-                <h2 class="section-heading">Step 5: Review</h2>
+                <h2 class="section-heading">Step 5: Review and start</h2>
                 <div class="guided-summary" data-quiz-summary></div>
             </section>
 

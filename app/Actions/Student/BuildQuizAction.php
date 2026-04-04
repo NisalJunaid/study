@@ -43,7 +43,13 @@ class BuildQuizAction
 
     public function execute(User $student, array $payload): Quiz
     {
-        $subjectIds = collect($payload['subject_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
+        $subjectIds = collect($payload['subject_ids'] ?? [])
+            ->when(isset($payload['subject_id']), fn (Collection $collection) => $collection->push($payload['subject_id']))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
         $subjects = Subject::query()->active()->whereIn('id', $subjectIds)->get(['id', 'name', 'level']);
 
         if ($subjects->isEmpty()) {

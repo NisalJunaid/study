@@ -78,16 +78,16 @@ Route::prefix('admin')
         Route::post('questions/bulk-action', [QuestionController::class, 'bulkAction'])->name('questions.bulk-action');
         Route::prefix('imports')->name('imports.')->controller(ImportController::class)->group(function (): void {
             Route::get('/', 'index')->name('index');
-            Route::get('/{import}', 'show')->name('show');
             Route::post('/questions', 'store')->name('questions.store');
             Route::post('/subjects-json', 'storeSubjectsJson')->name('subjects.store');
             Route::post('/topics-json', 'storeTopicsJson')->name('topics.store');
             Route::post('/subjects-topics-json', 'storeSubjectTopicJson')->name('subjects-topics.store');
-            Route::post('/{import}/confirm', 'confirm')->name('confirm');
             Route::get('/sample/questions', 'sample')->name('questions.sample');
             Route::get('/sample/subjects-json', 'subjectSample')->name('subjects.sample');
             Route::get('/sample/topics-json', 'topicSample')->name('topics.sample');
             Route::get('/sample/subjects-topics-json', 'subjectTopicSample')->name('subjects-topics.sample');
+            Route::get('/{import}', 'show')->name('show');
+            Route::post('/{import}/confirm', 'confirm')->name('confirm');
         });
         Route::get('/theory-reviews', [TheoryReviewController::class, 'index'])->name('theory-reviews.index');
         Route::get('/theory-reviews/{theoryReview}', [TheoryReviewController::class, 'show'])->name('theory-reviews.show');
