@@ -24,6 +24,28 @@ A Laravel 10 study platform with separate **student** and **admin** experiences,
    - Theory/structured answers queued for grading.
 5. Views results/progress/history; grading can continue asynchronously.
 
+### Retention + study effectiveness signals (from existing quiz data)
+
+The student progress page now derives practical study guidance directly from submitted quiz/history records:
+
+- **Study streaks**
+  - Rule: a day counts when the student has **at least one submitted quiz** (`submitted`, `grading`, or `graded`) with a non-null `submitted_at`.
+  - Date boundaries use **UTC calendar days** (current application timezone convention).
+  - Exposed metrics: `current streak`, `longest streak`, and whether the streak is active today.
+
+- **Daily study goal**
+  - Metric is based on **submitted quizzes per day**.
+  - Default goal is `2` quizzes/day (`users.daily_quiz_goal`) and can be edited in Profile.
+  - Progress shows completed today, remaining quizzes, and completion percentage.
+
+- **Recommended next practice**
+  - Uses existing weak-topic and weak-subject analytics (already derived from quiz answers/scores).
+  - Recommendation order:
+    1. weak topics first (if enough graded data),
+    2. weak subject fallback,
+    3. mixed revision fallback when data is sparse.
+  - CTA links directly into existing `/quiz/setup` with prefilled filters (subject/topic/mode/count), so no parallel flow is introduced.
+
 ### Quiz lifecycle state rules (hardened)
 
 Quiz status transitions are now enforced centrally in `App\Models\Quiz` (`allowedTransitions`, `canTransitionTo`, `transitionTo`).

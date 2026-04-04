@@ -15,9 +15,12 @@ class ProgressController extends Controller
 
         return view('pages.student.progress.index', [
             'summary' => $analytics['summary'],
+            'streak' => $analytics['streak'],
+            'dailyGoal' => $analytics['daily_goal'],
             'subjectPerformance' => $analytics['subject_performance'],
             'weakTopics' => $analytics['weak_topics'],
             'weakSubjects' => $analytics['weak_subjects'],
+            'recommendations' => $analytics['recommendations'],
             'topicPerformance' => $analytics['topic_performance'],
             'recentActivity' => $analytics['recent_activity'],
             'recentActivityAll' => $analytics['recent_activity_all'],

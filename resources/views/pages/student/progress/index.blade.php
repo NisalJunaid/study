@@ -7,6 +7,7 @@
     $onTimeRate = $summary['on_time_answer_rate'];
     $strongestSubject = $summary['strongest_subject'];
     $weakestSubject = $summary['weakest_subject'];
+    $recommendationUrl = route('student.quiz.setup', array_filter($recommendations['quiz_setup_params'] ?? [], fn ($value) => ! is_null($value) && $value !== []));
 @endphp
 
 <div class="stack-lg progress-dashboard" id="student-progress-dashboard" data-progress-dashboard data-chart-config='@json($charts)'>
@@ -18,14 +19,48 @@
                 <a class="btn btn-primary" href="{{ route('student.quiz.setup') }}">Build a quiz</a>
             </div>
         </section>
+        <section class="card stack-md section-surface-secondary">
+            <h2 class="section-heading">Recommended next practice</h2>
+            <p class="section-intro">{{ $recommendations['description'] ?? 'Start with a mixed revision set to build baseline data.' }}</p>
+            <div class="actions-row">
+                <a class="btn btn-primary" href="{{ $recommendationUrl }}">{{ $recommendations['title'] ?? 'Start mixed revision' }}</a>
+                <a class="btn" href="{{ route('profile.edit') }}">Set daily goal</a>
+            </div>
+            <p class="muted mb-0 text-xs">{{ $insights['streak_rule'] }}</p>
+        </section>
     @else
         <section class="card-grid progress-summary-grid">
             <x-student.metric-card title="Quizzes completed" :value="$summary['completed_quizzes']" :subtitle="$summary['in_progress_quizzes'].' active drafts'" />
+            <x-student.metric-card title="Current streak" :value="$streak['current'].' day'.($streak['current'] === 1 ? '' : 's')" :subtitle="$streak['active_today'] ? 'You studied today (UTC)' : 'Streak counts submitted-quiz days'" />
+            <x-student.metric-card title="Longest streak" :value="$streak['longest'].' day'.($streak['longest'] === 1 ? '' : 's')" :subtitle="$streak['last_study_date'] ? 'Last study day: '.\Carbon\Carbon::parse($streak['last_study_date'])->format('M d, Y').' UTC' : 'No completed study days yet'" />
+            <x-student.metric-card title="Daily goal" :value="$dailyGoal['completed_today'].' / '.$dailyGoal['goal']" :subtitle="$dailyGoal['is_met'] ? 'Goal met for today' : $dailyGoal['remaining'].' quiz(es) to go today'" />
             <x-student.metric-card title="Average score" :value="$avgScore !== null ? number_format((float) $avgScore, 1).'%' : '—'" subtitle="Across submitted quizzes" />
             <x-student.metric-card title="Average accuracy" :value="$avgAccuracy !== null ? number_format((float) $avgAccuracy, 1).'%' : '—'" subtitle="Question-level grading" />
             <x-student.metric-card title="On-time answer rate" :value="$onTimeRate !== null ? number_format((float) $onTimeRate, 1).'%' : '—'" :subtitle="$insights['measured_answers'] > 0 ? $insights['measured_answers'].' timed answers tracked' : 'Timing data not available yet'" />
             <x-student.metric-card title="Strongest subject" :value="$strongestSubject?->name ?? 'Not enough data'" :subtitle="$strongestSubject && $strongestSubject->average_score !== null ? number_format((float) $strongestSubject->average_score, 1).'% average' : 'Complete at least 2 quizzes per subject'" />
             <x-student.metric-card title="Needs attention" :value="$weakestSubject?->name ?? 'Not enough data'" :subtitle="$weakestSubject && $weakestSubject->average_score !== null ? number_format((float) $weakestSubject->average_score, 1).'% average' : 'We will identify this soon'" />
+        </section>
+
+        <section class="card stack-md section-surface-secondary">
+            <div class="row-between">
+                <div>
+                    <h2 class="section-heading">Recommended next practice</h2>
+                    <p class="section-intro">{{ $recommendations['description'] ?? 'Build your next quiz from your recent performance.' }}</p>
+                </div>
+                <span class="pill">{{ ucfirst(str_replace('_', ' ', $recommendations['strategy'] ?? 'mixed_revision')) }}</span>
+            </div>
+            @if(! empty($recommendations['topic_names']))
+                <div class="weak-topic-chip-row">
+                    @foreach($recommendations['topic_names'] as $topicName)
+                        <span class="weak-topic-chip">{{ $topicName }}</span>
+                    @endforeach
+                </div>
+            @endif
+            <div class="actions-row">
+                <a class="btn btn-primary" href="{{ $recommendationUrl }}">{{ $recommendations['title'] ?? 'Start recommended quiz' }}</a>
+                <a class="btn" href="{{ route('profile.edit') }}">Adjust daily goal</a>
+            </div>
+            <p class="muted mb-0 text-xs">{{ $insights['streak_rule'] }}</p>
         </section>
 
         <section class="card stack-md section-surface-primary">

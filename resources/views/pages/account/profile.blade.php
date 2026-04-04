@@ -23,6 +23,22 @@
                     <input id="email" class="field-control" type="email" name="email" value="{{ old('email', auth()->user()->email) }}" autocomplete="email" required>
                     @error('email') <small class="field-error">{{ $message }}</small> @enderror
                 </label>
+
+                <label class="field">
+                    <span>Daily quiz goal</span>
+                    <input
+                        id="daily_quiz_goal"
+                        class="field-control"
+                        type="number"
+                        name="daily_quiz_goal"
+                        min="1"
+                        max="20"
+                        value="{{ old('daily_quiz_goal', auth()->user()->daily_quiz_goal ?? 2) }}"
+                        required
+                    >
+                    <small class="muted text-xs">Used for your progress target and streak planning.</small>
+                    @error('daily_quiz_goal') <small class="field-error">{{ $message }}</small> @enderror
+                </label>
             </div>
 
             <div class="account-meta-grid">

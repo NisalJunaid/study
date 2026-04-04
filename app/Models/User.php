@@ -31,6 +31,7 @@ class User extends Authenticatable
         'password',
         'role',
         'onboarding_intent',
+        'daily_quiz_goal',
         'id_document_number',
         'nationality',
         'contact_number',
@@ -56,6 +57,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'daily_quiz_goal' => 'integer',
     ];
 
     public function quizzes(): HasMany
