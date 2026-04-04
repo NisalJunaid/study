@@ -69,6 +69,32 @@ Operational notes:
 | Billing/subscription/access gating | ✅ Supported | Middleware + services enforce trial/subscription/payment logic. |
 | Websocket realtime UX | ✅ Optional enhancement | Broadcast events exist; correctness still DB/HTTP-backed. |
 
+## Question Import Rules (Current Behavior)
+
+Question preview/confirm processing now enforces deterministic safety checks before queue processing:
+
+- Required fields are validated per row (`subject`, `type`, `question_text`, `marks`, publish flag + type-specific fields).
+- Invalid question types and malformed MCQ/theory/structured payloads are rejected at preview time with row-level messages.
+- Subject/topic references are validated against existing curriculum unless "create subjects/topics" toggles are enabled.
+- Duplicate detection blocks:
+  - duplicate rows in the same file (normalized comparison),
+  - duplicates against existing question bank under the same subject/topic/type (exact and normalized prompt checks).
+- Duplicate rows are surfaced in preview and skipped safely (they are not silently created).
+- Confirm/retry processing is idempotent enough for operational retries: already imported rows are not re-imported, and failed valid rows can be retried.
+
+### Supported question import columns
+
+CSV headers used by the importer:
+
+`subject, topic, type, question_text, difficulty, marks, is_published, option_a, option_b, option_c, option_d, option_e, correct_option, explanation, sample_answer, grading_notes, keywords, acceptable_phrases, question_group_key, part_label, part_prompt, part_marks, part_sample_answer, part_marking_notes`
+
+### JSON format
+
+- Root object must contain a `questions` array.
+- Each object mirrors the CSV schema semantics.
+- Structured response rows use `structured_parts` and are expanded into preview rows with `question_group_key` + part fields.
+
+Use the Admin → Imports sample download links to get templates that match the current rules exactly.
 
 ## Authorization Model & Access Boundaries
 

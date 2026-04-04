@@ -171,7 +171,7 @@
 
 
         <div class="card card-soft stack-sm" style="margin-bottom: 1rem;">
-            <p class="muted mb-0">Import supports CSV and JSON. Use the templates below to match the expected schema.</p>
+            <p class="muted mb-0">Import supports CSV and JSON. Preview enforces required fields, type/option integrity, subject/topic references, and duplicate detection (exact + normalized prompt) before confirmation.</p>
             <div class="actions-inline">
                 <a class="btn" href="{{ route('admin.imports.questions.sample', ['template' => 'general']) }}">Download General Sample CSV</a>
                 <a class="btn" href="{{ route('admin.imports.questions.sample', ['template' => 'structured_response']) }}">Download Structured Response Sample CSV</a>

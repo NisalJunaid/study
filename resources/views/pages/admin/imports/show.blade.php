@@ -12,10 +12,10 @@
             </div>
             <div class="actions-inline">
                 <a class="btn" href="{{ route('admin.imports.index') }}">Back to imports</a>
-                @if($import->status === \App\Models\Import::STATUS_READY)
+                @if(in_array($import->status, [\App\Models\Import::STATUS_READY, \App\Models\Import::STATUS_PARTIALLY_COMPLETED, \App\Models\Import::STATUS_FAILED], true))
                     <form method="POST" action="{{ route('admin.imports.confirm', $import) }}">
                         @csrf
-                        <button class="btn btn-primary" type="submit">Confirm & Start Import</button>
+                        <button class="btn btn-primary" type="submit">Confirm & Start / Retry Import</button>
                     </form>
                 @endif
             </div>
@@ -34,8 +34,9 @@
         <div style="margin-top:1rem" class="stack-sm">
             <div class="muted">Import strategy</div>
             <ul style="margin:0; padding-left:1.2rem;">
-                <li>Upsert by <strong>subject + topic + type + exact question text</strong>.</li>
+                <li>Upsert by <strong>subject + topic + type + exact question text</strong> after duplicate screening.</li>
                 <li>Structured response rows are grouped by <strong>question_group_key</strong> (or fallback to question text).</li>
+                <li>Preview blocks duplicates within the same file and against existing questions (exact + normalized text).</li>
                 <li>Missing subjects: {{ $import->allow_create_subjects ? 'auto-create enabled' : 'auto-create disabled' }}.</li>
                 <li>Missing topics: {{ $import->allow_create_topics ? 'auto-create enabled' : 'auto-create disabled' }}.</li>
             </ul>
